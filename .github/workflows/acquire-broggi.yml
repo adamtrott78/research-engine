@@ -11,38 +11,154 @@ jobs:
   acquire:
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch publisher PDF
+      - name: Resolve and fetch exact source
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p out
-          urls=(
-            "https://aisel.aisnet.org/cgi/viewcontent.cgi?article=1677&context=hicss-58"
-            "https://aisel.aisnet.org/context/hicss-58/article/1677/viewcontent/download.pdf"
-          )
+          python - <<'PY'
+          import json
+          import re
+          import urllib.request
+          from pathlib import Path
 
-          ok=0
-          for url in "${urls[@]}"; do
-            echo "TRY_URL=$url"
-            if curl -L --fail --retry 2 --connect-timeout 20 --max-time 120 \
-              -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/130 Safari/537.36" \
-              -e "https://aisel.aisnet.org/hicss-58/st/trustworthy_ai/2/" \
-              "$url" -o out/broggi2025_varmax.pdf; then
-              if test "$(head -c 5 out/broggi2025_varmax.pdf)" = "%PDF-"; then
-                ok=1
-                printf '%s\n' "$url" > out/source_url.txt
-                break
-              fi
+          UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/130 Safari/537.36"
+          OUT = Path("out")
+          PDF = OUT / "broggi2025_varmax.pdf"
+
+          def get(url, accept="*/*"):
+              req = urllib.request.Request(
+                  url,
+                  headers={
+                      "User-Agent": UA,
+                      "Accept": accept,
+                      "Referer": "https://scholarspace.manoa.hawaii.edu/",
+                  },
+              )
+              with urllib.request.urlopen(req, timeout=60) as r:
+                  return r.geturl(), r.headers.get("Content-Type", ""), r.read()
+
+          attempts = []
+          urls = [
+              "https://hdl.handle.net/10125/109750",
+              "https://aisel.aisnet.org/cgi/viewcontent.cgi?article=1677&context=hicss-58",
+              "https://aisel.aisnet.org/context/hicss-58/article/1677/viewcontent/download.pdf",
+          ]
+
+          for url in urls:
+              try:
+                  final_url, ctype, body = get(url)
+                  attempts.append({"url": url, "final_url": final_url, "content_type": ctype, "bytes": len(body)})
+                  if body.startswith(b"%PDF-"):
+                      PDF.write_bytes(body)
+                      (OUT / "source_url.txt").write_text(final_url + "\n")
+                      break
+
+                  text = body.decode("utf-8", "ignore")
+                  direct = re.search(r'https?://scholarspace\.manoa\.hawaii\.edu/bitstreams/[0-9a-f-]+/(?:download|content)', text)
+                  if direct:
+                      final2, ctype2, body2 = get(direct.group(0))
+                      attempts.append({"url": direct.group(0), "final_url": final2, "content_type": ctype2, "bytes": len(body2)})
+                      if body2.startswith(b"%PDF-"):
+                          PDF.write_bytes(body2)
+                          (OUT / "source_url.txt").write_text(final2 + "\n")
+                          break
+
+                  item = re.search(r'/items/([0-9a-fA-F-]{36})', final_url + "\n" + text)
+                  if item:
+                      item_id = item.group(1)
+                      bundle_url = f"https://scholarspace.manoa.hawaii.edu/server/api/core/items/{item_id}/bundles?size=100"
+                      _, _, bundle_body = get(bundle_url, "application/json")
+                      bundles = json.loads(bundle_body)
+                      embedded = bundles.get("_embedded", {}).get("bundles", [])
+                      originals = [b for b in embedded if b.get("name") == "ORIGINAL"] or embedded
+                      for bundle in originals:
+                          bid = bundle.get("uuid") or bundle.get("id")
+                          if not bid:
+                              continue
+                          bit_url = f"https://scholarspace.manoa.hawaii.edu/server/api/core/bundles/{bid}/bitstreams?size=100"
+                          _, _, bit_body = get(bit_url, "application/json")
+                          bits = json.loads(bit_body).get("_embedded", {}).get("bitstreams", [])
+                          for bit in bits:
+                              name = str(bit.get("name", ""))
+                              mime = str(bit.get("metadata", {}).get("dc.format.mimetype", [{}])[0].get("value", ""))
+                              if name.lower().endswith(".pdf") or mime == "application/pdf":
+                                  bit_id = bit.get("uuid") or bit.get("id")
+                                  href = bit.get("_links", {}).get("content", {}).get("href")
+                                  if not href and bit_id:
+                                      href = f"https://scholarspace.manoa.hawaii.edu/server/api/core/bitstreams/{bit_id}/content"
+                                  if href:
+                                      final3, ctype3, body3 = get(href)
+                                      attempts.append({"url": href, "final_url": final3, "content_type": ctype3, "bytes": len(body3)})
+                                      if body3.startswith(b"%PDF-"):
+                                          PDF.write_bytes(body3)
+                                          (OUT / "source_url.txt").write_text(final3 + "\n")
+                                          break
+                          if PDF.exists():
+                              break
+              except Exception as exc:
+                  attempts.append({"url": url, "error": f"{type(exc).__name__}: {exc}"})
+              if PDF.exists():
+                  break
+
+          if not PDF.exists():
+              # DSpace installations commonly expose a PID resolver even when
+              # handle.net pages are difficult to scrape. Try it explicitly.
+              pid_urls = [
+                  "https://scholarspace.manoa.hawaii.edu/server/api/pid/find?id=10125/109750",
+                  "https://scholarspace.manoa.hawaii.edu/server/api/pid/find?id=https://hdl.handle.net/10125/109750",
+              ]
+              for pid_url in pid_urls:
+                  try:
+                      final, ctype, body = get(pid_url, "application/json")
+                      attempts.append({"url": pid_url, "final_url": final, "content_type": ctype, "bytes": len(body)})
+                      data = json.loads(body)
+                      item_id = data.get("uuid") or data.get("id")
+                      if item_id:
+                          bundle_url = f"https://scholarspace.manoa.hawaii.edu/server/api/core/items/{item_id}/bundles?size=100"
+                          _, _, bundle_body = get(bundle_url, "application/json")
+                          embedded = json.loads(bundle_body).get("_embedded", {}).get("bundles", [])
+                          originals = [b for b in embedded if b.get("name") == "ORIGINAL"] or embedded
+                          for bundle in originals:
+                              bid = bundle.get("uuid") or bundle.get("id")
+                              bit_url = f"https://scholarspace.manoa.hawaii.edu/server/api/core/bundles/{bid}/bitstreams?size=100"
+                              _, _, bit_body = get(bit_url, "application/json")
+                              bits = json.loads(bit_body).get("_embedded", {}).get("bitstreams", [])
+                              for bit in bits:
+                                  name = str(bit.get("name", ""))
+                                  if name.lower().endswith(".pdf"):
+                                      href = bit.get("_links", {}).get("content", {}).get("href")
+                                      if href:
+                                          final3, _, body3 = get(href)
+                                          if body3.startswith(b"%PDF-"):
+                                              PDF.write_bytes(body3)
+                                              (OUT / "source_url.txt").write_text(final3 + "\n")
+                                              break
+                              if PDF.exists():
+                                  break
+                  except Exception as exc:
+                      attempts.append({"url": pid_url, "error": f"{type(exc).__name__}: {exc}"})
+                  if PDF.exists():
+                      break
+
+          (OUT / "attempts.json").write_text(json.dumps(attempts, indent=2) + "\n")
+          if not PDF.exists():
+              raise SystemExit("no exact PDF acquired from authorized direct surfaces")
+          PY
+
+          test "$(head -c 5 out/broggi2025_varmax.pdf)" = "%PDF-"
+          {
+            echo "BYTES=$(wc -c < out/broggi2025_varmax.pdf)"
+            echo "SHA256=$(sha256sum out/broggi2025_varmax.pdf | awk '{print $1}')"
+            echo "PDF_MAGIC=$(head -c 5 out/broggi2025_varmax.pdf)"
+            if command -v pdfinfo >/dev/null 2>&1; then
+              echo "PAGES=$(pdfinfo out/broggi2025_varmax.pdf | awk -F: '/^Pages:/ {gsub(/[[:space:]]/,"",$2); print $2}')"
             fi
-          done
-
-          test "$ok" = "1"
-          echo "BYTES=$(wc -c < out/broggi2025_varmax.pdf)" | tee out/receipt.txt
-          echo "SHA256=$(sha256sum out/broggi2025_varmax.pdf | awk '{print $1}')" | tee -a out/receipt.txt
-          echo "PDF_MAGIC=$(head -c 5 out/broggi2025_varmax.pdf)" | tee -a out/receipt.txt
-          cat out/source_url.txt | sed 's/^/URL=/' | tee -a out/receipt.txt
+            sed 's/^/URL=/' out/source_url.txt
+          } | tee out/receipt.txt
 
       - name: Upload exact source
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: broggi2025-exact-source
