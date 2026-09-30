@@ -9,6 +9,10 @@ class CorpusFixtureError(ValueError):
     pass
 
 
+class ImmutableRecordConflict(CorpusFixtureError):
+    pass
+
+
 def validate_corpus_fixture(data: dict[str, Any]) -> None:
     required = {
         "works",
@@ -56,12 +60,16 @@ def validate_corpus_fixture(data: dict[str, Any]) -> None:
             raise CorpusFixtureError(f"evidence {raw['id']} references missing locator")
         if raw.get("extraction_run_id") and raw["extraction_run_id"] not in extraction_ids:
             raise CorpusFixtureError(f"evidence {raw['id']} references missing extraction run")
+        if raw.get("supersedes_id") == raw["id"]:
+            raise CorpusFixtureError(f"evidence {raw['id']} cannot supersede itself")
         evidence[raw["id"]] = EvidenceObject.model_validate(raw)
 
     for raw in data["evidence_relations"]:
         rel = EvidenceRelation.model_validate(raw)
         if rel.source_id not in evidence or rel.target_id not in evidence:
             raise CorpusFixtureError(f"relation {rel.id} references missing evidence")
+        if rel.supersedes_id == rel.id:
+            raise CorpusFixtureError(f"relation {rel.id} cannot supersede itself")
         rel.validate_direction(evidence)
 
 
@@ -204,74 +212,85 @@ class PostgresCorpusLoader:
                     )
 
                 for row in data["evidence_objects"]:
+                    incoming = (
+                        row["evidence_type"],
+                        row["work_id"],
+                        row.get("work_version_id"),
+                        row.get("source_artifact_id"),
+                        row.get("source_locator_id"),
+                        row["source_level"],
+                        row.get("raw_source_form"),
+                        row["normalized_form"],
+                        row.get("extraction_run_id"),
+                        row.get("extractor_identity"),
+                        row["verification_state"],
+                        row.get("supersedes_id"),
+                        row.get("attributes", {}),
+                    )
                     cur.execute(
                         """
-                        INSERT INTO evidence_objects(
-                          id, evidence_type, work_id, work_version_id, source_artifact_id,
-                          source_locator_id, source_level, raw_source_form, normalized_form,
-                          extraction_run_id, extractor_identity, verification_state,
-                          supersedes_id, attributes
-                        )
-                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                        ON CONFLICT(id) DO UPDATE SET
-                          evidence_type = EXCLUDED.evidence_type,
-                          work_id = EXCLUDED.work_id,
-                          work_version_id = EXCLUDED.work_version_id,
-                          source_artifact_id = EXCLUDED.source_artifact_id,
-                          source_locator_id = EXCLUDED.source_locator_id,
-                          source_level = EXCLUDED.source_level,
-                          raw_source_form = EXCLUDED.raw_source_form,
-                          normalized_form = EXCLUDED.normalized_form,
-                          extraction_run_id = EXCLUDED.extraction_run_id,
-                          extractor_identity = EXCLUDED.extractor_identity,
-                          verification_state = EXCLUDED.verification_state,
-                          supersedes_id = EXCLUDED.supersedes_id,
-                          attributes = EXCLUDED.attributes
+                        SELECT evidence_type, work_id, work_version_id, source_artifact_id,
+                               source_locator_id, source_level, raw_source_form, normalized_form,
+                               extraction_run_id, extractor_identity, verification_state,
+                               supersedes_id, attributes
+                        FROM evidence_objects WHERE id = %s
                         """,
-                        (
-                            row["id"],
-                            row["evidence_type"],
-                            row["work_id"],
-                            row.get("work_version_id"),
-                            row.get("source_artifact_id"),
-                            row.get("source_locator_id"),
-                            row["source_level"],
-                            row.get("raw_source_form"),
-                            row["normalized_form"],
-                            row.get("extraction_run_id"),
-                            row.get("extractor_identity"),
-                            row["verification_state"],
-                            row.get("supersedes_id"),
-                            Jsonb(row.get("attributes", {})),
-                        ),
+                        (row["id"],),
                     )
+                    existing = cur.fetchone()
+                    if existing is None:
+                        cur.execute(
+                            """
+                            INSERT INTO evidence_objects(
+                              id, evidence_type, work_id, work_version_id, source_artifact_id,
+                              source_locator_id, source_level, raw_source_form, normalized_form,
+                              extraction_run_id, extractor_identity, verification_state,
+                              supersedes_id, attributes
+                            )
+                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                            """,
+                            (row["id"], *incoming[:-1], Jsonb(incoming[-1])),
+                        )
+                    elif tuple(existing) != incoming:
+                        raise ImmutableRecordConflict(
+                            f"evidence id {row['id']} already exists with different authoritative content; "
+                            "create a new evidence id and use supersedes_id"
+                        )
 
                 for row in data["evidence_relations"]:
+                    incoming = (
+                        row["source_id"],
+                        row["target_id"],
+                        row["relation_type"],
+                        row.get("context_compatibility"),
+                        row["verification_state"],
+                        row["rationale"],
+                        row.get("supersedes_id"),
+                        row.get("attributes", {}),
+                    )
                     cur.execute(
                         """
-                        INSERT INTO evidence_relations(
-                          id, source_id, target_id, relation_type, context_compatibility,
-                          verification_state, rationale, attributes
-                        )
-                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
-                        ON CONFLICT(id) DO UPDATE SET
-                          source_id = EXCLUDED.source_id,
-                          target_id = EXCLUDED.target_id,
-                          relation_type = EXCLUDED.relation_type,
-                          context_compatibility = EXCLUDED.context_compatibility,
-                          verification_state = EXCLUDED.verification_state,
-                          rationale = EXCLUDED.rationale,
-                          attributes = EXCLUDED.attributes
+                        SELECT source_id, target_id, relation_type, context_compatibility,
+                               verification_state, rationale, supersedes_id, attributes
+                        FROM evidence_relations WHERE id = %s
                         """,
-                        (
-                            row["id"],
-                            row["source_id"],
-                            row["target_id"],
-                            row["relation_type"],
-                            row.get("context_compatibility"),
-                            row["verification_state"],
-                            row["rationale"],
-                            Jsonb(row.get("attributes", {})),
-                        ),
+                        (row["id"],),
                     )
+                    existing = cur.fetchone()
+                    if existing is None:
+                        cur.execute(
+                            """
+                            INSERT INTO evidence_relations(
+                              id, source_id, target_id, relation_type, context_compatibility,
+                              verification_state, rationale, supersedes_id, attributes
+                            )
+                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                            """,
+                            (row["id"], *incoming[:-1], Jsonb(incoming[-1])),
+                        )
+                    elif tuple(existing) != incoming:
+                        raise ImmutableRecordConflict(
+                            f"relation id {row['id']} already exists with different authoritative content; "
+                            "create a new relation id and use supersedes_id"
+                        )
             conn.commit()
