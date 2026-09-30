@@ -26,11 +26,16 @@ class EvidenceObject(BaseModel):
     id: str
     evidence_type: str
     work_id: str
+    work_version_id: str | None = None
     normalized_form: str
+    raw_source_form: str | None = None
     verification_state: VerificationState
     source_level: SourceLevel
     source_artifact_id: str | None = None
     source_locator_id: str | None = None
+    extraction_run_id: str | None = None
+    extractor_identity: str | None = None
+    supersedes_id: str | None = None
     attributes: dict = Field(default_factory=dict)
 
 
@@ -42,6 +47,8 @@ class EvidenceRelation(BaseModel):
     relation_type: str
     verification_state: str
     rationale: str
+    context_compatibility: str | None = None
+    supersedes_id: str | None = None
     attributes: dict = Field(default_factory=dict)
 
     def validate_direction(self, evidence: dict[str, EvidenceObject]) -> None:

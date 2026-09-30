@@ -71,3 +71,83 @@ class PostgresStore:
                 cur.execute(PROVENANCE_PATH_SQL, {"start_id": start_id, "goal_id": goal_id, "max_depth": max_depth})
                 cols = [d.name for d in cur.description]
                 return [dict(zip(cols, row, strict=True)) for row in cur.fetchall()]
+
+    def record_verification_event(
+        self,
+        *,
+        event_id: str,
+        record_type: str,
+        record_id: str,
+        new_state: str,
+        verifier_type: str,
+        verifier_identity: str,
+        rationale: str | None = None,
+        evidence: list | None = None,
+    ) -> None:
+        from psycopg.types.json import Jsonb
+
+        tables = {
+            "evidence_object": "evidence_objects",
+            "evidence_relation": "evidence_relations",
+        }
+        table = tables.get(record_type)
+        if table is None:
+            raise ValueError(f"unsupported verification record_type: {record_type}")
+
+        requested = (
+            record_type,
+            record_id,
+            new_state,
+            verifier_type,
+            verifier_identity,
+            rationale,
+            evidence or [],
+        )
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT record_type, record_id, new_state, verifier_type,
+                           verifier_identity, rationale, evidence
+                    FROM verification_events WHERE id = %s
+                    """,
+                    (event_id,),
+                )
+                existing_event = cur.fetchone()
+                if existing_event is not None:
+                    if tuple(existing_event) != requested:
+                        raise ValueError(f"verification event id {event_id} already exists with different content")
+                    return
+
+                cur.execute(f"SELECT verification_state FROM {table} WHERE id = %s", (record_id,))
+                row = cur.fetchone()
+                if row is None:
+                    raise ValueError(f"{record_type} {record_id} does not exist")
+                previous_state = row[0]
+
+                cur.execute(
+                    """
+                    INSERT INTO verification_events(
+                      id, record_type, record_id, previous_state, new_state,
+                      verifier_type, verifier_identity, rationale, evidence
+                    )
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                    """,
+                    (
+                        event_id,
+                        record_type,
+                        record_id,
+                        previous_state,
+                        new_state,
+                        verifier_type,
+                        verifier_identity,
+                        rationale,
+                        Jsonb(evidence or []),
+                    ),
+                )
+                cur.execute(f"UPDATE {table} SET verification_state = %s WHERE id = %s", (new_state, record_id))
+            conn.commit()
+
+    def create_knowledge_checkpoint(self, work_ids: list[str] | None = None):
+        from .checkpoints import KnowledgeCheckpointBuilder
+        return KnowledgeCheckpointBuilder(self).capture(work_ids=work_ids)

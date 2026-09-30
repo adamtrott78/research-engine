@@ -123,6 +123,7 @@ CREATE INDEX IF NOT EXISTS evidence_objects_type_idx ON evidence_objects(evidenc
 CREATE INDEX IF NOT EXISTS evidence_objects_verification_idx ON evidence_objects(verification_state);
 CREATE INDEX IF NOT EXISTS evidence_objects_search_idx ON evidence_objects USING GIN(search_document);
 CREATE INDEX IF NOT EXISTS evidence_objects_attributes_idx ON evidence_objects USING GIN(attributes);
+CREATE INDEX IF NOT EXISTS evidence_objects_supersedes_idx ON evidence_objects(supersedes_id);
 
 CREATE TABLE IF NOT EXISTS evidence_relations (
     id TEXT PRIMARY KEY,
@@ -132,6 +133,7 @@ CREATE TABLE IF NOT EXISTS evidence_relations (
     context_compatibility TEXT,
     verification_state TEXT NOT NULL,
     rationale TEXT NOT NULL,
+    supersedes_id TEXT REFERENCES evidence_relations(id),
     attributes JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT relation_not_self CHECK (source_id <> target_id)
@@ -140,6 +142,7 @@ CREATE INDEX IF NOT EXISTS evidence_relations_source_idx ON evidence_relations(s
 CREATE INDEX IF NOT EXISTS evidence_relations_target_idx ON evidence_relations(target_id);
 CREATE INDEX IF NOT EXISTS evidence_relations_source_type_idx ON evidence_relations(source_id, relation_type);
 CREATE INDEX IF NOT EXISTS evidence_relations_target_type_idx ON evidence_relations(target_id, relation_type);
+CREATE INDEX IF NOT EXISTS evidence_relations_supersedes_idx ON evidence_relations(supersedes_id);
 
 CREATE TABLE IF NOT EXISTS verification_events (
     id TEXT PRIMARY KEY,
@@ -154,6 +157,15 @@ CREATE TABLE IF NOT EXISTS verification_events (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS verification_record_idx ON verification_events(record_type, record_id, created_at);
+
+CREATE TABLE IF NOT EXISTS knowledge_checkpoints (
+    id TEXT PRIMARY KEY,
+    fingerprint CHAR(64) NOT NULL UNIQUE,
+    scope JSONB NOT NULL,
+    manifest JSONB NOT NULL,
+    record_counts JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
 CREATE TABLE IF NOT EXISTS synthesis_artifacts (
     id TEXT PRIMARY KEY,
