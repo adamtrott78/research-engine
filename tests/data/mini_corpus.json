@@ -1,0 +1,36 @@
+{
+  "works": [
+    {
+      "work_id": "work:scheirer:2013:osr",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "evidence": [
+        {"evidence_id":"ev:scheirer:rejection","type":"CLAIM","normalized_form":"Open-set recognition requires a rejection option."}
+      ]
+    },
+    {
+      "work_id": "work:liu:2020:energy-ood",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "evidence": [
+        {"evidence_id":"ev:liu:energy","type":"METHOD","normalized_form":"Energy scoring separates in- and out-of-distribution inputs."}
+      ]
+    },
+    {
+      "work_id": "work:baye:2024:varmax",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "evidence": [
+        {"evidence_id":"ev:baye:energy-use","type":"CLAIM","normalized_form":"varMax uses energy OOD evidence for ambiguous inputs."}
+      ]
+    },
+    {
+      "work_id": "work:broggi:2025:varmax",
+      "source_level": "OCR_DERIVED",
+      "evidence": [
+        {"evidence_id":"ev:broggi:energy-compare","type":"CLAIM","normalized_form":"Later varMax explicitly compares against energy OOD."}
+      ]
+    }
+  ],
+  "cross_work_relations": [
+    {"relation_id":"rel:baye-liu","source_id":"ev:baye:energy-use","target_id":"ev:liu:energy","relation_type":"USES","verification_state":"OCR_SOURCE_SUPPORTED","rationale":"Baye explicitly attributes the energy method to Liu."},
+    {"relation_id":"rel:broggi-liu","source_id":"ev:broggi:energy-compare","target_id":"ev:liu:energy","relation_type":"COMPARES_AGAINST","verification_state":"OCR_SOURCE_SUPPORTED","rationale":"Broggi explicitly compares against Liu energy OOD."}
+  ]
+}

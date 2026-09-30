@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "research-engine"
+version = "0.1.0"
+description = "Provenance-first automated research engine"
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2.10,<3",
+  "jsonschema>=4.23,<5",
+  "SQLAlchemy>=2.0,<3",
+  "psycopg[binary]>=3.2,<4",
+  "pgvector>=0.4,<1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10"]
+
+[project.scripts]
+research-engine = "research_engine.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/research_engine"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+markers = ["integration: requires PostgreSQL/pgvector runtime"]
