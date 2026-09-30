@@ -49,5 +49,5 @@ def project_curated_fixture(data: dict[str, Any]) -> ProjectedCorpus:
     return ProjectedCorpus(
         graph=EvidenceGraph(evidence, relations),
         exact_pdf_work_count=sum(x == SourceLevel.FULLTEXT_PDF_LAYOUT for x in levels),
-        ocr_derived_work_count=sum(x == SourceLevel.OCR_DERIVED  for x in levels),
-     )
+        ocr_derived_work_count=sum(x == SourceLevel.OCR_DERIVED for x in levels),
+    )
