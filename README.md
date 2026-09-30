@@ -29,3 +29,7 @@ python -m pytest
 ```
 
 PostgreSQL integration uses the official pgvector image tag `pgvector/pgvector:0.8.6-pg18`.
+
+## Continuous integration
+
+GitHub Actions runs the unit suite plus the PostgreSQL/pgvector integration test against a real PostgreSQL 18 + pgvector service. Local Docker is optional for development; CI is the canonical portable runtime check for the v1 database boundary.
