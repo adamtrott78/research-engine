@@ -1,0 +1,51 @@
+name: Acquire Broggi 2025 exact source
+
+on:
+  push:
+    branches: [acquire-broggi-source]
+
+permissions:
+  contents: read
+
+jobs:
+  acquire:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch publisher PDF
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          urls=(
+            "https://aisel.aisnet.org/cgi/viewcontent.cgi?article=1677&context=hicss-58"
+            "https://aisel.aisnet.org/context/hicss-58/article/1677/viewcontent/download.pdf"
+          )
+
+          ok=0
+          for url in "${urls[@]}"; do
+            echo "TRY_URL=$url"
+            if curl -L --fail --retry 2 --connect-timeout 20 --max-time 120 \
+              -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/130 Safari/537.36" \
+              -e "https://aisel.aisnet.org/hicss-58/st/trustworthy_ai/2/" \
+              "$url" -o out/broggi2025_varmax.pdf; then
+              if test "$(head -c 5 out/broggi2025_varmax.pdf)" = "%PDF-"; then
+                ok=1
+                printf '%s\n' "$url" > out/source_url.txt
+                break
+              fi
+            fi
+          done
+
+          test "$ok" = "1"
+          echo "BYTES=$(wc -c < out/broggi2025_varmax.pdf)" | tee out/receipt.txt
+          echo "SHA256=$(sha256sum out/broggi2025_varmax.pdf | awk '{print $1}')" | tee -a out/receipt.txt
+          echo "PDF_MAGIC=$(head -c 5 out/broggi2025_varmax.pdf)" | tee -a out/receipt.txt
+          cat out/source_url.txt | sed 's/^/URL=/' | tee -a out/receipt.txt
+
+      - name: Upload exact source
+        uses: actions/upload-artifact@v4
+        with:
+          name: broggi2025-exact-source
+          path: out/
+          if-no-files-found: error
+          retention-days: 7
