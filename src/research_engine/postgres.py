@@ -25,6 +25,7 @@ class PostgresStore:
             conn.commit()
 
     def put_work(self, *, work_id: str, title: str, publication_year: int | None = None, attributes: dict | None = None) -> None:
+        from psycopg.types.json import Jsonb
         with self.connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(
@@ -36,7 +37,7 @@ class PostgresStore:
                       publication_year = EXCLUDED.publication_year,
                       attributes = EXCLUDED.attributes
                     """,
-                    (work_id, title, publication_year, attributes or {}),
+                    (work_id, title, publication_year, Jsonb(attributes or {})),
                 )
             conn.commit()
 
@@ -47,6 +48,21 @@ class PostgresStore:
                 cur.execute(CLAIM_SUPPORT_SQL, {"claim_id": claim_id})
                 cols = [d.name for d in cur.description]
                 return [dict(zip(cols, row, strict=True)) for row in cur.fetchall()]
+
+    def qualifiers_for_method(self, method_id: str) -> list[dict]:
+        from .sql_queries import METHOD_QUALIFIERS_SQL
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(METHOD_QUALIFIERS_SQL, {"method_id": method_id})
+                cols = [d.name for d in cur.description]
+                return [dict(zip(cols, row, strict=True)) for row in cur.fetchall()]
+
+    def source_level_counts(self) -> dict[str, int]:
+        from .sql_queries import SOURCE_LEVEL_COUNTS_SQL
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(SOURCE_LEVEL_COUNTS_SQL)
+                return {row[0]: row[1] for row in cur.fetchall()}
 
     def provenance_path(self, start_id: str, goal_id: str, max_depth: int = 8) -> list[dict]:
         from .sql_queries import PROVENANCE_PATH_SQL

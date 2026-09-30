@@ -1,0 +1,741 @@
+{
+  "fixture_version": 1,
+  "provenance": {
+    "source": "workspace-control architecture/research-engine vertical-slice fixtures",
+    "source_checkpoint": "automated-research-engine-v1@7f09a557240722b4d104cbb7d7a2d99779974755",
+    "purpose": "self-contained five-work PostgreSQL import/query regression fixture"
+  },
+  "works": [
+    {
+      "id": "work:arxiv:2108.13099",
+      "title": "Open Set RF Fingerprinting using Generative Outlier Augmentation",
+      "publication_year": 2021,
+      "attributes": {
+        "domain": "RF OSR"
+      }
+    },
+    {
+      "id": "work:scheirer:2013:osr",
+      "title": "Toward Open Set Recognition",
+      "publication_year": 2013,
+      "attributes": {
+        "domain": "open set recognition"
+      }
+    },
+    {
+      "id": "work:liu:2020:energy-ood",
+      "title": "Energy-based Out-of-distribution Detection",
+      "publication_year": 2020,
+      "attributes": {
+        "domain": "OOD detection"
+      }
+    },
+    {
+      "id": "work:baye:2024:varmax",
+      "title": "varMax: Towards Confidence-Based Zero-Day Attack Recognition",
+      "publication_year": 2024,
+      "attributes": {
+        "domain": "open set recognition"
+      }
+    },
+    {
+      "id": "work:broggi:2025:varmax",
+      "title": "varMax: Uncertainty and Novelty Management in Deep Neural Networks",
+      "publication_year": 2025,
+      "attributes": {
+        "domain": "open set recognition"
+      }
+    }
+  ],
+  "work_versions": [
+    {
+      "id": "work-version:arxiv:2108.13099v1",
+      "work_id": "work:arxiv:2108.13099",
+      "version_label": "v1"
+    },
+    {
+      "id": "work-version:scheirer:2013:osr:pdf",
+      "work_id": "work:scheirer:2013:osr",
+      "version_label": "pdf"
+    },
+    {
+      "id": "work-version:liu:2020:energy-ood:pdf",
+      "work_id": "work:liu:2020:energy-ood",
+      "version_label": "pdf"
+    },
+    {
+      "id": "work-version:baye:2024:varmax:pdf",
+      "work_id": "work:baye:2024:varmax",
+      "version_label": "pdf"
+    },
+    {
+      "id": "work-version:broggi:2025:varmax:ocr",
+      "work_id": "work:broggi:2025:varmax",
+      "version_label": "ocr"
+    }
+  ],
+  "source_artifacts": [
+    {
+      "id": "source-artifact:sha256:7fcfc9929fd80a94095657ebf644be3301000d0a4342b74de1adc2af529ff7ab",
+      "work_version_id": "work-version:arxiv:2108.13099v1",
+      "sha256": "7fcfc9929fd80a94095657ebf644be3301000d0a4342b74de1adc2af529ff7ab",
+      "byte_size": 816786,
+      "media_type": "application/pdf",
+      "format": "pdf",
+      "access_class": "OPEN_ACCESS",
+      "artifact_uri": "arxiv:2108.13099v1"
+    },
+    {
+      "id": "source-artifact:sha256:b121b72c904d6f70d08e2cfba2ffcca77f9fb05654311781691d07f119c0eed9",
+      "work_version_id": "work-version:scheirer:2013:osr:pdf",
+      "sha256": "b121b72c904d6f70d08e2cfba2ffcca77f9fb05654311781691d07f119c0eed9",
+      "byte_size": 1777783,
+      "media_type": "application/pdf",
+      "format": "pdf",
+      "access_class": "LOCAL_CURATED",
+      "artifact_uri": "padataset:2013_scheirer_toward_open_set_recognition.pdf"
+    },
+    {
+      "id": "source-artifact:sha256:202c4d502f682bd31c5979be6fe930e505553a47a0acf39a15d24bff3e9bc4f7",
+      "work_version_id": "work-version:liu:2020:energy-ood:pdf",
+      "sha256": "202c4d502f682bd31c5979be6fe930e505553a47a0acf39a15d24bff3e9bc4f7",
+      "byte_size": 673885,
+      "media_type": "application/pdf",
+      "format": "pdf",
+      "access_class": "LOCAL_CURATED",
+      "artifact_uri": "padataset:2020_liu_energy_ood_detection.pdf"
+    },
+    {
+      "id": "source-artifact:sha256:68d0e07fba96977ce202715d1d36493f4c05933c57df6a32e5c58430855c0714",
+      "work_version_id": "work-version:baye:2024:varmax:pdf",
+      "sha256": "68d0e07fba96977ce202715d1d36493f4c05933c57df6a32e5c58430855c0714",
+      "byte_size": 1026611,
+      "media_type": "application/pdf",
+      "format": "pdf",
+      "access_class": "LOCAL_CURATED",
+      "artifact_uri": "padataset:2024_baye_varmax_milcom.pdf"
+    }
+  ],
+  "extraction_runs": [
+    {
+      "id": "extract:2108:fulltext:v1",
+      "work_version_id": "work-version:arxiv:2108.13099v1",
+      "source_artifact_id": "source-artifact:sha256:7fcfc9929fd80a94095657ebf644be3301000d0a4342b74de1adc2af529ff7ab",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "extractor_identity": "research-engine-pilot"
+    },
+    {
+      "id": "extract:scheirer:pdf:v1",
+      "work_version_id": "work-version:scheirer:2013:osr:pdf",
+      "source_artifact_id": "source-artifact:sha256:b121b72c904d6f70d08e2cfba2ffcca77f9fb05654311781691d07f119c0eed9",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "extractor_identity": "research-engine-promotion"
+    },
+    {
+      "id": "extract:liu:pdf:v1",
+      "work_version_id": "work-version:liu:2020:energy-ood:pdf",
+      "source_artifact_id": "source-artifact:sha256:202c4d502f682bd31c5979be6fe930e505553a47a0acf39a15d24bff3e9bc4f7",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "extractor_identity": "research-engine-promotion"
+    },
+    {
+      "id": "extract:baye:pdf:v1",
+      "work_version_id": "work-version:baye:2024:varmax:pdf",
+      "source_artifact_id": "source-artifact:sha256:68d0e07fba96977ce202715d1d36493f4c05933c57df6a32e5c58430855c0714",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "extractor_identity": "research-engine-promotion"
+    },
+    {
+      "id": "extract:broggi:ocr:v1",
+      "work_version_id": "work-version:broggi:2025:varmax:ocr",
+      "source_artifact_id": null,
+      "source_level": "OCR_DERIVED",
+      "extractor_identity": "mathpix-padaset"
+    }
+  ],
+  "source_locators": [
+    {
+      "id": "loc:2108:ellipsoid-method",
+      "source_artifact_id": "source-artifact:sha256:7fcfc9929fd80a94095657ebf644be3301000d0a4342b74de1adc2af529ff7ab",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "locator_quality": "EXACT",
+      "page_number": 5,
+      "pdf_bbox": [
+        48.96,
+        51.66,
+        300.03,
+        193.68
+      ],
+      "section_path": [
+        "V. BLIND OUTLIER GENERATION",
+        "A. Ellipsoisal method"
+      ]
+    },
+    {
+      "id": "loc:2108:ellipsoid-result",
+      "source_artifact_id": "source-artifact:sha256:7fcfc9929fd80a94095657ebf644be3301000d0a4342b74de1adc2af529ff7ab",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "locator_quality": "EXACT",
+      "page_number": 5,
+      "pdf_bbox": [
+        48.96,
+        352.25,
+        300.03,
+        613.27
+      ],
+      "section_path": [
+        "V. BLIND OUTLIER GENERATION",
+        "A. Ellipsoisal method"
+      ]
+    },
+    {
+      "id": "loc:2108:ellipsoid-limit",
+      "source_artifact_id": "source-artifact:sha256:7fcfc9929fd80a94095657ebf644be3301000d0a4342b74de1adc2af529ff7ab",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "locator_quality": "EXACT",
+      "page_number": 5,
+      "pdf_bbox": [
+        48.96,
+        637.9,
+        300.03,
+        719.57
+      ],
+      "section_path": [
+        "V. BLIND OUTLIER GENERATION",
+        "B. Optimization method"
+      ]
+    },
+    {
+      "id": "loc:2108:optimization-method",
+      "source_artifact_id": "source-artifact:sha256:7fcfc9929fd80a94095657ebf644be3301000d0a4342b74de1adc2af529ff7ab",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "locator_quality": "EXACT",
+      "page_number": 5,
+      "pdf_bbox": [
+        311.98,
+        406.99,
+        563.04,
+        584.67
+      ],
+      "section_path": [
+        "V. BLIND OUTLIER GENERATION",
+        "B. Optimization method"
+      ]
+    },
+    {
+      "id": "loc:2108:optimization-result",
+      "source_artifact_id": "source-artifact:sha256:7fcfc9929fd80a94095657ebf644be3301000d0a4342b74de1adc2af529ff7ab",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "locator_quality": "EXACT",
+      "page_number": 6,
+      "pdf_bbox": [
+        48.96,
+        446.75,
+        300.03,
+        719.57
+      ],
+      "section_path": [
+        "V. BLIND OUTLIER GENERATION",
+        "B. Optimization method"
+      ]
+    },
+    {
+      "id": "loc:2108:conclusion",
+      "source_artifact_id": "source-artifact:sha256:7fcfc9929fd80a94095657ebf644be3301000d0a4342b74de1adc2af529ff7ab",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "locator_quality": "EXACT",
+      "page_number": 6,
+      "pdf_bbox": [
+        311.98,
+        67.17,
+        563.04,
+        328.19
+      ],
+      "section_path": [
+        "VI. CONCLUSION"
+      ]
+    },
+    {
+      "id": "loc:scheirer:unknown",
+      "source_artifact_id": "source-artifact:sha256:b121b72c904d6f70d08e2cfba2ffcca77f9fb05654311781691d07f119c0eed9",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "locator_quality": "EXACT",
+      "page_number": 1,
+      "pdf_bbox": [
+        50.12,
+        135.46,
+        516.46,
+        248.11
+      ]
+    },
+    {
+      "id": "loc:scheirer:rejection",
+      "source_artifact_id": "source-artifact:sha256:b121b72c904d6f70d08e2cfba2ffcca77f9fb05654311781691d07f119c0eed9",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "locator_quality": "EXACT",
+      "page_number": 2,
+      "pdf_bbox": [
+        289.25,
+        190.16,
+        540.31,
+        746.84
+      ]
+    },
+    {
+      "id": "loc:scheirer:risk",
+      "source_artifact_id": "source-artifact:sha256:b121b72c904d6f70d08e2cfba2ffcca77f9fb05654311781691d07f119c0eed9",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "locator_quality": "EXACT",
+      "page_number": 3,
+      "pdf_bbox": [
+        26.19,
+        331.05,
+        277.3,
+        746.85
+      ]
+    },
+    {
+      "id": "loc:liu:page1",
+      "source_artifact_id": "source-artifact:sha256:202c4d502f682bd31c5979be6fe930e505553a47a0acf39a15d24bff3e9bc4f7",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "locator_quality": "EXACT",
+      "page_number": 1,
+      "pdf_bbox": [
+        143.87,
+        341.64,
+        469.79,
+        493.4
+      ]
+    },
+    {
+      "id": "loc:liu:page2",
+      "source_artifact_id": "source-artifact:sha256:202c4d502f682bd31c5979be6fe930e505553a47a0acf39a15d24bff3e9bc4f7",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "locator_quality": "EXACT",
+      "page_number": 2,
+      "pdf_bbox": [
+        107.81,
+        123.42,
+        504.35,
+        220.76
+      ]
+    },
+    {
+      "id": "loc:baye:method",
+      "source_artifact_id": "source-artifact:sha256:68d0e07fba96977ce202715d1d36493f4c05933c57df6a32e5c58430855c0714",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "locator_quality": "EXACT",
+      "page_number": 1,
+      "pdf_bbox": [
+        48.96,
+        291.13,
+        300.02,
+        509.81
+      ]
+    },
+    {
+      "id": "loc:baye:page2",
+      "source_artifact_id": "source-artifact:sha256:68d0e07fba96977ce202715d1d36493f4c05933c57df6a32e5c58430855c0714",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "locator_quality": "EXACT",
+      "page_number": 2,
+      "pdf_bbox": [
+        311.98,
+        420.73,
+        563.04,
+        718.85
+      ]
+    }
+  ],
+  "evidence_objects": [
+    {
+      "id": "ev:2108:method:ellipsoid",
+      "evidence_type": "METHOD",
+      "work_id": "work:arxiv:2108.13099",
+      "work_version_id": "work-version:arxiv:2108.13099v1",
+      "source_artifact_id": "source-artifact:sha256:7fcfc9929fd80a94095657ebf644be3301000d0a4342b74de1adc2af529ff7ab",
+      "source_locator_id": "loc:2108:ellipsoid-method",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "normalized_form": "Blind ellipsoidal generation maps authorized samples into latent space and samples a surrounding shell as synthetic outliers.",
+      "extraction_run_id": "extract:2108:fulltext:v1",
+      "extractor_identity": "research-engine-pilot",
+      "verification_state": "MACHINE_CHECKED"
+    },
+    {
+      "id": "ev:2108:method:optimization",
+      "evidence_type": "METHOD",
+      "work_id": "work:arxiv:2108.13099",
+      "work_version_id": "work-version:arxiv:2108.13099v1",
+      "source_artifact_id": "source-artifact:sha256:7fcfc9929fd80a94095657ebf644be3301000d0a4342b74de1adc2af529ff7ab",
+      "source_locator_id": "loc:2108:optimization-method",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "normalized_form": "Optimization-based blind generation uses an authorized-class classifier to optimize latent samples toward an unauthorized class.",
+      "extraction_run_id": "extract:2108:fulltext:v1",
+      "extractor_identity": "research-engine-pilot",
+      "verification_state": "MACHINE_CHECKED"
+    },
+    {
+      "id": "ev:2108:experiment:ellipsoid",
+      "evidence_type": "EXPERIMENT",
+      "work_id": "work:arxiv:2108.13099",
+      "work_version_id": "work-version:arxiv:2108.13099v1",
+      "source_artifact_id": "source-artifact:sha256:7fcfc9929fd80a94095657ebf644be3301000d0a4342b74de1adc2af529ff7ab",
+      "source_locator_id": "loc:2108:ellipsoid-result",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "normalized_form": "Ellipsoidal experiment evaluates authorized-set sizes 5, 10, 15, 20, and 25 with 7,500 generated outliers.",
+      "extraction_run_id": "extract:2108:fulltext:v1",
+      "extractor_identity": "research-engine-pilot",
+      "verification_state": "MACHINE_CHECKED"
+    },
+    {
+      "id": "ev:2108:result:ellipsoid",
+      "evidence_type": "RESULT",
+      "work_id": "work:arxiv:2108.13099",
+      "work_version_id": "work-version:arxiv:2108.13099v1",
+      "source_artifact_id": "source-artifact:sha256:7fcfc9929fd80a94095657ebf644be3301000d0a4342b74de1adc2af529ff7ab",
+      "source_locator_id": "loc:2108:ellipsoid-result",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "normalized_form": "For small authorized sets, ellipsoidal augmentation yields testing-accuracy gains greater than 15 percentage points.",
+      "extraction_run_id": "extract:2108:fulltext:v1",
+      "extractor_identity": "research-engine-pilot",
+      "verification_state": "MACHINE_CHECKED"
+    },
+    {
+      "id": "ev:2108:limitation:ellipsoid",
+      "evidence_type": "LIMITATION",
+      "work_id": "work:arxiv:2108.13099",
+      "work_version_id": "work-version:arxiv:2108.13099v1",
+      "source_artifact_id": "source-artifact:sha256:7fcfc9929fd80a94095657ebf644be3301000d0a4342b74de1adc2af529ff7ab",
+      "source_locator_id": "loc:2108:ellipsoid-limit",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "normalized_form": "The ellipsoidal blind-generation method requires empirical tuning of shell-thickness parameter delta.",
+      "extraction_run_id": "extract:2108:fulltext:v1",
+      "extractor_identity": "research-engine-pilot",
+      "verification_state": "MACHINE_CHECKED"
+    },
+    {
+      "id": "ev:2108:result:optimization",
+      "evidence_type": "RESULT",
+      "work_id": "work:arxiv:2108.13099",
+      "work_version_id": "work-version:arxiv:2108.13099v1",
+      "source_artifact_id": "source-artifact:sha256:7fcfc9929fd80a94095657ebf644be3301000d0a4342b74de1adc2af529ff7ab",
+      "source_locator_id": "loc:2108:optimization-result",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "normalized_form": "Optimization-based blind generation reports results similar to the ellipsoidal method and additional improvement at authorized-set size 15.",
+      "extraction_run_id": "extract:2108:fulltext:v1",
+      "extractor_identity": "research-engine-pilot",
+      "verification_state": "MACHINE_CHECKED"
+    },
+    {
+      "id": "ev:2108:limitation:optimization",
+      "evidence_type": "LIMITATION",
+      "work_id": "work:arxiv:2108.13099",
+      "work_version_id": "work-version:arxiv:2108.13099v1",
+      "source_artifact_id": "source-artifact:sha256:7fcfc9929fd80a94095657ebf644be3301000d0a4342b74de1adc2af529ff7ab",
+      "source_locator_id": "loc:2108:optimization-result",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "normalized_form": "Generating 1,000 outlier samples with the optimization method took about 30 times as long as the ellipsoidal method.",
+      "extraction_run_id": "extract:2108:fulltext:v1",
+      "extractor_identity": "research-engine-pilot",
+      "verification_state": "MACHINE_CHECKED"
+    },
+    {
+      "id": "ev:2108:claim:conclusion",
+      "evidence_type": "CLAIM",
+      "work_id": "work:arxiv:2108.13099",
+      "work_version_id": "work-version:arxiv:2108.13099v1",
+      "source_artifact_id": "source-artifact:sha256:7fcfc9929fd80a94095657ebf644be3301000d0a4342b74de1adc2af529ff7ab",
+      "source_locator_id": "loc:2108:conclusion",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "normalized_form": "Generative outlier augmentation can reduce or replace the need to acquire physical known-outlier transmitters for RF authentication training.",
+      "extraction_run_id": "extract:2108:fulltext:v1",
+      "extractor_identity": "research-engine-pilot",
+      "verification_state": "MACHINE_CHECKED"
+    },
+    {
+      "id": "ev:scheirer2013:claim:unknown-at-test",
+      "evidence_type": "CLAIM",
+      "work_id": "work:scheirer:2013:osr",
+      "work_version_id": "work-version:scheirer:2013:osr:pdf",
+      "source_artifact_id": "source-artifact:sha256:b121b72c904d6f70d08e2cfba2ffcca77f9fb05654311781691d07f119c0eed9",
+      "source_locator_id": "loc:scheirer:unknown",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "normalized_form": "Open-set recognition assumes incomplete training-time class knowledge and permits previously unseen classes at test time.",
+      "extraction_run_id": "extract:scheirer:pdf:v1",
+      "extractor_identity": "research-engine-promotion",
+      "verification_state": "MACHINE_CHECKED"
+    },
+    {
+      "id": "ev:scheirer2013:claim:rejection",
+      "evidence_type": "CLAIM",
+      "work_id": "work:scheirer:2013:osr",
+      "work_version_id": "work-version:scheirer:2013:osr:pdf",
+      "source_artifact_id": "source-artifact:sha256:b121b72c904d6f70d08e2cfba2ffcca77f9fb05654311781691d07f119c0eed9",
+      "source_locator_id": "loc:scheirer:rejection",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "normalized_form": "A general open-set classifier must support an unknown/rejection output rather than always returning a known class.",
+      "extraction_run_id": "extract:scheirer:pdf:v1",
+      "extractor_identity": "research-engine-promotion",
+      "verification_state": "MACHINE_CHECKED"
+    },
+    {
+      "id": "ev:scheirer2013:concept:open-space-risk",
+      "evidence_type": "METHOD",
+      "work_id": "work:scheirer:2013:osr",
+      "work_version_id": "work-version:scheirer:2013:osr:pdf",
+      "source_artifact_id": "source-artifact:sha256:b121b72c904d6f70d08e2cfba2ffcca77f9fb05654311781691d07f119c0eed9",
+      "source_locator_id": "loc:scheirer:risk",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "normalized_form": "Open-set recognition can explicitly balance empirical risk on known training data against open-space risk.",
+      "extraction_run_id": "extract:scheirer:pdf:v1",
+      "extractor_identity": "research-engine-promotion",
+      "verification_state": "MACHINE_CHECKED"
+    },
+    {
+      "id": "ev:liu2020:claim:softmax-overconfidence",
+      "evidence_type": "CLAIM",
+      "work_id": "work:liu:2020:energy-ood",
+      "work_version_id": "work-version:liu:2020:energy-ood:pdf",
+      "source_artifact_id": "source-artifact:sha256:202c4d502f682bd31c5979be6fe930e505553a47a0acf39a15d24bff3e9bc4f7",
+      "source_locator_id": "loc:liu:page1",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "normalized_form": "Softmax confidence can be overconfident on out-of-distribution inputs.",
+      "extraction_run_id": "extract:liu:pdf:v1",
+      "extractor_identity": "research-engine-promotion",
+      "verification_state": "MACHINE_CHECKED"
+    },
+    {
+      "id": "ev:liu2020:method:energy",
+      "evidence_type": "METHOD",
+      "work_id": "work:liu:2020:energy-ood",
+      "work_version_id": "work-version:liu:2020:energy-ood:pdf",
+      "source_artifact_id": "source-artifact:sha256:202c4d502f682bd31c5979be6fe930e505553a47a0acf39a15d24bff3e9bc4f7",
+      "source_locator_id": "loc:liu:page1",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "normalized_form": "Energy-based OOD detection derives a scalar score from classifier logits to separate in- and out-of-distribution inputs.",
+      "extraction_run_id": "extract:liu:pdf:v1",
+      "extractor_identity": "research-engine-promotion",
+      "verification_state": "MACHINE_CHECKED"
+    },
+    {
+      "id": "ev:liu2020:result:fpr95",
+      "evidence_type": "RESULT",
+      "work_id": "work:liu:2020:energy-ood",
+      "work_version_id": "work-version:liu:2020:energy-ood:pdf",
+      "source_artifact_id": "source-artifact:sha256:202c4d502f682bd31c5979be6fe930e505553a47a0acf39a15d24bff3e9bc4f7",
+      "source_locator_id": "loc:liu:page1",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "normalized_form": "Energy scoring reduces average FPR at 95% TPR by 18.03 percentage points relative to softmax confidence in the reported CIFAR-10/WideResNet setting.",
+      "extraction_run_id": "extract:liu:pdf:v1",
+      "extractor_identity": "research-engine-promotion",
+      "verification_state": "MACHINE_CHECKED"
+    },
+    {
+      "id": "ev:liu2020:claim:discriminative-no-density-estimator",
+      "evidence_type": "CLAIM",
+      "work_id": "work:liu:2020:energy-ood",
+      "work_version_id": "work-version:liu:2020:energy-ood:pdf",
+      "source_artifact_id": "source-artifact:sha256:202c4d502f682bd31c5979be6fe930e505553a47a0acf39a15d24bff3e9bc4f7",
+      "source_locator_id": "loc:liu:page2",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "normalized_form": "Energy scoring can be used with a discriminative classifier without explicit density estimation.",
+      "extraction_run_id": "extract:liu:pdf:v1",
+      "extractor_identity": "research-engine-promotion",
+      "verification_state": "MACHINE_CHECKED"
+    },
+    {
+      "id": "ev:baye2024:method:varmax",
+      "evidence_type": "METHOD",
+      "work_id": "work:baye:2024:varmax",
+      "work_version_id": "work-version:baye:2024:varmax:pdf",
+      "source_artifact_id": "source-artifact:sha256:68d0e07fba96977ce202715d1d36493f4c05933c57df6a32e5c58430855c0714",
+      "source_locator_id": "loc:baye:method",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "normalized_form": "varMax combines a top-two softmax-difference gate, logit-variance confidence for ambiguous samples, and energy-based OOD evidence.",
+      "extraction_run_id": "extract:baye:pdf:v1",
+      "extractor_identity": "research-engine-promotion",
+      "verification_state": "MACHINE_CHECKED"
+    },
+    {
+      "id": "ev:baye2024:claim:variance-known-unknown",
+      "evidence_type": "CLAIM",
+      "work_id": "work:baye:2024:varmax",
+      "work_version_id": "work-version:baye:2024:varmax:pdf",
+      "source_artifact_id": "source-artifact:sha256:68d0e07fba96977ce202715d1d36493f4c05933c57df6a32e5c58430855c0714",
+      "source_locator_id": "loc:baye:page2",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "normalized_form": "Higher final-logit variance is treated as evidence of known-class membership and lower variance as evidence of novelty.",
+      "extraction_run_id": "extract:baye:pdf:v1",
+      "extractor_identity": "research-engine-promotion",
+      "verification_state": "MACHINE_CHECKED"
+    },
+    {
+      "id": "ev:baye2024:claim:energy-validation",
+      "evidence_type": "CLAIM",
+      "work_id": "work:baye:2024:varmax",
+      "work_version_id": "work-version:baye:2024:varmax:pdf",
+      "source_artifact_id": "source-artifact:sha256:68d0e07fba96977ce202715d1d36493f4c05933c57df6a32e5c58430855c0714",
+      "source_locator_id": "loc:baye:page2",
+      "source_level": "FULLTEXT_PDF_LAYOUT",
+      "normalized_form": "The varMax pipeline uses energy-based OOD evidence to validate ambiguous or unknown classification confidence.",
+      "extraction_run_id": "extract:baye:pdf:v1",
+      "extractor_identity": "research-engine-promotion",
+      "verification_state": "MACHINE_CHECKED"
+    },
+    {
+      "id": "ev:broggi2025:method:varmax",
+      "evidence_type": "METHOD",
+      "work_id": "work:broggi:2025:varmax",
+      "work_version_id": "work-version:broggi:2025:varmax:ocr",
+      "source_artifact_id": null,
+      "source_locator_id": null,
+      "source_level": "OCR_DERIVED",
+      "normalized_form": "The later varMax formulation first uses top-two softmax separation for ambiguity, then logit variance to discriminate known from unknown inputs.",
+      "extraction_run_id": "extract:broggi:ocr:v1",
+      "extractor_identity": "mathpix-padaset",
+      "verification_state": "MACHINE_CHECKED",
+      "attributes": {
+        "ocr_git_blob": "95f146b0c3ab0c5244a568f4ac2529591a04a191",
+        "line_start": 36,
+        "line_end": 38
+      }
+    },
+    {
+      "id": "ev:broggi2025:claim:balanced-known-unknown",
+      "evidence_type": "CLAIM",
+      "work_id": "work:broggi:2025:varmax",
+      "work_version_id": "work-version:broggi:2025:varmax:ocr",
+      "source_artifact_id": null,
+      "source_locator_id": null,
+      "source_level": "OCR_DERIVED",
+      "normalized_form": "Balanced OSR should avoid both missed unknowns and excessive rejection of known inputs.",
+      "extraction_run_id": "extract:broggi:ocr:v1",
+      "extractor_identity": "mathpix-padaset",
+      "verification_state": "MACHINE_CHECKED",
+      "attributes": {
+        "ocr_git_blob": "95f146b0c3ab0c5244a568f4ac2529591a04a191",
+        "line_start": 32,
+        "line_end": 34
+      }
+    },
+    {
+      "id": "ev:broggi2025:relation:energy-comparison",
+      "evidence_type": "CLAIM",
+      "work_id": "work:broggi:2025:varmax",
+      "work_version_id": "work-version:broggi:2025:varmax:ocr",
+      "source_artifact_id": null,
+      "source_locator_id": null,
+      "source_level": "OCR_DERIVED",
+      "normalized_form": "The 2025 varMax work explicitly compares against Liu et al.'s energy-based OOD function.",
+      "extraction_run_id": "extract:broggi:ocr:v1",
+      "extractor_identity": "mathpix-padaset",
+      "verification_state": "MACHINE_CHECKED",
+      "attributes": {
+        "ocr_git_blob": "95f146b0c3ab0c5244a568f4ac2529591a04a191",
+        "line_start": 76,
+        "line_end": 78
+      }
+    }
+  ],
+  "evidence_relations": [
+    {
+      "id": "rel:2108:experiment-uses-ellipsoid",
+      "source_id": "ev:2108:experiment:ellipsoid",
+      "target_id": "ev:2108:method:ellipsoid",
+      "relation_type": "USES",
+      "context_compatibility": "COMPATIBLE_WITHIN_PAPER",
+      "verification_state": "MACHINE_CHECKED",
+      "rationale": "The experiment evaluates the ellipsoidal method."
+    },
+    {
+      "id": "rel:2108:result-derived-experiment",
+      "source_id": "ev:2108:result:ellipsoid",
+      "target_id": "ev:2108:experiment:ellipsoid",
+      "relation_type": "DERIVED_FROM",
+      "context_compatibility": "COMPATIBLE_WITHIN_PAPER",
+      "verification_state": "MACHINE_CHECKED",
+      "rationale": "The reported accuracy gain is an outcome of the ellipsoidal experiment."
+    },
+    {
+      "id": "rel:2108:ellipsoid-limit",
+      "source_id": "ev:2108:limitation:ellipsoid",
+      "target_id": "ev:2108:method:ellipsoid",
+      "relation_type": "QUALIFIES",
+      "context_compatibility": "COMPATIBLE_WITHIN_PAPER",
+      "verification_state": "MACHINE_CHECKED",
+      "rationale": "Delta tuning qualifies the ellipsoidal method."
+    },
+    {
+      "id": "rel:2108:ellipsoid-support",
+      "source_id": "ev:2108:result:ellipsoid",
+      "target_id": "ev:2108:claim:conclusion",
+      "relation_type": "SUPPORTS",
+      "context_compatibility": "COMPATIBLE_WITHIN_PAPER",
+      "verification_state": "MACHINE_CHECKED",
+      "rationale": "Ellipsoidal gains support the conclusion."
+    },
+    {
+      "id": "rel:2108:optimization-limit",
+      "source_id": "ev:2108:limitation:optimization",
+      "target_id": "ev:2108:method:optimization",
+      "relation_type": "QUALIFIES",
+      "context_compatibility": "COMPATIBLE_WITHIN_PAPER",
+      "verification_state": "MACHINE_CHECKED",
+      "rationale": "The 30x generation-time cost qualifies the optimization method."
+    },
+    {
+      "id": "rel:2108:optimization-support",
+      "source_id": "ev:2108:result:optimization",
+      "target_id": "ev:2108:claim:conclusion",
+      "relation_type": "SUPPORTS",
+      "context_compatibility": "COMPATIBLE_WITHIN_PAPER",
+      "verification_state": "MACHINE_CHECKED",
+      "rationale": "Optimization results support the conclusion."
+    },
+    {
+      "id": "rel:scheirer-liu",
+      "source_id": "ev:scheirer2013:claim:rejection",
+      "target_id": "ev:liu2020:method:energy",
+      "relation_type": "MOTIVATES",
+      "context_compatibility": "CROSS_DOMAIN_CONCEPTUAL",
+      "verification_state": "MODEL_INFERRED",
+      "rationale": "The rejection requirement motivates later OOD scoring methods; this is a taxonomy inference."
+    },
+    {
+      "id": "rel:baye-liu",
+      "source_id": "ev:baye2024:claim:energy-validation",
+      "target_id": "ev:liu2020:method:energy",
+      "relation_type": "USES",
+      "context_compatibility": "CROSS_WORK_METHOD_LINEAGE",
+      "verification_state": "SOURCE_SUPPORTED",
+      "rationale": "Baye explicitly uses energy-based OOD evidence attributed to Liu."
+    },
+    {
+      "id": "rel:broggi-liu",
+      "source_id": "ev:broggi2025:relation:energy-comparison",
+      "target_id": "ev:liu2020:method:energy",
+      "relation_type": "COMPARES_AGAINST",
+      "context_compatibility": "CROSS_WORK_METHOD_LINEAGE",
+      "verification_state": "OCR_SOURCE_SUPPORTED",
+      "rationale": "Broggi explicitly compares against Liu energy OOD."
+    },
+    {
+      "id": "rel:broggi-baye",
+      "source_id": "ev:broggi2025:method:varmax",
+      "target_id": "ev:baye2024:method:varmax",
+      "relation_type": "SAME_METHOD_LINEAGE",
+      "context_compatibility": "CROSS_WORK_METHOD_LINEAGE",
+      "verification_state": "MODEL_INFERRED_HIGH_CONFIDENCE",
+      "rationale": "The two works describe the named varMax method with overlapping authorship and method components."
+    },
+    {
+      "id": "rel:2108-liu-alternative",
+      "source_id": "ev:2108:method:ellipsoid",
+      "target_id": "ev:liu2020:method:energy",
+      "relation_type": "ALTERNATIVE_OPEN_WORLD_STRATEGY",
+      "context_compatibility": "CROSS_DOMAIN_TAXONOMY",
+      "verification_state": "MODEL_INFERRED",
+      "rationale": "Synthetic outlier augmentation and post-hoc energy scoring are distinct open-world strategy families."
+    }
+  ]
+}
