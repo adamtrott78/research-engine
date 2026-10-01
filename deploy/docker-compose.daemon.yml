@@ -1,0 +1,51 @@
+services:
+  daemon:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      RESEARCH_ENGINE_DATABASE_URL: postgresql://research_engine:research_engine@db:5432/research_engine
+      RESEARCH_ENGINE_ARTIFACT_ROOT: /var/lib/research-engine/artifacts
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      RESEARCH_ENGINE_DETERMINISTIC_WORKERS: ${RESEARCH_ENGINE_DETERMINISTIC_WORKERS:-2}
+      RESEARCH_ENGINE_CHEAP_WORKERS: ${RESEARCH_ENGINE_CHEAP_WORKERS:-4}
+      RESEARCH_ENGINE_STANDARD_WORKERS: ${RESEARCH_ENGINE_STANDARD_WORKERS:-2}
+      RESEARCH_ENGINE_STRONG_WORKERS: ${RESEARCH_ENGINE_STRONG_WORKERS:-1}
+      RESEARCH_ENGINE_OPENAI_CHEAP_MODEL: ${RESEARCH_ENGINE_OPENAI_CHEAP_MODEL:-gpt-5.6-luna}
+      RESEARCH_ENGINE_OPENAI_CHEAP_EFFORT: ${RESEARCH_ENGINE_OPENAI_CHEAP_EFFORT:-low}
+      RESEARCH_ENGINE_OPENAI_STANDARD_MODEL: ${RESEARCH_ENGINE_OPENAI_STANDARD_MODEL:-gpt-5.6-terra}
+      RESEARCH_ENGINE_OPENAI_STANDARD_EFFORT: ${RESEARCH_ENGINE_OPENAI_STANDARD_EFFORT:-medium}
+      RESEARCH_ENGINE_OPENAI_STRONG_MODEL: ${RESEARCH_ENGINE_OPENAI_STRONG_MODEL:-gpt-5.6-sol}
+      RESEARCH_ENGINE_OPENAI_STRONG_EFFORT: ${RESEARCH_ENGINE_OPENAI_STRONG_EFFORT:-high}
+    volumes:
+      - research_engine_artifacts:/var/lib/research-engine/artifacts
+    command:
+      - daemon
+      - --poll-seconds
+      - "${RESEARCH_ENGINE_POLL_SECONDS:-2}"
+      - --lease-seconds
+      - "${RESEARCH_ENGINE_LEASE_SECONDS:-300}"
+      - --max-active-runs
+      - "${RESEARCH_ENGINE_MAX_ACTIVE_RUNS:-4}"
+      - --max-pending-human
+      - "${RESEARCH_ENGINE_MAX_PENDING_HUMAN:-8}"
+      - --stale-worker-seconds
+      - "${RESEARCH_ENGINE_STALE_WORKER_SECONDS:-900}"
+    healthcheck:
+      test:
+        - CMD
+        - research-engine
+        - overnight-report
+        - --hours
+        - "0.1"
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  research_engine_artifacts:

@@ -46,3 +46,11 @@ jobs:
 
       - name: Test
         run: python -m pytest -q
+
+      - name: Validate daemon Compose configuration
+        env:
+          OPENAI_API_KEY: ci-placeholder-only
+        run: docker compose -f docker-compose.yml -f deploy/docker-compose.daemon.yml config >/dev/null
+
+      - name: Build daemon image
+        run: docker build -t research-engine:ci .
