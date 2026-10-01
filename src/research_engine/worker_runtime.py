@@ -26,12 +26,26 @@ def semantic_worker_from_env(
     lease_seconds: int = 300,
 ) -> AgentWorker:
     dsn = os.environ["RESEARCH_ENGINE_DATABASE_URL"]
+    artifact_root = os.environ["RESEARCH_ENGINE_ARTIFACT_ROOT"]
     store = PostgresStore(dsn)
     queue = OrchestratorStore(store)
     planner = ResearchPlanner(queue)
     selected = tuple(tiers)
+
+    from .semantic_pipeline import (
+        AuthoritativeSemanticExecutor,
+        ResearchContextHydrator,
+        SemanticResultMaterializer,
+    )
+
+    hydrator = ResearchContextHydrator(store=store, artifact_root=artifact_root)
+    materializer = SemanticResultMaterializer(store=store)
     executors = {
-        tier: OpenAIResponsesExecutor(tier=tier)
+        tier: AuthoritativeSemanticExecutor(
+            delegate=OpenAIResponsesExecutor(tier=tier),
+            hydrator=hydrator,
+            materializer=materializer,
+        )
         for tier in selected
         if tier in {ExecutorTier.CHEAP, ExecutorTier.STANDARD, ExecutorTier.STRONG}
     }

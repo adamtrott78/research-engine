@@ -331,6 +331,18 @@ CREATE TABLE IF NOT EXISTS research_job_attempts (
 CREATE INDEX IF NOT EXISTS research_job_attempts_job_idx
     ON research_job_attempts(job_id, attempt_no);
 
+CREATE TABLE IF NOT EXISTS semantic_materializations (
+    job_id TEXT PRIMARY KEY REFERENCES research_jobs(id) ON DELETE CASCADE,
+    job_type TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('PENDING','COMPLETED')),
+    semantic_result JSONB NOT NULL,
+    materialized_result JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS semantic_materializations_status_idx
+    ON semantic_materializations(status, updated_at);
+
 CREATE TABLE IF NOT EXISTS human_review_requests (
     id TEXT PRIMARY KEY,
     run_id TEXT NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
