@@ -1,0 +1,19 @@
+[Unit]
+Description=Research Engine 24/7 Agentic Daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/adamArchives/Adam/research-engine
+EnvironmentFile=%h/adamArchives/Adam/.research-engine/research-engine.env
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/env research-engine daemon
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+KillSignal=SIGTERM
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target
