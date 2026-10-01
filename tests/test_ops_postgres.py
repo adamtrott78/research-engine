@@ -168,7 +168,7 @@ def test_ops_snapshot_attributes_usage_and_forecasts_allowance():
                 VALUES (
                   'evidence:ops','CLAIM','work:ops','work-version:ops','artifact:ops',
                   'FULLTEXT_PDF_TEXT','ops evidence','MACHINE_CHECKED',
-                  jsonb_build_object('semantic_job_id', %s)
+                  jsonb_build_object('semantic_job_id', %s::text)
                 )
                 """,
                 (extract_job_id,),
