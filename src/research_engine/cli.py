@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 from .artifact_store import ContentAddressedArtifactStore
@@ -62,9 +63,21 @@ def main() -> None:
     daemon.add_argument("--poll-seconds", type=float, default=2.0)
     daemon.add_argument("--lease-seconds", type=int, default=300)
     daemon.add_argument("--max-ticks", type=int)
-    daemon.add_argument("--max-active-runs", type=int, default=4)
-    daemon.add_argument("--max-pending-human", type=int, default=8)
-    daemon.add_argument("--stale-worker-seconds", type=int, default=900)
+    daemon.add_argument(
+        "--max-active-runs",
+        type=int,
+        default=int(os.getenv("RESEARCH_ENGINE_MAX_ACTIVE_RUNS", "4")),
+    )
+    daemon.add_argument(
+        "--max-pending-human",
+        type=int,
+        default=int(os.getenv("RESEARCH_ENGINE_MAX_PENDING_HUMAN", "8")),
+    )
+    daemon.add_argument(
+        "--stale-worker-seconds",
+        type=int,
+        default=int(os.getenv("RESEARCH_ENGINE_STALE_WORKER_SECONDS", "900")),
+    )
     daemon.add_argument("--submit-topic")
     daemon.add_argument("--run-id")
     daemon.add_argument(
@@ -72,10 +85,41 @@ def main() -> None:
         help="JSON object persisted as research_runs.policy for a submitted run",
     )
 
+    submit = sub.add_parser("submit-run")
+    submit.add_argument("topic")
+    submit.add_argument("--run-id")
+    submit.add_argument(
+        "--policy-json",
+        help="JSON object persisted as research_runs.policy",
+    )
+    submit.add_argument(
+        "--discovery-json",
+        help="JSON object used as the initial DISCOVERY job payload",
+    )
+
     report = sub.add_parser("overnight-report")
     report.add_argument("--hours", type=float, default=12.0)
-    report.add_argument("--max-active-runs", type=int, default=4)
-    report.add_argument("--max-pending-human", type=int, default=8)
+    report.add_argument(
+        "--max-active-runs",
+        type=int,
+        default=int(os.getenv("RESEARCH_ENGINE_MAX_ACTIVE_RUNS", "4")),
+    )
+    report.add_argument(
+        "--max-pending-human",
+        type=int,
+        default=int(os.getenv("RESEARCH_ENGINE_MAX_PENDING_HUMAN", "8")),
+    )
+
+    review = sub.add_parser("human-review-resolve")
+    review.add_argument("request_id")
+    decision_group = review.add_mutually_exclusive_group(required=True)
+    decision_group.add_argument("--approve", action="store_true")
+    decision_group.add_argument("--reject", action="store_true")
+    review.add_argument(
+        "--decision-json",
+        required=True,
+        help="JSON object persisted as the durable human review decision",
+    )
 
     budget_status = sub.add_parser("budget-status")
     budget_status.add_argument("run_id")
@@ -181,6 +225,36 @@ def main() -> None:
         result = service.run_forever(max_ticks=args.max_ticks)
         result["submitted_run_id"] = submitted
         print(json.dumps(result, default=str))
+    elif args.cmd == "submit-run":
+        from .daemon import daemon_from_env
+
+        service = daemon_from_env(with_workers=False)
+        policy = json.loads(args.policy_json) if args.policy_json else None
+        discovery = (
+            json.loads(args.discovery_json)
+            if args.discovery_json
+            else None
+        )
+        if policy is not None and not isinstance(policy, dict):
+            raise ValueError("--policy-json must be a JSON object")
+        if discovery is not None and not isinstance(discovery, dict):
+            raise ValueError("--discovery-json must be a JSON object")
+        run_id = service.submit_run(
+            topic=args.topic,
+            run_id=args.run_id,
+            policy=policy,
+            discovery_payload=discovery,
+        )
+        print(
+            json.dumps(
+                {
+                    "run_id": run_id,
+                    "status": service.queue.run_state(run_id)["status"],
+                    "admission": service.admission_status(),
+                },
+                default=str,
+            )
+        )
     elif args.cmd == "overnight-report":
         from .daemon import DaemonLimits, daemon_from_env
 
@@ -192,6 +266,30 @@ def main() -> None:
             ),
         )
         print(json.dumps(service.overnight_report(hours=args.hours), default=str))
+    elif args.cmd == "human-review-resolve":
+        from .orchestration import OrchestratorStore
+        from .postgres import PostgresStore
+
+        store = PostgresStore(os.environ["RESEARCH_ENGINE_DATABASE_URL"])
+        queue = OrchestratorStore(store)
+        decision = json.loads(args.decision_json)
+        if not isinstance(decision, dict):
+            raise ValueError("--decision-json must be a JSON object")
+        queue.resolve_human_review(
+            args.request_id,
+            approved=bool(args.approve),
+            decision=decision,
+        )
+        print(
+            json.dumps(
+                {
+                    "request_id": args.request_id,
+                    "status": "APPROVED" if args.approve else "REJECTED",
+                    "decision": decision,
+                },
+                default=str,
+            )
+        )
     elif args.cmd == "budget-status":
         from .daemon import daemon_from_env
 

@@ -75,6 +75,30 @@ journalctl --user -u research-engine-daemon.service -n 100 --no-pager
 "$HOME/adamArchives/Adam/.research-engine/venv/bin/research-engine" overnight-report --hours 12
 ```
 
+Submit work to the already-running daemon with `submit-run`; do not start a
+second daemon just to enqueue a research run:
+
+```bash
+research-engine submit-run "open-set RF research topic" \
+  --run-id "rf-expansion-v1" \
+  --policy-json '{"fanout":{"max_gap_candidates":2,"max_novelty_queries_per_gap":2}}' \
+  --discovery-json '{"candidate_limit":20,"source_scope":"primary open-access arXiv papers"}'
+```
+
+Resolve a durable human gate explicitly:
+
+```bash
+research-engine human-review-resolve human-review:rf-expansion-v1 \
+  --approve \
+  --decision-json '{"reviewer":"human","decision":"approved after provenance audit"}'
+```
+
+Discovery output is deterministically capped when `candidate_limit` is supplied.
+SCREEN may select only IDs that came from the bounded DISCOVERY result; the
+original discovery metadata remains authoritative. Until more deterministic
+acquisition adapters are installed, retained non-arXiv sources are recorded as
+cancelled acquisition jobs rather than failing the research run.
+
 ## Explicit API-development profile only
 
 `deploy/docker-compose.daemon.yml` is retained solely for explicit
@@ -90,6 +114,17 @@ constraint.
 ChatGPT-authenticated Codex consumes the plan's Codex/Work allowance. Production
 must pace or pause when that allowance is unavailable; it must never switch to a
 paid API key automatically.
+
+When Codex reports a plan/usage limit, the semantic provider enters a durable
+PostgreSQL-backed backoff window. The affected job is requeued without consuming
+its scientific retry budget, semantic workers keep heartbeating while they wait,
+and deterministic work may continue. If Codex provides a retry/reset duration,
+the daemon uses it; otherwise
+`RESEARCH_ENGINE_CODEX_PLAN_LIMIT_RETRY_SECONDS` supplies the fallback.
+
+Budget caps are enforced at lease admission. Per-tier saturation blocks only
+that tier while other eligible tiers can continue; a run enters
+`PAUSED_BUDGET` only when saturation leaves no eligible non-human work.
 
 ## Secrets
 

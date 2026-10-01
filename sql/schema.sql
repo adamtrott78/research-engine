@@ -288,6 +288,16 @@ CREATE TABLE IF NOT EXISTS research_workers (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS research_provider_backoffs (
+    provider TEXT PRIMARY KEY,
+    blocked_until TIMESTAMPTZ NOT NULL,
+    reason TEXT NOT NULL,
+    detail JSONB NOT NULL DEFAULT '{}'::jsonb,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS research_provider_backoffs_until_idx
+    ON research_provider_backoffs(blocked_until);
+
 CREATE TABLE IF NOT EXISTS research_jobs (
     id TEXT PRIMARY KEY,
     run_id TEXT NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,

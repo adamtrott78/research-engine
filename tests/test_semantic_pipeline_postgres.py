@@ -135,7 +135,7 @@ class ContextAwareSemantic:
                 "status": "NEEDS_HUMAN_REVIEW",
                 "reasoning": "The automated search is insufficient to establish novelty.",
                 "surviving_statement": job.payload["gap"]["statement"],
-                "search_count": len(job.payload["search_results"]),
+                "search_count": 999,
                 "_execution": {"provider": "scripted", "model": "test-strong"},
             }
         raise AssertionError(jt)
@@ -280,6 +280,12 @@ def test_authoritative_semantic_cycle_materializes_scientific_state_and_replays(
             f"jobs={diagnostic_jobs!r}"
         )
     assert controller_result.human_review["status"] == "PENDING"
+    assert (
+        controller_result.human_review["payload"]["gap_decisions"][0]["decision"][
+            "search_count"
+        ]
+        == 1
+    )
     assert controller_result.jobs_processed > 0
     state = queue.run_state(run_id)
     assert state["status"] == "WAITING_HUMAN"

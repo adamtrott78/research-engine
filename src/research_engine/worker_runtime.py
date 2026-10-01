@@ -61,6 +61,7 @@ def semantic_worker_from_env(
         for tier in selected
         if tier in {ExecutorTier.CHEAP, ExecutorTier.STANDARD, ExecutorTier.STRONG}
     }
+    backend = os.getenv("RESEARCH_ENGINE_SEMANTIC_BACKEND", "codex").strip().lower()
     return AgentWorker(
         worker_id=worker_id or f"semantic:{socket.gethostname()}:{os.getpid()}",
         queue=queue,
@@ -68,6 +69,9 @@ def semantic_worker_from_env(
         supported_tiers=selected,
         executors=executors,
         lease_seconds=lease_seconds,
+        backoff_provider=(
+            "codex-chatgpt-plan" if backend == "codex" else None
+        ),
     )
 
 
