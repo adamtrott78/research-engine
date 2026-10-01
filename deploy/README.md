@@ -155,13 +155,12 @@ Record a ChatGPT/Codex plan reading from the product UI:
 ```bash
 research-engine allowance-observe \
   --window 5h \
-  --used-percent 16 \
-  --approximate \
-  --note "acceptance/launch calibration seed"
+  --left-percent 86 \
+  --resets-in "3h 20m" \
+  --note "live usage UI observation"
 ```
 
-Record weekly usage the same way with `--window weekly`. Add
-`--resets-at 2026-10-01T20:00:00-04:00` when the reset time is known.
+Record weekly usage exactly as the UI presents it, for example `--window weekly --left-percent 96 --resets-in "5d 8h"`. `--used-percent` and absolute `--resets-at` remain available for programmatic callers.
 
 Inspect a machine-readable snapshot:
 
