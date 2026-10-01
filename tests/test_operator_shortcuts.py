@@ -48,6 +48,11 @@ def test_verify_calibration_runner_never_starts_daemon():
     root = Path(__file__).parents[1]
     text = (root / "deploy" / "run-verify-calibration.sh").read_text()
     assert "calibrate-verify" in text
+    assert "--selector lowest" in text
+    assert "--selector highest" in text
+    assert "audit-extract-provenance" in text
+    assert "pre low/high VERIFY replay batch" in text
+    assert "post low/high VERIFY replay batch" in text
     assert "DAEMON_MUST_REMAIN_STOPPED_FOR_VERIFY_CALIBRATION" in text
     assert "systemctl --user start" not in text
     assert " START" not in text

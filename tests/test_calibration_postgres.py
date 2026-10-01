@@ -148,6 +148,46 @@ def test_verify_replay_calibration_is_operational_only(tmp_path: Path):
                 """,
                 (run_id, job_id),
             )
+            for extra_id, tokens in (
+                ("job:verify-low", 10000),
+                ("job:verify-high", 50000),
+            ):
+                cur.execute(
+                    """
+                    INSERT INTO research_jobs(
+                      id,run_id,job_type,executor_tier,status,priority,
+                      idempotency_key,payload,result,depends_on,
+                      attempt_count,max_attempts
+                    )
+                    VALUES (
+                      %s,%s,'VERIFY','STANDARD','COMPLETED',0,
+                      %s,%s,%s,'{}',1,3
+                    )
+                    """,
+                    (
+                        extra_id,
+                        run_id,
+                        extra_id,
+                        Jsonb({"item": {"id": "paper:1"}}),
+                        Jsonb(source_result),
+                    ),
+                )
+                cur.execute(
+                    """
+                    INSERT INTO research_usage_events(
+                      run_id,job_id,job_type,executor_tier,
+                      provider,model,reasoning_effort,
+                      input_tokens,cached_input_tokens,
+                      output_tokens,reasoning_output_tokens
+                    )
+                    VALUES (
+                      %s,%s,'VERIFY','STANDARD',
+                      'codex-chatgpt-plan','gpt-5.6-terra','medium',
+                      %s,0,100,10
+                    )
+                    """,
+                    (run_id, extra_id, tokens),
+                )
             cur.execute(
                 """
                 SELECT result,status,payload
@@ -172,9 +212,23 @@ def test_verify_replay_calibration_is_operational_only(tmp_path: Path):
     )
     service.hydrator = FakeHydrator()
 
+    assert service.select_source_job(
+        run_id=run_id,
+        selector="lowest",
+    ).id == "job:verify-low"
+    assert service.select_source_job(
+        run_id=run_id,
+        selector="median",
+    ).id == job_id
+    assert service.select_source_job(
+        run_id=run_id,
+        selector="highest",
+    ).id == "job:verify-high"
+
     result = service.run(run_id=run_id)
 
     assert result["source_job_id"] == job_id
+    assert result["selector"] == "median"
     assert result["context_page_count"] == 1
     assert result["context_page_numbers"] == [3]
     assert result["evidence_count"] == 1

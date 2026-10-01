@@ -157,6 +157,14 @@ def main() -> None:
     calibrate_verify = sub.add_parser("calibrate-verify")
     calibrate_verify.add_argument("run_id")
     calibrate_verify.add_argument("--source-job-id")
+    calibrate_verify.add_argument(
+        "--selector",
+        choices=["lowest", "median", "highest"],
+        default="median",
+    )
+
+    extract_audit = sub.add_parser("audit-extract-provenance")
+    extract_audit.add_argument("run_id")
 
     budget_status = sub.add_parser("budget-status")
     budget_status.add_argument("run_id")
@@ -356,7 +364,11 @@ def main() -> None:
             color=not args.no_color,
         )
     elif args.cmd == "allowance-observe":
-        from .ops import parse_relative_duration, service_from_env
+        from .ops import (
+            parse_relative_duration,
+            relative_duration_precision_seconds,
+            service_from_env,
+        )
 
         observed_at = datetime.now(timezone.utc)
         if args.left_percent is not None:
@@ -366,7 +378,9 @@ def main() -> None:
         if not 0 <= percent_used <= 100:
             raise ValueError("allowance percentage must resolve to [0,100] used")
 
+        percent_quantum = 1.0 if args.left_percent is not None else None
         reset_at = None
+        reset_precision_seconds = None
         if args.resets_at:
             reset_at = datetime.fromisoformat(
                 args.resets_at.replace("Z", "+00:00")
@@ -375,13 +389,22 @@ def main() -> None:
                 raise ValueError("--resets-at must include a timezone")
         elif args.resets_in:
             reset_at = observed_at + parse_relative_duration(args.resets_in)
+            reset_precision_seconds = relative_duration_precision_seconds(
+                args.resets_in
+            )
 
         observation = service_from_env().observe_allowance(
             window=args.window,
             percent_used=percent_used,
             reset_at=reset_at,
             note=args.note,
-            approximate=args.approximate,
+            approximate=(
+                args.approximate
+                or percent_quantum is not None
+                or reset_precision_seconds is not None
+            ),
+            percent_quantum=percent_quantum,
+            reset_precision_seconds=reset_precision_seconds,
             observed_at=observed_at,
         )
         print(json.dumps(observation, default=str))
@@ -391,7 +414,13 @@ def main() -> None:
         result = calibration_from_env().run(
             run_id=args.run_id,
             source_job_id=args.source_job_id,
+            selector=args.selector,
         )
+        print(json.dumps(result, default=str))
+    elif args.cmd == "audit-extract-provenance":
+        from .calibration import extraction_audit_from_env
+
+        result = extraction_audit_from_env().run(run_id=args.run_id)
         print(json.dumps(result, default=str))
     elif args.cmd == "budget-status":
         from .daemon import daemon_from_env

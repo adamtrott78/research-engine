@@ -407,10 +407,19 @@ CREATE TABLE IF NOT EXISTS research_allowance_observations (
     reset_at TIMESTAMPTZ,
     source TEXT NOT NULL DEFAULT 'MANUAL_UI',
     approximate BOOLEAN NOT NULL DEFAULT FALSE,
+    percent_quantum NUMERIC(5,2) CHECK (percent_quantum IS NULL OR percent_quantum > 0),
+    reset_precision_seconds INTEGER CHECK (
+        reset_precision_seconds IS NULL OR reset_precision_seconds > 0
+    ),
     note TEXT,
     usage_event_highwater BIGINT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE research_allowance_observations
+    ADD COLUMN IF NOT EXISTS percent_quantum NUMERIC(5,2)
+        CHECK (percent_quantum IS NULL OR percent_quantum > 0),
+    ADD COLUMN IF NOT EXISTS reset_precision_seconds INTEGER
+        CHECK (reset_precision_seconds IS NULL OR reset_precision_seconds > 0);
 CREATE INDEX IF NOT EXISTS research_allowance_observations_window_idx
     ON research_allowance_observations(window_type, observed_at);
 

@@ -209,26 +209,42 @@ bash deploy/run-verify-calibration.sh
 The runner:
 
 - requires `research-engine-daemon.service` to remain `inactive/dead`;
-- records fresh pre/post 5-hour and weekly allowance UI observations;
-- selects the median historical VERIFY job by recorded input tokens unless a
-  source job is specified directly through the CLI;
-- rehydrates that exact job using the current VERIFY page-window policy;
-- performs exactly one STANDARD/Terra semantic replay;
+- runs a deterministic zero-model-call EXTRACT provenance audit before any
+  semantic replay;
+- records exactly one fresh pre-batch and one post-batch 5-hour/weekly usage-UI
+  reading pair;
+- records whole-percent LEFT readings as quantized/censored observations and
+  records the displayed reset-duration precision;
+- selects the lowest-cost and highest-cost historical VERIFY jobs by recorded
+  input tokens, complementing the already-completed median sample;
+- rehydrates each exact job using the current VERIFY page-window policy;
+- performs exactly two STANDARD/Terra semantic replays;
 - bypasses the semantic materializer, so no evidence object, verification event,
   checkpoint, gap, or human-review state is changed;
-- persists the A/B measurement in `research_calibration_events`;
-- exposes the result in the HUD CALIBRATION panel.
+- persists each A/B measurement in `research_calibration_events`;
+- exposes the results in the HUD CALIBRATION panel.
 
-Direct use is also available:
+Direct use remains available:
 
 ```bash
-research-engine calibrate-verify rf-open-world-corpus-expansion-v1
+research-engine calibrate-verify rf-open-world-corpus-expansion-v1 --selector lowest
+research-engine calibrate-verify rf-open-world-corpus-expansion-v1 --selector median
+research-engine calibrate-verify rf-open-world-corpus-expansion-v1 --selector highest
+research-engine audit-extract-provenance rf-open-world-corpus-expansion-v1
 ```
+
+The extraction audit invokes no semantic executor. It reports total PDF pages,
+extraction-context pages/chars, evidence-bearing pages, evidence density, and
+contiguous evidence-page clusters for each completed EXTRACT job.
 
 A context optimization is not considered quality-safe merely because it saves
 tokens. Compare both `verified_equal` and `accepted_evidence_ids_equal`.
-If either differs, keep sustained research stopped and increase
-`RESEARCH_ENGINE_VERIFY_PAGE_RADIUS` before another calibration.
+If either differs, keep sustained research stopped and rerun only that source at
+radius 1 before changing the global page-window policy.
+
+Allowance reset timestamps derived from relative UI text are grouped with a
+precision-aware tolerance. Raw observations remain durable, and a whole-percent
+bucket transition is not treated as an exact percentage cost.
 
 ## Allowance behavior
 

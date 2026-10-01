@@ -48,6 +48,64 @@ WINDOW_ALIASES = {
     "WEEKLY": "WEEKLY",
 }
 
+_RESET_WINDOW_FALLBACK_TOLERANCE_SECONDS = {
+    "FIVE_HOUR": 5 * 60,
+    "WEEKLY": 2 * 60 * 60,
+}
+
+
+def relative_duration_precision_seconds(value: str) -> int:
+    match = _RELATIVE_DURATION_PATTERN.fullmatch(value or "")
+    if match is None or not any(match.groupdict().values()):
+        raise ValueError(
+            "relative duration must look like '3h 20m', '5d 8h', or '45m'"
+        )
+    for key, seconds in (
+        ("seconds", 1),
+        ("minutes", 60),
+        ("hours", 60 * 60),
+        ("days", 24 * 60 * 60),
+    ):
+        if match.group(key) is not None:
+            return seconds
+    raise AssertionError("validated relative duration has no displayed unit")
+
+
+def _reset_tolerance_seconds(
+    previous: dict[str, Any],
+    newer: dict[str, Any],
+    *,
+    window_type: str | None,
+) -> float:
+    precision = [
+        int(value)
+        for value in (
+            previous.get("reset_precision_seconds"),
+            newer.get("reset_precision_seconds"),
+        )
+        if value is not None and int(value) > 0
+    ]
+    if precision:
+        return float(2 * max(precision))
+    return float(
+        _RESET_WINDOW_FALLBACK_TOLERANCE_SECONDS.get(
+            str(window_type or "").upper(),
+            5 * 60,
+        )
+    )
+
+
+def _measurement_bounds(row: dict[str, Any]) -> tuple[float, float]:
+    value = float(row["percent_used"])
+    quantum = row.get("percent_quantum")
+    if quantum is None or float(quantum) <= 0:
+        return value, value
+    # The product exposes a whole-percent bucket but does not document whether
+    # the bucket is rounded, floored, or ceiled. Use a conservative +/- one
+    # display quantum censoring interval rather than inventing sub-bucket truth.
+    q = float(quantum)
+    return max(0.0, value - q), min(100.0, value + q)
+
 
 def _iso(value: Any) -> str | None:
     if value is None:
@@ -104,6 +162,7 @@ def _forecast_observations(
     rows: list[dict[str, Any]],
     *,
     now: datetime | None = None,
+    window_type: str | None = None,
 ) -> dict[str, Any]:
     now = now or datetime.now(timezone.utc)
     ordered = sorted(rows, key=lambda row: row["observed_at"])
@@ -113,32 +172,61 @@ def _forecast_observations(
             "observations": 0,
             "percent_used": None,
             "burn_percent_per_hour": None,
+            "burn_percent_per_hour_bounds": None,
             "eta_hours": None,
+            "eta_hours_bounds": None,
             "reset_at": None,
             "confidence": "NO_DATA",
             "approximate": None,
+            "censored": None,
         }
 
+    effective_window = window_type or latest.get("window_type")
     segment = [latest]
+    reset_tolerance_seconds = 0.0
     for previous in reversed(ordered[:-1]):
         newer = segment[-1]
         if previous["percent_used"] > newer["percent_used"]:
             break
         prev_reset = previous.get("reset_at")
         new_reset = newer.get("reset_at")
-        if prev_reset and new_reset and prev_reset != new_reset:
-            break
+        if prev_reset and new_reset:
+            tolerance = _reset_tolerance_seconds(
+                previous,
+                newer,
+                window_type=effective_window,
+            )
+            reset_tolerance_seconds = max(reset_tolerance_seconds, tolerance)
+            if abs((prev_reset - new_reset).total_seconds()) > tolerance:
+                break
         segment.append(previous)
     segment.reverse()
 
+    censored = any(
+        row.get("percent_quantum") is not None
+        and float(row["percent_quantum"]) > 0
+        for row in segment
+    )
+    latest_bounds = _measurement_bounds(latest)
     result = {
         "observations": len(segment),
         "percent_used": float(latest["percent_used"]),
+        "percent_used_bounds": list(latest_bounds) if censored else None,
+        "percent_quantum": (
+            float(latest["percent_quantum"])
+            if latest.get("percent_quantum") is not None
+            else None
+        ),
         "burn_percent_per_hour": None,
+        "burn_percent_per_hour_bounds": None,
         "eta_hours": None,
+        "eta_hours_bounds": None,
         "reset_at": _iso(latest.get("reset_at")),
+        "reset_precision_seconds": latest.get("reset_precision_seconds"),
+        "reset_window_tolerance_seconds": reset_tolerance_seconds,
         "confidence": "CALIBRATING",
         "approximate": bool(latest.get("approximate")),
+        "censored": censored,
         "observed_at": _iso(latest["observed_at"]),
     }
     if len(segment) < 2:
@@ -149,6 +237,28 @@ def _forecast_observations(
     ).total_seconds() / 3600.0
     if elapsed_hours <= 0:
         return result
+
+    if censored:
+        first_low, first_high = _measurement_bounds(segment[0])
+        last_low, last_high = _measurement_bounds(segment[-1])
+        delta_low = max(0.0, last_low - first_high)
+        delta_high = max(0.0, last_high - first_low)
+        burn_low = delta_low / elapsed_hours
+        burn_high = delta_high / elapsed_hours
+        result["burn_percent_per_hour_bounds"] = [burn_low, burn_high]
+        if burn_high > 0:
+            remaining_low = max(0.0, 100.0 - last_high)
+            remaining_high = max(0.0, 100.0 - last_low)
+            eta_low = remaining_low / burn_high
+            eta_high = (
+                remaining_high / burn_low
+                if burn_low > 0
+                else None
+            )
+            result["eta_hours_bounds"] = [eta_low, eta_high]
+        result["confidence"] = "LOW" if burn_low > 0 else "CALIBRATING"
+        return result
+
     delta = float(segment[-1]["percent_used"]) - float(segment[0]["percent_used"])
     burn = delta / elapsed_hours
     if burn <= 0:
@@ -228,6 +338,8 @@ class OpsService:
         reset_at: datetime | None = None,
         note: str | None = None,
         approximate: bool = False,
+        percent_quantum: float | None = None,
+        reset_precision_seconds: int | None = None,
         observed_at: datetime | None = None,
     ) -> dict[str, Any]:
         window_type = WINDOW_ALIASES.get(window)
@@ -245,11 +357,13 @@ class OpsService:
                     """
                     INSERT INTO research_allowance_observations(
                       window_type,percent_used,observed_at,reset_at,
-                      source,approximate,note,usage_event_highwater
+                      source,approximate,percent_quantum,reset_precision_seconds,
+                      note,usage_event_highwater
                     )
-                    VALUES (%s,%s,%s,%s,'MANUAL_UI',%s,%s,%s)
+                    VALUES (%s,%s,%s,%s,'MANUAL_UI',%s,%s,%s,%s,%s)
                     RETURNING id,window_type,percent_used,observed_at,reset_at,
-                              source,approximate,note,usage_event_highwater
+                              source,approximate,percent_quantum,
+                              reset_precision_seconds,note,usage_event_highwater
                     """,
                     (
                         window_type,
@@ -257,6 +371,8 @@ class OpsService:
                         observed_at,
                         reset_at,
                         approximate,
+                        percent_quantum,
+                        reset_precision_seconds,
                         note,
                         highwater,
                     ),
@@ -314,7 +430,8 @@ class OpsService:
                 cur.execute(
                     """
                     SELECT window_type,percent_used,observed_at,reset_at,
-                           approximate,note,usage_event_highwater
+                           approximate,percent_quantum,reset_precision_seconds,
+                           note,usage_event_highwater
                     FROM research_allowance_observations
                     ORDER BY window_type,observed_at,id
                     """
@@ -768,7 +885,11 @@ class OpsService:
                 row for row in allowance_rows
                 if row["window_type"] == window_type
             ]
-            allowance[window_type] = _forecast_observations(rows, now=now)
+            allowance[window_type] = _forecast_observations(
+                rows,
+                now=now,
+                window_type=window_type,
+            )
 
         verified = int(pipeline.get("verified") or 0)
         evidence_count = int(pipeline.get("evidence_objects") or 0)
@@ -908,8 +1029,19 @@ def _allowance_line(label: str, data: dict[str, Any]) -> str:
     pieces = [f"{label:<7} {used}", confidence]
     if burn is not None:
         pieces.append(f"burn {burn:.2f}%/h")
+    elif data.get("burn_percent_per_hour_bounds") is not None:
+        low, high = data["burn_percent_per_hour_bounds"]
+        pieces.append(f"burn {low:.2f}-{high:.2f}%/h censored")
     if eta is not None:
         pieces.append(f"ETA {_fmt_duration(eta*3600)}")
+    elif data.get("eta_hours_bounds") is not None:
+        low, high = data["eta_hours_bounds"]
+        if high is None:
+            pieces.append(f"ETA >= {_fmt_duration(low*3600)} censored")
+        else:
+            pieces.append(
+                f"ETA {_fmt_duration(low*3600)}-{_fmt_duration(high*3600)} censored"
+            )
     if data.get("reset_at"):
         pieces.append(f"reset {data['reset_at']}")
     return " | ".join(pieces)

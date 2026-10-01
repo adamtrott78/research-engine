@@ -48,7 +48,7 @@ observe() {
     "$venv/bin/research-engine" "${args[@]}"
 }
 
-echo "=== VERIFY CONTEXT A/B CALIBRATION ==="
+echo "=== VERIFY CONTEXT LOW/HIGH CALIBRATION ==="
 echo "SOURCE_RUN=$run_id"
 
 require_stopped
@@ -96,19 +96,35 @@ print("CALIBRATION_SCHEMA=PASS")
 PY
 
 echo
-echo "--- PRE-CALIBRATION PLAN READING ---"
-echo "Enter the current usage UI values immediately before the one-call replay."
-observe "5h" "5-hour" "pre VERIFY replay calibration"
-observe "weekly" "WEEKLY" "pre VERIFY replay calibration"
+echo "--- ZERO-MODEL EXTRACT PROVENANCE AUDIT ---"
+audit_file="$scratch/extract-provenance-audit.json"
+"$venv/bin/research-engine" audit-extract-provenance "$run_id" > "$audit_file"
+"$venv/bin/python" - "$audit_file" <<'PY'
+import json
+import sys
+
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+print("AUDIT_PAPERS=" + str(data["paper_count"]))
+print("AUDIT_TOTAL_PDF_PAGES=" + str(data["total_pdf_pages"]))
+print("AUDIT_EVIDENCE_OBJECTS=" + str(data["total_evidence_objects"]))
+print("AUDIT_EVIDENCE_BEARING_PAGES=" + str(data["total_evidence_bearing_pages"]))
+print("AUDIT_EXTRACTION_CONTEXT_CHARS=" + str(data["total_extraction_context_chars"]))
+print("EXTRACT_AUDIT_JSON=" + json.dumps(data, sort_keys=True))
+PY
 
 require_stopped
 
 echo
-echo "--- ONE TERRA VERIFY REPLAY ---"
-result_file="$scratch/verify-replay-calibration.json"
-"$venv/bin/research-engine" calibrate-verify "$run_id" > "$result_file"
+echo "--- PRE-CALIBRATION PLAN READING ---"
+echo "Enter one fresh usage-UI reading pair immediately before the two Terra replays."
+observe "5h" "5-hour" "pre low/high VERIFY replay batch"
+observe "weekly" "WEEKLY" "pre low/high VERIFY replay batch"
 
-"$venv/bin/python" - "$result_file" <<'PY'
+require_stopped
+
+print_replay() {
+    local result_file="$1"
+    "$venv/bin/python" - "$result_file" <<'PY'
 import json
 import sys
 
@@ -117,24 +133,26 @@ historical = data["historical"]
 replay = data["replay"]
 agreement = data["agreement"]
 
+print("SELECTOR=" + data["selector"])
 print("CALIBRATION_EVENT_ID=" + str(data["calibration_event_id"]))
 print("SOURCE_JOB_ID=" + data["source_job_id"])
 print("CONTEXT_PAGES=" + str(data["context_page_count"]))
 print("CONTEXT_PAGE_NUMBERS=" + ",".join(map(str, data["context_page_numbers"])))
+print("CONTEXT_CHARS=" + str(data["context_char_count"]))
 print("EVIDENCE_COUNT=" + str(data["evidence_count"]))
 print("HISTORICAL_INPUT=" + str(historical["input_tokens"]))
 print("HISTORICAL_CACHED=" + str(historical["cached_input_tokens"]))
+print("HISTORICAL_OUTPUT=" + str(historical["output_tokens"]))
+print("HISTORICAL_REASONING_OUTPUT=" + str(historical["reasoning_output_tokens"]))
 print("REPLAY_INPUT=" + str(replay["input_tokens"]))
 print("REPLAY_CACHED=" + str(replay["cached_input_tokens"]))
+print("REPLAY_OUTPUT=" + str(replay["output_tokens"]))
+print("REPLAY_REASONING_OUTPUT=" + str(replay["reasoning_output_tokens"]))
+print("REPLAY_WALL_TIME_MS=" + str(replay["wall_time_ms"]))
 reduction = data.get("input_reduction_fraction")
 print(
     "INPUT_REDUCTION_PERCENT="
     + ("NA" if reduction is None else f"{100*reduction:.2f}")
-)
-uncached = data.get("uncached_input_reduction_fraction")
-print(
-    "UNCACHED_INPUT_REDUCTION_PERCENT="
-    + ("NA" if uncached is None else f"{100*uncached:.2f}")
 )
 print("VERIFIED_EQUAL=" + str(bool(agreement["verified_equal"])).lower())
 print(
@@ -143,14 +161,29 @@ print(
 )
 print("CALIBRATION_JSON=" + json.dumps(data, sort_keys=True))
 PY
+}
+
+echo
+echo "--- LOWEST-COST TERRA VERIFY REPLAY ---"
+low_file="$scratch/verify-replay-lowest.json"
+"$venv/bin/research-engine" calibrate-verify "$run_id" --selector lowest > "$low_file"
+print_replay "$low_file"
+
+require_stopped
+
+echo
+echo "--- HIGHEST-COST TERRA VERIFY REPLAY ---"
+high_file="$scratch/verify-replay-highest.json"
+"$venv/bin/research-engine" calibrate-verify "$run_id" --selector highest > "$high_file"
+print_replay "$high_file"
 
 require_stopped
 
 echo
 echo "--- POST-CALIBRATION PLAN READING ---"
-echo "Refresh the usage UI, then enter what it shows now."
-observe "5h" "5-hour" "post VERIFY replay calibration"
-observe "weekly" "WEEKLY" "post VERIFY replay calibration"
+echo "Refresh the usage UI once after both calls, then enter the displayed values."
+observe "5h" "5-hour" "post low/high VERIFY replay batch"
+observe "weekly" "WEEKLY" "post low/high VERIFY replay batch"
 
 echo
 echo "--- UPDATED HUD ---"
@@ -164,4 +197,4 @@ require_stopped
 
 echo
 echo "DAEMON_FINAL=inactive/dead pid=0"
-echo "VERIFY_REPLAY_CALIBRATION=PASS"
+echo "VERIFY_LOW_HIGH_REPLAY_CALIBRATION=PASS"

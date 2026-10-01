@@ -106,6 +106,7 @@ class VerifyReplayCalibration:
         *,
         run_id: str,
         source_job_id: str | None = None,
+        selector: str = "median",
     ) -> ResearchJob:
         jobs = self._verify_jobs(run_id)
         if not jobs:
@@ -119,10 +120,19 @@ class VerifyReplayCalibration:
                     f"completed VERIFY job not found in run {run_id}: {source_job_id}"
                 ) from exc
 
+        selector = str(selector).strip().lower()
+        if selector not in {"lowest", "median", "highest"}:
+            raise ValueError(
+                "VERIFY calibration selector must be lowest, median, or highest"
+            )
         ranked = sorted(
             ((self._usage(job.id)["input_tokens"], job.id, job) for job in jobs),
             key=lambda item: (item[0], item[1]),
         )
+        if selector == "lowest":
+            return ranked[0][2]
+        if selector == "highest":
+            return ranked[-1][2]
         return ranked[len(ranked) // 2][2]
 
     @staticmethod
@@ -157,10 +167,12 @@ class VerifyReplayCalibration:
         *,
         run_id: str,
         source_job_id: str | None = None,
+        selector: str = "median",
     ) -> dict[str, Any]:
         source = self.select_source_job(
             run_id=run_id,
             source_job_id=source_job_id,
+            selector=selector,
         )
         historical_usage = self._usage(source.id)
         hydrated = self.hydrator.hydrate(source)
@@ -191,6 +203,7 @@ class VerifyReplayCalibration:
             "calibration_type": "VERIFY_CONTEXT_WINDOW",
             "source_run_id": run_id,
             "source_job_id": source.id,
+            "selector": selector if source_job_id is None else "explicit",
             "verify_page_radius": self.verify_page_radius,
             "context_page_count": len(pages),
             "context_page_numbers": [
@@ -259,6 +272,7 @@ class VerifyReplayCalibration:
                         Jsonb(
                             {
                                 "verify_page_radius": self.verify_page_radius,
+                                "selector": summary["selector"],
                                 "context_page_numbers": summary[
                                     "context_page_numbers"
                                 ],
@@ -302,6 +316,165 @@ class VerifyReplayCalibration:
         summary["calibration_event_id"] = int(event_id)
         summary["created_at"] = created_at.isoformat()
         return summary
+
+
+class ExtractionProvenanceAudit:
+    """Deterministic, zero-model-call audit of completed EXTRACT provenance."""
+
+    def __init__(
+        self,
+        *,
+        store: PostgresStore,
+        artifact_root: str | Path,
+        hydrator: ResearchContextHydrator | None = None,
+    ):
+        self.store = store
+        self.queue = OrchestratorStore(store)
+        self.hydrator = hydrator or ResearchContextHydrator(
+            store=store,
+            artifact_root=artifact_root,
+        )
+
+    @staticmethod
+    def _clusters(page_numbers: list[int]) -> list[dict[str, int]]:
+        pages = sorted(set(int(value) for value in page_numbers))
+        if not pages:
+            return []
+        clusters: list[dict[str, int]] = []
+        start = previous = pages[0]
+        for page in pages[1:]:
+            if page == previous + 1:
+                previous = page
+                continue
+            clusters.append(
+                {
+                    "start_page": start,
+                    "end_page": previous,
+                    "page_count": previous - start + 1,
+                }
+            )
+            start = previous = page
+        clusters.append(
+            {
+                "start_page": start,
+                "end_page": previous,
+                "page_count": previous - start + 1,
+            }
+        )
+        return clusters
+
+    def _evidence_pages(self, job_id: str) -> list[int]:
+        with self.store.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT l.page_number
+                    FROM evidence_objects e
+                    JOIN source_locators l ON l.id=e.source_locator_id
+                    WHERE e.attributes->>'semantic_job_id'=%s
+                      AND l.page_number IS NOT NULL
+                    ORDER BY l.page_number,e.id
+                    """,
+                    (job_id,),
+                )
+                return [int(row[0]) for row in cur.fetchall()]
+
+    def run(self, *, run_id: str) -> dict[str, Any]:
+        try:
+            from pypdf import PdfReader
+        except Exception as exc:
+            raise RuntimeError("pypdf is required for extraction provenance audit") from exc
+
+        jobs = [
+            job
+            for job in self.queue.jobs(run_id, JobType.EXTRACT)
+            if job.status == "COMPLETED"
+        ]
+        if not jobs:
+            raise ValueError(f"run has no completed EXTRACT jobs: {run_id}")
+
+        papers: list[dict[str, Any]] = []
+        for job in sorted(jobs, key=lambda item: item.id):
+            acquisition = dict(job.payload.get("acquisition") or {})
+            artifact_id = str(acquisition.get("artifact_id") or "")
+            if not artifact_id:
+                raise ValueError(f"completed EXTRACT job lacks artifact_id: {job.id}")
+
+            artifact_context = self.hydrator._artifact_context(artifact_id)
+            artifact = dict(artifact_context["source_artifact"])
+            context_pages = list(artifact_context.get("pages") or [])
+            path = self.hydrator.artifact_store.path_for_hash(str(artifact["sha256"]))
+            total_pdf_pages = len(PdfReader(str(path)).pages)
+            evidence_pages_all = self._evidence_pages(job.id)
+            evidence_pages = sorted(set(evidence_pages_all))
+            clusters = self._clusters(evidence_pages)
+            evidence_count = len(evidence_pages_all)
+            evidence_page_count = len(evidence_pages)
+            context_char_count = sum(
+                len(str(page.get("text") or "")) for page in context_pages
+            )
+
+            papers.append(
+                {
+                    "extract_job_id": job.id,
+                    "item_id": str((job.payload.get("item") or {}).get("id") or ""),
+                    "artifact_id": artifact_id,
+                    "total_pdf_pages": total_pdf_pages,
+                    "extraction_context_page_count": len(context_pages),
+                    "extraction_context_char_count": context_char_count,
+                    "evidence_object_count": evidence_count,
+                    "evidence_page_numbers": evidence_pages,
+                    "evidence_bearing_page_count": evidence_page_count,
+                    "evidence_page_fraction": (
+                        evidence_page_count / total_pdf_pages
+                        if total_pdf_pages > 0
+                        else None
+                    ),
+                    "evidence_objects_per_pdf_page": (
+                        evidence_count / total_pdf_pages
+                        if total_pdf_pages > 0
+                        else None
+                    ),
+                    "evidence_page_clusters": clusters,
+                    "evidence_page_cluster_count": len(clusters),
+                    "largest_cluster_pages": max(
+                        (cluster["page_count"] for cluster in clusters),
+                        default=0,
+                    ),
+                }
+            )
+
+        total_pages = sum(row["total_pdf_pages"] for row in papers)
+        total_evidence = sum(row["evidence_object_count"] for row in papers)
+        total_evidence_pages = sum(
+            row["evidence_bearing_page_count"] for row in papers
+        )
+        total_context_chars = sum(
+            row["extraction_context_char_count"] for row in papers
+        )
+        return {
+            "audit_type": "EXTRACT_PROVENANCE_ZERO_MODEL",
+            "source_run_id": run_id,
+            "paper_count": len(papers),
+            "total_pdf_pages": total_pages,
+            "total_evidence_objects": total_evidence,
+            "total_evidence_bearing_pages": total_evidence_pages,
+            "evidence_page_fraction": (
+                total_evidence_pages / total_pages if total_pages > 0 else None
+            ),
+            "evidence_objects_per_pdf_page": (
+                total_evidence / total_pages if total_pages > 0 else None
+            ),
+            "total_extraction_context_chars": total_context_chars,
+            "papers": papers,
+        }
+
+
+def extraction_audit_from_env() -> ExtractionProvenanceAudit:
+    return ExtractionProvenanceAudit(
+        store=PostgresStore(os.environ["RESEARCH_ENGINE_DATABASE_URL"]),
+        artifact_root=os.environ["RESEARCH_ENGINE_ARTIFACT_ROOT"],
+    )
 
 
 def service_from_env(*, delegate: Any | None = None) -> VerifyReplayCalibration:
