@@ -1,4 +1,5 @@
 import os
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -232,3 +233,70 @@ def test_saturated_unused_tier_does_not_pause_other_runnable_tier():
         worker_id="worker:cheap-routing",
         supported_tiers=[ExecutorTier.CHEAP],
     ) is None
+
+
+@pytest.mark.integration
+def test_concurrent_workers_cannot_overlease_semantic_budget():
+    dsn = os.getenv("RESEARCH_ENGINE_DATABASE_URL")
+    if not dsn:
+        pytest.skip("RESEARCH_ENGINE_DATABASE_URL not set")
+
+    from research_engine.orchestration import (
+        ExecutorTier,
+        JobType,
+        OrchestratorStore,
+    )
+    from research_engine.postgres import PostgresStore
+
+    store = PostgresStore(dsn)
+    store.initialize(Path(__file__).parents[1] / "sql" / "schema.sql")
+    queue = OrchestratorStore(store)
+
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                TRUNCATE research_usage_events, human_review_requests,
+                         semantic_materializations, research_job_attempts,
+                         research_jobs, research_workers, research_runs CASCADE
+                """
+            )
+        conn.commit()
+
+    run_id = "run:concurrent-budget-admission"
+    queue.create_run(
+        run_id=run_id,
+        topic="concurrent semantic budget",
+        policy={
+            "budgets": {
+                "max_semantic_jobs": 1,
+                "max_jobs_by_tier": {"CHEAP": 1},
+            }
+        },
+    )
+    queue.enqueue(
+        run_id=run_id,
+        job_type=JobType.SCREEN,
+        idempotency_key="test:second-cheap-job",
+        payload={},
+        priority=99,
+    )
+
+    queue.register_worker("worker:race-a", [ExecutorTier.CHEAP])
+    queue.register_worker("worker:race-b", [ExecutorTier.CHEAP])
+
+    def lease(worker_id):
+        return queue.lease_next(
+            worker_id=worker_id,
+            supported_tiers=[ExecutorTier.CHEAP],
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        jobs = list(pool.map(lease, ["worker:race-a", "worker:race-b"]))
+
+    leased = [job for job in jobs if job is not None]
+    assert len(leased) == 1
+
+    all_jobs = queue.jobs(run_id)
+    assert sum(job.status == "RUNNING" for job in all_jobs) == 1
+    assert sum(job.status == "QUEUED" for job in all_jobs) == 1
