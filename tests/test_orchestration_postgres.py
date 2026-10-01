@@ -362,3 +362,132 @@ def test_reconcile_reuses_legacy_novelty_job_payload_by_idempotency_key():
     assert jobs["novelty-search:gap:legacy:0"].payload == legacy_payload
     assert jobs["novelty-search:gap:legacy:1"].status == "QUEUED"
     assert jobs["novelty-search:gap:legacy:2"].status == "CANCELLED"
+
+
+@pytest.mark.integration
+def test_codex_plan_limit_defers_without_consuming_failure_budget():
+    dsn = os.getenv("RESEARCH_ENGINE_DATABASE_URL")
+    if not dsn:
+        pytest.skip("RESEARCH_ENGINE_DATABASE_URL not set")
+    pytest.importorskip("psycopg")
+
+    from research_engine.orchestration import (
+        AgentWorker,
+        ExecutorTier,
+        JobExecutionError,
+        JobType,
+        OrchestratorStore,
+        ResearchPlanner,
+    )
+    from research_engine.postgres import PostgresStore
+
+    class PlanLimited:
+        def execute(self, job):
+            raise JobExecutionError(
+                "Usage limit reached. Try again in 1h.",
+                code="CODEX_PLAN_LIMIT",
+                retryable=True,
+                detail={"retry_after_seconds": 3600},
+            )
+
+    store = PostgresStore(dsn)
+    store.initialize(Path(__file__).parents[1] / "sql" / "schema.sql")
+    queue = OrchestratorStore(store)
+    planner = ResearchPlanner(queue)
+
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                TRUNCATE research_usage_events, human_review_requests,
+                         semantic_materializations, research_job_attempts,
+                         research_jobs, research_workers, research_runs CASCADE
+                """
+            )
+            cur.execute("DELETE FROM research_provider_backoffs")
+        conn.commit()
+
+    run_id = "run:plan-limit-backoff"
+    queue.create_run(run_id=run_id, topic="plan limit durability")
+    worker = AgentWorker(
+        worker_id="worker:plan-limit",
+        queue=queue,
+        planner=planner,
+        supported_tiers=[ExecutorTier.CHEAP],
+        executors={ExecutorTier.CHEAP: PlanLimited()},
+        backoff_provider="codex-chatgpt-plan",
+    )
+
+    leased = worker.run_once()
+    assert leased is not None
+    assert leased.job_type == JobType.DISCOVERY
+
+    job = queue.jobs(run_id, JobType.DISCOVERY)[0]
+    assert job.status == "QUEUED"
+    assert job.attempt_count == 1
+
+    backoff = queue.provider_backoff("codex-chatgpt-plan")
+    assert backoff is not None
+    assert backoff["reason"] == "CODEX_PLAN_LIMIT"
+
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT status
+                FROM research_job_attempts
+                WHERE job_id=%s AND attempt_no=1
+                """,
+                (job.id,),
+            )
+            assert cur.fetchone()[0] == "DEFERRED_PLAN_LIMIT"
+
+            # Make the deferred job available again and clear provider backoff
+            # to prove three genuine failures are still required for terminal
+            # failure even though attempt_no will advance past max_attempts.
+            cur.execute(
+                "UPDATE research_jobs SET available_at=now() WHERE id=%s",
+                (job.id,),
+            )
+            cur.execute("DELETE FROM research_provider_backoffs")
+        conn.commit()
+
+    queue.register_worker("worker:genuine-failures", [ExecutorTier.CHEAP])
+    for expected_status in ("QUEUED", "QUEUED", "FAILED"):
+        current = queue.lease_next(
+            worker_id="worker:genuine-failures",
+            supported_tiers=[ExecutorTier.CHEAP],
+        )
+        assert current is not None
+        actual = queue.fail(
+            current,
+            "worker:genuine-failures",
+            {"type": "GENUINE_FAILURE"},
+            retryable=True,
+        )
+        assert actual == expected_status
+
+    final = queue.jobs(run_id, JobType.DISCOVERY)[0]
+    assert final.status == "FAILED"
+    assert final.attempt_count == 4
+
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT count(*)::int
+                FROM research_job_attempts
+                WHERE job_id=%s AND status='DEFERRED_PLAN_LIMIT'
+                """,
+                (final.id,),
+            )
+            assert cur.fetchone()[0] == 1
+            cur.execute(
+                """
+                SELECT count(*)::int
+                FROM research_job_attempts
+                WHERE job_id=%s AND status IN ('FAILED','RETRY','EXPIRED')
+                """,
+                (final.id,),
+            )
+            assert cur.fetchone()[0] == 3
