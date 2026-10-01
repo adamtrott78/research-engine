@@ -103,3 +103,45 @@ def test_codex_exec_reports_plan_limit(monkeypatch):
     with pytest.raises(Exception) as exc:
         executor.execute(_job(JobType.SCREEN))
     assert getattr(exc.value, "code", None) == "CODEX_PLAN_LIMIT"
+    assert exc.value.detail["retry_after_seconds"] == 3600
+
+
+def test_codex_exec_parses_plan_limit_retry_window(monkeypatch):
+    def fake_run(cmd, **kwargs):
+        return SimpleNamespace(
+            returncode=1,
+            stdout="",
+            stderr="Usage limit reached. Try again in 2h 15m.",
+        )
+
+    monkeypatch.setattr("research_engine.codex_executor.subprocess.run", fake_run)
+    executor = CodexExecExecutor(tier=ExecutorTier.CHEAP)
+    with pytest.raises(Exception) as exc:
+        executor.execute(_job(JobType.SCREEN))
+    assert getattr(exc.value, "code", None) == "CODEX_PLAN_LIMIT"
+    assert exc.value.detail["retry_after_seconds"] == 8100
+
+
+def test_codex_stream_plan_limit_is_classified_and_deferred(monkeypatch):
+    events = [
+        {
+            "type": "turn.failed",
+            "error": {
+                "message": "You've hit your usage limit. Try again in 45m."
+            },
+        }
+    ]
+
+    def fake_run(cmd, **kwargs):
+        return SimpleNamespace(
+            returncode=0,
+            stdout="\n".join(json.dumps(x) for x in events),
+            stderr="",
+        )
+
+    monkeypatch.setattr("research_engine.codex_executor.subprocess.run", fake_run)
+    executor = CodexExecExecutor(tier=ExecutorTier.CHEAP)
+    with pytest.raises(Exception) as exc:
+        executor.execute(_job(JobType.SCREEN))
+    assert getattr(exc.value, "code", None) == "CODEX_PLAN_LIMIT"
+    assert exc.value.detail["retry_after_seconds"] == 2700
