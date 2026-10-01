@@ -1,0 +1,432 @@
+{
+  "schema_version": 1,
+  "title": "Research-engine localization matrix v1",
+  "principle": "Localize repetitive deterministic or bounded semantic work when measured quality/provenance is preserved and throughput/plan usage improves; retain external web access and strong remote reasoning where locality adds risk without demonstrated benefit.",
+  "entries": [
+    {
+      "component": "source_discovery_web_search",
+      "current_role": "DISCOVERY/NOVELTY_SEARCH external retrieval",
+      "target_class": "EXTERNAL_WEB",
+      "localize": "partial",
+      "localizable_parts": [
+        "query expansion",
+        "result deduplication",
+        "ranking",
+        "screening"
+      ],
+      "retain_external": [
+        "internet search/retrieval",
+        "freshness-sensitive source access"
+      ],
+      "benchmark_required": true,
+      "authority": "external source records",
+      "fallback": "existing web-backed discovery path"
+    },
+    {
+      "component": "source_acquisition_transport",
+      "current_role": "download/fetch source bytes",
+      "target_class": "DETERMINISTIC_LOCAL",
+      "localize": "yes",
+      "localizable_parts": [
+        "download validation",
+        "media sniffing",
+        "hashing",
+        "deduplication",
+        "artifact storage"
+      ],
+      "benchmark_required": false,
+      "authority": "content-addressed source artifact",
+      "fallback": "existing acquisition path"
+    },
+    {
+      "component": "pdf_validation_and_classification",
+      "current_role": "implicit PDF handling",
+      "target_class": "DETERMINISTIC_LOCAL",
+      "localize": "yes",
+      "localizable_parts": [
+        "page count",
+        "text-layer health",
+        "scan detection",
+        "encryption/corruption checks",
+        "layout complexity signals"
+      ],
+      "benchmark_required": true,
+      "authority": "original PDF",
+      "fallback": "route whole document to specialized parser"
+    },
+    {
+      "component": "native_pdf_text_and_geometry",
+      "current_role": "pypdf bounded extraction",
+      "target_class": "DETERMINISTIC_LOCAL",
+      "localize": "yes",
+      "localizable_parts": [
+        "embedded text",
+        "font runs",
+        "page geometry",
+        "images",
+        "links",
+        "reading-order candidates"
+      ],
+      "benchmark_required": true,
+      "authority": "original PDF",
+      "fallback": "specialized layout/OCR parser"
+    },
+    {
+      "component": "page_rendering_and_image_extraction",
+      "current_role": "PDF context support",
+      "target_class": "DETERMINISTIC_LOCAL",
+      "localize": "yes",
+      "localizable_parts": [
+        "page rasterization",
+        "embedded figure extraction",
+        "thumbnailing",
+        "bbox transforms"
+      ],
+      "benchmark_required": true,
+      "authority": "original PDF",
+      "fallback": "full-page render"
+    },
+    {
+      "component": "ocr",
+      "current_role": "PDF parser fallback",
+      "target_class": "SPECIALIZED_LOCAL_MODEL",
+      "localize": "yes",
+      "localizable_parts": [
+        "scanned pages",
+        "garbled text-layer repair",
+        "localized block OCR"
+      ],
+      "benchmark_required": true,
+      "authority": "original PDF image region",
+      "fallback": "document VLM or manual benchmark oracle"
+    },
+    {
+      "component": "layout_and_reading_order",
+      "current_role": "implicit parser behavior",
+      "target_class": "SPECIALIZED_LOCAL_MODEL",
+      "localize": "yes",
+      "localizable_parts": [
+        "column detection",
+        "block classification",
+        "reading order",
+        "header/footer suppression"
+      ],
+      "benchmark_required": true,
+      "authority": "original PDF geometry",
+      "fallback": "document VLM"
+    },
+    {
+      "component": "digital_table_reconstruction",
+      "current_role": "semantic extraction from PDF context",
+      "target_class": "DETERMINISTIC_LOCAL",
+      "localize": "yes-first",
+      "localizable_parts": [
+        "cell boundary inference",
+        "text-to-cell assignment",
+        "Markdown/CSV/JSON"
+      ],
+      "benchmark_required": true,
+      "authority": "PDF text and geometry",
+      "fallback": "specialized table model"
+    },
+    {
+      "component": "scanned_or_complex_tables",
+      "current_role": "semantic extraction from page context",
+      "target_class": "SPECIALIZED_LOCAL_MODEL",
+      "localize": "yes",
+      "localizable_parts": [
+        "table detection",
+        "structure recognition",
+        "merged-cell recovery",
+        "OCR"
+      ],
+      "benchmark_required": true,
+      "authority": "original PDF region",
+      "fallback": "document/general VLM escalation"
+    },
+    {
+      "component": "formula_and_equation_recognition",
+      "current_role": "semantic interpretation from PDF context",
+      "target_class": "SPECIALIZED_LOCAL_MODEL",
+      "localize": "yes",
+      "localizable_parts": [
+        "equation detection",
+        "LaTeX transcription",
+        "display/inline classification"
+      ],
+      "benchmark_required": true,
+      "authority": "original PDF region",
+      "fallback": "document VLM"
+    },
+    {
+      "component": "figure_extraction_and_caption_pairing",
+      "current_role": "PDF page context",
+      "target_class": "DETERMINISTIC_LOCAL",
+      "localize": "yes-first",
+      "localizable_parts": [
+        "image extraction",
+        "figure bbox",
+        "caption association",
+        "figure numbering"
+      ],
+      "benchmark_required": true,
+      "authority": "original PDF region",
+      "fallback": "layout model"
+    },
+    {
+      "component": "chart_and_figure_semantic_understanding",
+      "current_role": "general semantic model sees page context",
+      "target_class": "GENERAL_LOCAL_MODEL",
+      "localize": "on-demand",
+      "localizable_parts": [
+        "axes/legend parsing",
+        "trend description",
+        "numeric series recovery where reliable",
+        "diagram explanation"
+      ],
+      "benchmark_required": true,
+      "authority": "original figure plus caption",
+      "fallback": "remote strong vision/reasoning or human review"
+    },
+    {
+      "component": "references_and_citation_parsing",
+      "current_role": "text context",
+      "target_class": "DETERMINISTIC_LOCAL",
+      "localize": "yes-first",
+      "localizable_parts": [
+        "reference section detection",
+        "entry segmentation",
+        "DOI/URL extraction",
+        "in-text citation anchors"
+      ],
+      "benchmark_required": true,
+      "authority": "original PDF text/geometry",
+      "fallback": "small specialized/local model"
+    },
+    {
+      "component": "markdown_normalization",
+      "current_role": "none/vendor-dependent",
+      "target_class": "DETERMINISTIC_LOCAL",
+      "localize": "yes",
+      "localizable_parts": [
+        "heading normalization",
+        "page markers",
+        "asset links",
+        "whitespace cleanup",
+        "stable block IDs"
+      ],
+      "benchmark_required": true,
+      "authority": "derived only",
+      "fallback": "raw block representation"
+    },
+    {
+      "component": "provenance_mapping",
+      "current_role": "source_locators",
+      "target_class": "DETERMINISTIC_LOCAL",
+      "localize": "mandatory",
+      "localizable_parts": [
+        "page/bbox/section/raw-anchor mapping",
+        "transform lineage",
+        "confidence/warnings"
+      ],
+      "benchmark_required": true,
+      "authority": "existing source_artifact/source_locator model",
+      "fallback": "fail closed to page-level locator"
+    },
+    {
+      "component": "paper_package_cache",
+      "current_role": "content-addressed source store only",
+      "target_class": "DETERMINISTIC_LOCAL",
+      "localize": "yes",
+      "localizable_parts": [
+        "source+compiler+config cache identity",
+        "atomic package writes",
+        "reuse across runs"
+      ],
+      "benchmark_required": false,
+      "authority": "derived cache",
+      "fallback": "recompile package"
+    },
+    {
+      "component": "chunking_and_context_assembly",
+      "current_role": "job-specific hydrator",
+      "target_class": "DETERMINISTIC_LOCAL",
+      "localize": "yes",
+      "localizable_parts": [
+        "section/block chunking",
+        "citation-aware context",
+        "token-budget packing",
+        "asset selection"
+      ],
+      "benchmark_required": true,
+      "authority": "derived context",
+      "fallback": "existing PDF hydrator"
+    },
+    {
+      "component": "embeddings",
+      "current_role": "vector projection where used",
+      "target_class": "SPECIALIZED_LOCAL_MODEL",
+      "localize": "candidate",
+      "localizable_parts": [
+        "text/block embeddings",
+        "figure-caption embeddings"
+      ],
+      "benchmark_required": true,
+      "authority": "rebuildable projection",
+      "fallback": "existing projection path"
+    },
+    {
+      "component": "retrieval_and_reranking",
+      "current_role": "research corpus/search support",
+      "target_class": "SPECIALIZED_LOCAL_MODEL",
+      "localize": "candidate",
+      "localizable_parts": [
+        "local vector retrieval",
+        "cross-encoder reranking",
+        "duplicate detection"
+      ],
+      "benchmark_required": true,
+      "authority": "rebuildable projection",
+      "fallback": "existing retrieval path"
+    },
+    {
+      "component": "screen",
+      "current_role": "CHEAP/Luna semantic call",
+      "target_class": "SPECIALIZED_LOCAL_MODEL",
+      "localize": "candidate",
+      "localizable_parts": [
+        "relevance classification",
+        "obvious exclusion"
+      ],
+      "benchmark_required": true,
+      "authority": "research job result",
+      "fallback": "existing Luna SCREEN"
+    },
+    {
+      "component": "extract",
+      "current_role": "STANDARD/Terra semantic call over PDF-derived context",
+      "target_class": "SPECIALIZED_LOCAL_MODEL",
+      "localize": "candidate-after-document-compiler",
+      "localizable_parts": [
+        "structured evidence candidate extraction",
+        "page/block-grounded claims"
+      ],
+      "benchmark_required": true,
+      "authority": "evidence remains subject to research-engine verification",
+      "fallback": "existing Terra EXTRACT"
+    },
+    {
+      "component": "verify",
+      "current_role": "STANDARD/Terra provenance check with radius-0 cited pages",
+      "target_class": "SPECIALIZED_LOCAL_MODEL",
+      "localize": "candidate-with-remote-escalation",
+      "localizable_parts": [
+        "deterministic locator checks",
+        "local evidence-text consistency check",
+        "confidence triage"
+      ],
+      "benchmark_required": true,
+      "authority": "verification event",
+      "fallback": "existing Terra VERIFY"
+    },
+    {
+      "component": "synthesize",
+      "current_role": "STRONG/Sol",
+      "target_class": "REMOTE_REASONING",
+      "localize": "no-by-default",
+      "localizable_parts": [
+        "context assembly",
+        "citation formatting"
+      ],
+      "retain_remote": [
+        "cross-paper synthesis",
+        "research interpretation"
+      ],
+      "benchmark_required": false,
+      "authority": "derived synthesis",
+      "fallback": "existing Sol SYNTHESIZE"
+    },
+    {
+      "component": "gap_generate",
+      "current_role": "STRONG/Sol",
+      "target_class": "REMOTE_REASONING",
+      "localize": "no-by-default",
+      "localizable_parts": [
+        "evidence aggregation",
+        "candidate clustering"
+      ],
+      "retain_remote": [
+        "research-gap reasoning"
+      ],
+      "benchmark_required": false,
+      "authority": "gap candidate",
+      "fallback": "existing Sol GAP_GENERATE"
+    },
+    {
+      "component": "novelty_search",
+      "current_role": "CHEAP/Luna plus web search",
+      "target_class": "EXTERNAL_WEB",
+      "localize": "partial",
+      "localizable_parts": [
+        "query variants",
+        "deduplication",
+        "candidate ranking"
+      ],
+      "retain_external": [
+        "web retrieval",
+        "current source search"
+      ],
+      "benchmark_required": true,
+      "authority": "external source evidence",
+      "fallback": "existing NOVELTY_SEARCH"
+    },
+    {
+      "component": "novelty_arbitrate",
+      "current_role": "STRONG/Sol",
+      "target_class": "REMOTE_REASONING",
+      "localize": "no-by-default",
+      "localizable_parts": [
+        "evidence packet construction"
+      ],
+      "retain_remote": [
+        "final novelty judgment",
+        "conflict resolution"
+      ],
+      "benchmark_required": false,
+      "authority": "arbitration record",
+      "fallback": "existing Sol NOVELTY_ARBITRATE"
+    },
+    {
+      "component": "human_review_and_chat_escalation",
+      "current_role": "human gate / planned Chat bridge",
+      "target_class": "HUMAN",
+      "localize": "no",
+      "localizable_parts": [
+        "request packaging",
+        "status notification"
+      ],
+      "retain_external": [
+        "human decision",
+        "high-level Chat reasoning when invoked"
+      ],
+      "benchmark_required": false,
+      "authority": "human/advisory audit record",
+      "fallback": "existing human-review gate"
+    },
+    {
+      "component": "ops_telemetry_and_accounting",
+      "current_role": "PostgreSQL ops mirror/HUD",
+      "target_class": "DETERMINISTIC_LOCAL",
+      "localize": "already-local",
+      "localizable_parts": [
+        "throughput",
+        "resource accounting",
+        "router/model usage",
+        "cache hit rate"
+      ],
+      "benchmark_required": false,
+      "authority": "PostgreSQL telemetry",
+      "fallback": "existing ops surfaces"
+    }
+  ]
+}
