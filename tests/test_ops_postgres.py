@@ -12,7 +12,7 @@ def test_ops_snapshot_attributes_usage_and_forecasts_allowance():
         pytest.skip("RESEARCH_ENGINE_DATABASE_URL not set")
 
     from research_engine.ops import OpsService
-    from research_engine.orchestration import ExecutorTier, OrchestratorStore
+    from research_engine.orchestration import ExecutorTier, JobType, OrchestratorStore
     from research_engine.postgres import PostgresStore
 
     store = PostgresStore(dsn)
@@ -126,6 +126,76 @@ def test_ops_snapshot_attributes_usage_and_forecasts_allowance():
     assert row[10] >= 0
     assert row[11] == 1
 
+    extract_job_id = queue.enqueue(
+        run_id=run_id,
+        job_type=JobType.EXTRACT,
+        idempotency_key="ops:evidence-lineage",
+        payload={"item": {"id": "work:ops"}},
+        status="COMPLETED",
+    )
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO works(id,title)
+                VALUES ('work:ops','Ops Work')
+                """
+            )
+            cur.execute(
+                """
+                INSERT INTO work_versions(id,work_id,version_label)
+                VALUES ('work-version:ops','work:ops','v1')
+                """
+            )
+            cur.execute(
+                """
+                INSERT INTO source_artifacts(
+                  id,work_version_id,sha256,byte_size,media_type,format,access_class
+                )
+                VALUES (
+                  'artifact:ops','work-version:ops',
+                  'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+                  1,'application/pdf','pdf','OPEN_ACCESS'
+                )
+                """
+            )
+            cur.execute(
+                """
+                INSERT INTO evidence_objects(
+                  id,evidence_type,work_id,work_version_id,source_artifact_id,
+                  source_level,normalized_form,verification_state,attributes
+                )
+                VALUES (
+                  'evidence:ops','CLAIM','work:ops','work-version:ops','artifact:ops',
+                  'FULLTEXT_PDF_TEXT','ops evidence','MACHINE_CHECKED',
+                  jsonb_build_object('semantic_job_id', %s::text)
+                )
+                """,
+                (extract_job_id,),
+            )
+        conn.commit()
+
+    queue.register_worker(
+        "daemon:test:124:cheap:0",
+        [ExecutorTier.CHEAP],
+        metadata={
+            "logical_agent_id": "semantic:cheap:0",
+            "host_name": "test-host",
+            "process_id": 124,
+            "code_sha": "def456",
+        },
+    )
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE research_workers
+                SET created_at=now()+interval '1 second'
+                WHERE id='daemon:test:124:cheap:0'
+                """
+            )
+        conn.commit()
+
     start = datetime.now(timezone.utc) - timedelta(hours=1)
     ops.observe_allowance(
         window="5h",
@@ -144,15 +214,29 @@ def test_ops_snapshot_attributes_usage_and_forecasts_allowance():
     snapshot = ops.snapshot(run_id=run_id, windows=(1, 5))
     assert snapshot["run"]["id"] == run_id
     assert snapshot["pipeline"]["discovered"] == 2
+    assert snapshot["pipeline"]["evidence_objects"] == 1
+    assert snapshot["throughput"]["1h"]["evidence_per_hour"] == pytest.approx(1.0)
     assert snapshot["usage"]["totals"]["input_tokens"] == 100
     assert snapshot["usage"]["totals"]["cached_input_tokens"] == 20
     assert snapshot["usage"]["totals"]["reasoning_output_tokens"] == 3
     assert snapshot["usage"]["by_agent"][0]["agent"] == "semantic:cheap:0"
+    discovery_usage = next(
+        row for row in snapshot["usage"]["by_job_type"]
+        if row["job_type"] == "DISCOVERY"
+    )
+    assert discovery_usage["calls"] == 1
+    assert discovery_usage["input_tokens"] == 100
+    assert discovery_usage["cached_input_tokens"] == 20
+    assert discovery_usage["reasoning_output_tokens"] == 3
+    assert discovery_usage["web_search_count"] == 1
     assert snapshot["allowance"]["FIVE_HOUR"]["burn_percent_per_hour"] == pytest.approx(4.0)
     assert snapshot["allowance"]["FIVE_HOUR"]["eta_hours"] == pytest.approx(20.0)
     cheap = next(
         row for row in snapshot["agents"]
         if row["logical_agent_id"] == "semantic:cheap:0"
     )
+    assert cheap["worker_id"] == "daemon:test:124:cheap:0"
     assert cheap["model"] == "gpt-5.6-luna"
+    assert cheap["reasoning_effort"] == "low"
+    assert cheap["backend"] == "codex-chatgpt-plan"
     assert cheap["calls"] == 1
