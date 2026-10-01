@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+state="$HOME/adamArchives/Adam/.research-engine"
+venv="$state/venv"
+envf="$state/research-engine.env"
+run_id="${RESEARCH_HUD_RUN_ID:-rf-open-world-corpus-expansion-v1}"
+
+[ -f "$envf" ] || { echo "HUD ERROR: missing $envf" >&2; exit 1; }
+[ -x "$venv/bin/research-engine" ] || { echo "HUD ERROR: missing research-engine venv command" >&2; exit 1; }
+
+set -a
+. "$envf"
+set +a
+
+export RESEARCH_ENGINE_DATABASE_URL="postgresql://research_engine:research_engine@localhost:5432/research_engine"
+export RESEARCH_ENGINE_ARTIFACT_ROOT="$state/artifacts"
+
+exec "$venv/bin/research-engine" hud --run-id "$run_id" "$@"

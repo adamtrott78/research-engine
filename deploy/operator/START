@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+unit="research-engine-daemon.service"
+
+systemctl --user start "$unit"
+
+restart_seen=""
+for _ in $(seq 1 30); do
+    active="$(systemctl --user is-active "$unit" 2>/dev/null || true)"
+    sub="$(systemctl --user show "$unit" -p SubState --value 2>/dev/null || true)"
+    restarts="$(systemctl --user show "$unit" -p NRestarts --value 2>/dev/null || true)"
+
+    if [ "$active" = "active" ] && [ "$sub" = "running" ]; then
+        sleep 1
+        active2="$(systemctl --user is-active "$unit" 2>/dev/null || true)"
+        sub2="$(systemctl --user show "$unit" -p SubState --value 2>/dev/null || true)"
+        restarts2="$(systemctl --user show "$unit" -p NRestarts --value 2>/dev/null || true)"
+        if [ "$active2" = "active" ] && [ "$sub2" = "running" ] && [ "$restarts2" = "$restarts" ]; then
+            echo "STARTED"
+            exit 0
+        fi
+    fi
+
+    sleep 0.25
+done
+
+echo "START FAILED: daemon did not become stable active/running" >&2
+systemctl --user show "$unit" -p ActiveState -p SubState -p Result -p MainPID -p NRestarts >&2 || true
+journalctl --user -u "$unit" -n 40 --no-pager >&2 || true
+exit 1

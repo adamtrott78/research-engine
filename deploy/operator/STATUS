@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+state="$HOME/adamArchives/Adam/.research-engine"
+venv="$state/venv"
+envf="$state/research-engine.env"
+run_id="${RESEARCH_HUD_RUN_ID:-rf-open-world-corpus-expansion-v1}"
+unit="research-engine-daemon.service"
+
+echo "=== DAEMON ==="
+systemctl --user show "$unit" -p ActiveState -p SubState -p Result -p MainPID -p NRestarts
+
+if [ -f "$envf" ] && [ -x "$venv/bin/research-engine" ]; then
+    set -a
+    . "$envf"
+    set +a
+    export RESEARCH_ENGINE_DATABASE_URL="postgresql://research_engine:research_engine@localhost:5432/research_engine"
+    export RESEARCH_ENGINE_ARTIFACT_ROOT="$state/artifacts"
+    echo
+    echo "=== HUD SNAPSHOT ==="
+    "$venv/bin/research-engine" hud --run-id "$run_id" --once --no-color
+fi

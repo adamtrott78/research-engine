@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+unit="research-engine-daemon.service"
+
+systemctl --user stop "$unit"
+
+for _ in $(seq 1 30); do
+    active="$(systemctl --user is-active "$unit" 2>/dev/null || true)"
+    sub="$(systemctl --user show "$unit" -p SubState --value 2>/dev/null || true)"
+    pid="$(systemctl --user show "$unit" -p MainPID --value 2>/dev/null || true)"
+
+    if [ "$active" = "inactive" ] && [ "$sub" = "dead" ] && [ "${pid:-0}" = "0" ]; then
+        echo "STOPPED"
+        exit 0
+    fi
+
+    sleep 0.25
+done
+
+echo "STOP FAILED: daemon did not reach inactive/dead" >&2
+systemctl --user show "$unit" -p ActiveState -p SubState -p MainPID -p NRestarts >&2 || true
+exit 1
