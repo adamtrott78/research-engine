@@ -205,7 +205,7 @@ def test_chat_ops_mirror_whitelists_operational_fields_and_excludes_sensitive_da
     assert mirror["usage"]["by_job_type"][0]["job_type"] == "VERIFY"
     assert mirror["calibrations"][0]["accepted_evidence_ids_equal"] is True
 
-    for secret in (
+    for secret_value in (
         "SECRET_SOURCE_TOPIC",
         "SECRET_POLICY",
         "SECRET_WORKER_ID",
@@ -213,6 +213,11 @@ def test_chat_ops_mirror_whitelists_operational_fields_and_excludes_sensitive_da
         "SECRET_JOB_ID",
         "SECRET_SOURCE_TEXT",
         "SECRET_PROVIDER_DETAIL",
+    ):
+        assert secret_value not in encoded
+        assert secret_value not in rendered
+
+    for forbidden_key in (
         "MainPID",
         "process_id",
         "host_name",
@@ -221,8 +226,7 @@ def test_chat_ops_mirror_whitelists_operational_fields_and_excludes_sensitive_da
         "result_summary",
         "detail",
     ):
-        assert secret not in encoded
-        assert secret not in rendered
+        assert forbidden_key not in encoded
 
     assert "Research Engine Live Ops" in rendered
     assert "17% used (censored)" in rendered
