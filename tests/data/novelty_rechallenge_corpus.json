@@ -1,0 +1,67 @@
+{
+  "fixture_version": 1,
+  "prior_checkpoint_stage": "five-work-corpus",
+  "expanded_checkpoint_stage": "seven-work-corpus",
+  "challenges": [
+    {
+      "id": "challenge:dynamic-generalization:corpus-v2",
+      "gap_candidate_id": "gap:rf-osr:dynamic-environment-generalization:v1",
+      "proposed_result": "REJECTED_PRIOR_WORK_FOUND",
+      "search_provenance": {
+        "mode": "CORPUS_BACKED_RECHALLENGE",
+        "source_work_ids": [
+          "work:arxiv:2605.15593"
+        ],
+        "source_evidence_ids": [
+          "ev:2605:method:contracsi-open-set",
+          "ev:2605:experiment:dynamic-open-set",
+          "ev:2605:result:dynamic-open-set",
+          "ev:2605:claim:dynamic-rejection"
+        ]
+      },
+      "counterevidence": [
+        {
+          "work_id": "work:arxiv:2605.15593",
+          "evidence_ids": [
+            "ev:2605:experiment:dynamic-open-set",
+            "ev:2605:result:dynamic-open-set",
+            "ev:2605:claim:dynamic-rejection"
+          ],
+          "source_level": "FULLTEXT_STRUCTURED",
+          "observed_coverage": "Direct empirical open-set RF authentication under dynamic public-building conditions with human motion, multipath, spatial/cross-day variation, and unseen transmitters."
+        }
+      ],
+      "reasoning": "The broad dynamic-environment RF OSR gap remains rejected after promoting the counterexample from external abstract metadata to full-text structured corpus evidence."
+    },
+    {
+      "id": "challenge:efficient-blind-generative:corpus-v2",
+      "gap_candidate_id": "gap:rf-osr:efficient-blind-generative-outliers:v1",
+      "proposed_result": "NARROWED",
+      "search_provenance": {
+        "mode": "CORPUS_BACKED_RECHALLENGE",
+        "source_work_ids": [
+          "work:arxiv:2606.12718"
+        ],
+        "source_evidence_ids": [
+          "ev:2606:method:shot-no-ood",
+          "ev:2606:result:shot-no-ood",
+          "ev:2606:claim:no-ood-tuning",
+          "ev:2606:limitation:scope"
+        ]
+      },
+      "counterevidence": [
+        {
+          "work_id": "work:arxiv:2606.12718",
+          "evidence_ids": [
+            "ev:2606:method:shot-no-ood",
+            "ev:2606:result:shot-no-ood",
+            "ev:2606:claim:no-ood-tuning"
+          ],
+          "source_level": "FULLTEXT_STRUCTURED",
+          "observed_coverage": "Direct evidence that open-set RF OOD detectors can be tuned without supplied OOD data, while leaving the narrower efficient blind-generative augmentation question unresolved."
+        }
+      ],
+      "reasoning": "The candidate remains narrowed to efficient blind generative augmentation specifically; the broader operational need for no supplied OOD tuning data is directly addressed by corpus-backed prior work."
+    }
+  ]
+}
