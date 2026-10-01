@@ -63,10 +63,14 @@ class ResearchContextHydrator:
         store,
         artifact_root: str | Path,
         text_extractor: Callable[[Path], list[dict[str, Any]]] | None = None,
+        verify_page_radius: int = 0,
     ):
+        if verify_page_radius < 0:
+            raise ValueError("verify_page_radius must be non-negative")
         self.store = store
         self.artifact_store = ContentAddressedArtifactStore(artifact_root)
         self.text_extractor = text_extractor or PdfPageTextExtractor()
+        self.verify_page_radius = int(verify_page_radius)
 
     def _artifact_context(self, artifact_id: str) -> dict[str, Any]:
         with self.store.connect() as conn:
@@ -124,6 +128,55 @@ class ResearchContextHydrator:
                 )
                 cols = [d.name for d in cur.description]
                 return [dict(zip(cols, row, strict=True)) for row in cur.fetchall()]
+
+    def _verification_pages(
+        self,
+        pages: list[dict[str, Any]],
+        evidence: list[dict[str, Any]],
+    ) -> tuple[list[dict[str, Any]], list[int]]:
+        if not evidence:
+            return [], []
+
+        cited: set[int] = set()
+        for item in evidence:
+            page_number = item.get("page_number")
+            if page_number is None:
+                raise JobExecutionError(
+                    "verification evidence lacks a source page locator",
+                    code="MISSING_VERIFICATION_LOCATOR",
+                    retryable=False,
+                    detail={"evidence_id": item.get("id")},
+                )
+            cited.add(int(page_number))
+
+        wanted: set[int] = set()
+        for page_number in cited:
+            for offset in range(-self.verify_page_radius, self.verify_page_radius + 1):
+                candidate = page_number + offset
+                if candidate > 0:
+                    wanted.add(candidate)
+
+        selected = [
+            dict(page)
+            for page in pages
+            if int(page.get("page_number") or 0) in wanted
+        ]
+        selected_numbers = {
+            int(page.get("page_number") or 0)
+            for page in selected
+        }
+        missing = sorted(cited - selected_numbers)
+        if missing:
+            raise JobExecutionError(
+                "verification evidence references unavailable source pages",
+                code="MISSING_VERIFICATION_SOURCE_PAGE",
+                retryable=False,
+                detail={
+                    "missing_page_numbers": missing,
+                    "available_page_numbers": sorted(selected_numbers),
+                },
+            )
+        return selected, sorted(cited)
 
     def _checkpoint_context(self, checkpoint_id: str) -> dict[str, Any]:
         with self.store.connect() as conn:
@@ -195,9 +248,23 @@ class ResearchContextHydrator:
                     code="MISSING_EXTRACTION_CONTEXT",
                     retryable=False,
                 )
-            context.update(self._artifact_context(str(artifact_id)))
             evidence_ids = list(materialized.get("evidence_ids") or [])
-            context["authoritative_evidence"] = self._evidence(evidence_ids)
+            evidence = self._evidence(evidence_ids)
+            artifact_context = self._artifact_context(str(artifact_id))
+            verification_pages, cited_pages = self._verification_pages(
+                list(artifact_context.get("pages") or []),
+                evidence,
+            )
+            artifact_context["pages"] = verification_pages
+            context.update(artifact_context)
+            context["authoritative_evidence"] = evidence
+            context["verification_scope"] = {
+                "cited_page_numbers": cited_pages,
+                "page_radius": self.verify_page_radius,
+                "supplied_page_numbers": [
+                    int(page["page_number"]) for page in verification_pages
+                ],
+            }
 
         elif job.job_type == JobType.SYNTHESIZE:
             checkpoint_id = str(payload.get("knowledge_checkpoint_id") or "")
