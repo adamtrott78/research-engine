@@ -591,19 +591,25 @@ def test_planner_skips_unsupported_retained_sources_without_failing_run():
 
     planner.reconcile(run_id)
 
-    acquisitions = {
-        job.payload["item"]["id"]: job
-        for job in queue.jobs(run_id, JobType.ACQUIRE)
-    }
-    assert acquisitions["arxiv:one"].status == "QUEUED"
-    assert acquisitions["publisher:two"].status == "CANCELLED"
+    acquisitions = queue.jobs(run_id, JobType.ACQUIRE)
+    supported = next(
+        job for job in acquisitions
+        if job.status == "QUEUED"
+    )
+    unsupported = next(
+        job for job in acquisitions
+        if job.status == "CANCELLED"
+    )
+    assert supported.payload["item"]["id"] == "arxiv:2601.00001"
+    assert supported.payload["item"]["discovery_id"] == "arxiv:one"
+    assert unsupported.payload["item"]["id"] == "publisher:two"
     assert queue.run_state(run_id)["status"] == "RUNNING"
 
     with store.connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 "SELECT last_error FROM research_jobs WHERE id=%s",
-                (acquisitions["publisher:two"].id,),
+                (unsupported.id,),
             )
             detail = cur.fetchone()[0]
     assert detail["type"] == "SKIPPED_UNSUPPORTED_SOURCE_PROVIDER"
