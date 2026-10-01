@@ -399,6 +399,15 @@ class OrchestratorStore:
             return None
         with self.store.connect() as conn:
             with conn.cursor() as cur:
+                # Serialize only lease admission so concurrent workers observe
+                # each other's RUNNING reservations before evaluating budgets.
+                # The lock is transaction-scoped and released immediately after
+                # the leased job/attempt record commits; model execution is not
+                # serialized.
+                cur.execute(
+                    "SELECT pg_advisory_xact_lock(hashtext(%s))",
+                    ("research-engine:lease-budget",),
+                )
                 cur.execute(
                     """
                     WITH candidate AS (
