@@ -1065,8 +1065,8 @@ class ResearchPlanner:
                 discovery[0],
                 screen[0],
             )
-            existing_acquisitions = {
-                job.idempotency_key: job
+            existing_acquisition_keys = {
+                job.idempotency_key
                 for job in jobs
                 if job.job_type == JobType.ACQUIRE
             }
@@ -1077,9 +1077,15 @@ class ResearchPlanner:
             for item in retained:
                 if acquisition_candidate_supported(item):
                     continue
-                key = str(item.get("id") or "unknown")
-                idem = f"acquire:{key}"
-                if idem in existing_acquisitions:
+                digest = hashlib.sha256(
+                    json.dumps(
+                        item,
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ).encode("utf-8")
+                ).hexdigest()[:16]
+                idem = f"acquire-unsupported:{digest}"
+                if idem in existing_acquisition_keys:
                     continue
                 job_id = self.queue.enqueue(
                     run_id=run_id,
@@ -1097,10 +1103,7 @@ class ResearchPlanner:
                         "source_uri": item.get("source_uri"),
                     },
                 )
-                existing_acquisitions[idem] = next(
-                    j for j in self.queue.jobs(run_id, JobType.ACQUIRE)
-                    if j.id == job_id
-                )
+                existing_acquisition_keys.add(idem)
 
             canonical_items = canonical_acquisition_candidates(retained)
             verified_existing = self.queue.verified_work_ids(
@@ -1109,7 +1112,7 @@ class ResearchPlanner:
             for item in canonical_items:
                 key = str(item["id"])
                 idem = f"acquire:{key}"
-                if idem in existing_acquisitions:
+                if idem in existing_acquisition_keys:
                     continue
                 already_verified = key in verified_existing
                 job_id = self.queue.enqueue(
