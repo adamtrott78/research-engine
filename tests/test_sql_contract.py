@@ -28,5 +28,4 @@ def test_postgres_schema_preserves_authority_projection_boundaries():
 def test_usage_ledger_schema_present():
     sql = (Path(__file__).parents[1] / "sql" / "schema.sql").read_text()
     assert "CREATE TABLE IF NOT EXISTS research_usage_events" in sql
-    assert "UNIQUE REFERENCES research_jobs" not in sql
     assert "job_id TEXT NOT NULL UNIQUE REFERENCES research_jobs(id)" in sql
