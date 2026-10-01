@@ -76,6 +76,21 @@ def test_autonomous_cycle_fanout_retry_crash_recovery_and_human_gate():
         conn.commit()
 
     run_id = "research-run:agentic-dry-v1"
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO knowledge_checkpoints(id, fingerprint, scope, manifest, record_counts)
+                VALUES (%s, %s, '{}'::jsonb, '{}'::jsonb, '{}'::jsonb)
+                ON CONFLICT(id) DO NOTHING
+                """,
+                (
+                    "knowledge-checkpoint:dry-run-v1",
+                    "0" * 64,
+                ),
+            )
+        conn.commit()
+
     queue.create_run(
         run_id=run_id,
         topic="open-set RF fingerprinting",
@@ -125,13 +140,13 @@ def test_autonomous_cycle_fanout_retry_crash_recovery_and_human_gate():
         ),
     ]
 
-    # Discovery + screening + acquisition fan-out.
-    for _ in range(6):
-        for worker in workers:
-            worker.run_until_idle()
-        planner.reconcile(run_id)
+    # Drive only discovery/screening/acquisition first, then crash a STANDARD
+    # worker before the normal STANDARD worker can consume extraction.
+    workers[0].run_until_idle()
+    planner.reconcile(run_id)
+    workers[1].run_until_idle()
+    planner.reconcile(run_id)
 
-    # Simulate a standard worker dying after leasing one extraction job.
     crash_worker = "worker:crashed"
     queue.register_worker(crash_worker, [ExecutorTier.STANDARD])
     leased = queue.lease_next(
@@ -139,10 +154,10 @@ def test_autonomous_cycle_fanout_retry_crash_recovery_and_human_gate():
         supported_tiers=[ExecutorTier.STANDARD],
         lease_seconds=0,
     )
-    if leased is not None:
-        assert leased.job_type == JobType.EXTRACT
-        recovered = queue.recover_expired_leases()
-        assert leased.id in recovered
+    assert leased is not None
+    assert leased.job_type == JobType.EXTRACT
+    recovered = queue.recover_expired_leases()
+    assert leased.id in recovered
 
     # Continue autonomously. One novelty search intentionally fails once and retries.
     for _ in range(40):
