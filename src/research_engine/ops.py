@@ -53,6 +53,73 @@ _RESET_WINDOW_FALLBACK_TOLERANCE_SECONDS = {
     "WEEKLY": 2 * 60 * 60,
 }
 
+_ALLOWANCE_UI_SECTION_PATTERN = re.compile(
+    r"^(?P<label>5\s*-?\s*hour|weekly)\s+limit$",
+    re.IGNORECASE,
+)
+_ALLOWANCE_UI_RESET_PATTERN = re.compile(
+    r"^resets\s+in\s+(?P<duration>.+?)\s*$",
+    re.IGNORECASE,
+)
+_ALLOWANCE_UI_LEFT_PATTERN = re.compile(
+    r"^(?P<left>\d+(?:\.\d+)?)\s*%\s*left\s*$",
+    re.IGNORECASE,
+)
+
+
+def _normalize_allowance_ui_line(value: str) -> str:
+    return str(value).replace("\r", "").strip().strip("*").strip()
+
+
+def parse_allowance_ui_paste(value: str) -> dict[str, dict[str, Any]]:
+    """Parse the copy/paste shape emitted by the ChatGPT usage-limit UI."""
+    current: str | None = None
+    parsed: dict[str, dict[str, Any]] = {}
+
+    for raw_line in str(value or "").splitlines():
+        line = _normalize_allowance_ui_line(raw_line)
+        if not line:
+            continue
+
+        section = _ALLOWANCE_UI_SECTION_PATTERN.fullmatch(line)
+        if section:
+            label = section.group("label").lower().replace(" ", "")
+            current = "5h" if "5" in label else "weekly"
+            parsed.setdefault(current, {})
+            continue
+
+        if current is None:
+            continue
+
+        reset = _ALLOWANCE_UI_RESET_PATTERN.fullmatch(line)
+        if reset:
+            parsed[current]["resets_in"] = reset.group("duration").strip()
+            continue
+
+        left = _ALLOWANCE_UI_LEFT_PATTERN.fullmatch(line)
+        if left:
+            parsed[current]["left_percent"] = float(left.group("left"))
+
+    missing: list[str] = []
+    for window in ("5h", "weekly"):
+        row = parsed.get(window) or {}
+        if "left_percent" not in row:
+            missing.append(f"{window} left percent")
+        if "resets_in" not in row:
+            missing.append(f"{window} reset duration")
+    if missing:
+        raise ValueError(
+            "usage-limit paste is incomplete; missing " + ", ".join(missing)
+        )
+
+    return {
+        window: {
+            "left_percent": float(parsed[window]["left_percent"]),
+            "resets_in": str(parsed[window]["resets_in"]),
+        }
+        for window in ("5h", "weekly")
+    }
+
 
 def relative_duration_precision_seconds(value: str) -> int:
     match = _RELATIVE_DURATION_PATTERN.fullmatch(value or "")
