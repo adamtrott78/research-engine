@@ -276,3 +276,89 @@ def test_cancel_queued_except_salvages_legacy_novelty_fanout():
     assert states["novelty-search:g1:0"] == "QUEUED"
     assert states["novelty-search:g1:1"] == "QUEUED"
     assert states["novelty-search:g1:2"] == "CANCELLED"
+
+
+@pytest.mark.integration
+def test_reconcile_reuses_legacy_novelty_job_payload_by_idempotency_key():
+    dsn = os.getenv("RESEARCH_ENGINE_DATABASE_URL")
+    if not dsn:
+        pytest.skip("RESEARCH_ENGINE_DATABASE_URL not set")
+    pytest.importorskip("psycopg")
+
+    from psycopg.types.json import Jsonb
+
+    from research_engine.orchestration import (
+        JobType,
+        OrchestratorStore,
+        ResearchPlanner,
+    )
+    from research_engine.postgres import PostgresStore
+
+    store = PostgresStore(dsn)
+    store.initialize(Path(__file__).parents[1] / "sql" / "schema.sql")
+    queue = OrchestratorStore(store)
+    planner = ResearchPlanner(queue)
+
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                TRUNCATE human_review_requests, research_job_attempts, research_jobs,
+                         research_workers, research_runs CASCADE
+                """
+            )
+        conn.commit()
+
+    run_id = "research-run:legacy-idempotent-reconcile"
+    queue.create_run(run_id=run_id, topic="legacy payload reconciliation")
+
+    full_gap = {
+        "id": "gap:legacy",
+        "statement": "legacy gap",
+        "search_queries": ["q0", "q1", "q2"],
+    }
+    gap_job_id = queue.enqueue(
+        run_id=run_id,
+        job_type=JobType.GAP_GENERATE,
+        idempotency_key="stage:gap-generate",
+        payload={"synthesis": {"legacy": True}},
+        status="COMPLETED",
+    )
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE research_jobs SET result=%s WHERE id=%s",
+                (Jsonb({"gaps": [full_gap]}), gap_job_id),
+            )
+        conn.commit()
+
+    legacy_payload = {"gap": full_gap, "query": "q0"}
+    queue.enqueue(
+        run_id=run_id,
+        job_type=JobType.NOVELTY_SEARCH,
+        idempotency_key="novelty-search:gap:legacy:0",
+        payload=legacy_payload,
+        depends_on=[gap_job_id],
+        priority=30,
+    )
+    queue.enqueue(
+        run_id=run_id,
+        job_type=JobType.NOVELTY_SEARCH,
+        idempotency_key="novelty-search:gap:legacy:2",
+        payload={"gap": full_gap, "query": "q2"},
+        depends_on=[gap_job_id],
+        priority=30,
+    )
+
+    # Must not raise even though the bounded representation would truncate
+    # search_queries and therefore differ from the immutable legacy payload.
+    planner.reconcile(run_id)
+
+    jobs = {
+        job.idempotency_key: job
+        for job in queue.jobs(run_id, JobType.NOVELTY_SEARCH)
+    }
+    assert jobs["novelty-search:gap:legacy:0"].status == "QUEUED"
+    assert jobs["novelty-search:gap:legacy:0"].payload == legacy_payload
+    assert jobs["novelty-search:gap:legacy:1"].status == "QUEUED"
+    assert jobs["novelty-search:gap:legacy:2"].status == "CANCELLED"
