@@ -31,3 +31,13 @@ def test_stop_shortcut_verifies_process_is_dead_before_success():
     assert '[ "$sub" = "dead" ]' in text
     assert '[ "${pid:-0}" = "0" ]' in text
     assert 'echo "STOPPED"' in text
+
+
+def test_paused_hud_deployer_uses_usage_ui_shape():
+    root = Path(__file__).parents[1]
+    text = (root / "deploy" / "deploy-hud-paused.sh").read_text()
+    assert "LEFT percent" in text
+    assert "resets in [e.g. 3h 20m" in text
+    assert "--left-percent" in text
+    assert "--resets-in" in text
+    assert "--used-percent" not in text
