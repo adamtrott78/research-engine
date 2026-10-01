@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import os
+import re
 import shutil
 import subprocess
 import time
@@ -9,6 +10,33 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable
 
 from .postgres import PostgresStore
+
+
+_RELATIVE_DURATION_PATTERN = re.compile(
+    r"^\\s*(?:(?P<days>\\d+)\\s*d(?:ays?)?\\s*)?"
+    r"(?:(?P<hours>\\d+)\\s*h(?:ours?)?\\s*)?"
+    r"(?:(?P<minutes>\\d+)\\s*m(?:in(?:ute)?s?)?\\s*)?"
+    r"(?:(?P<seconds>\\d+)\\s*s(?:ec(?:ond)?s?)?\\s*)?$",
+    re.IGNORECASE,
+)
+
+
+def parse_relative_duration(value: str) -> timedelta:
+    match = _RELATIVE_DURATION_PATTERN.fullmatch(value or "")
+    if match is None or not any(match.groupdict().values()):
+        raise ValueError(
+            "relative duration must look like '3h 20m', '5d 8h', or '45m'"
+        )
+    parts = {key: int(raw or 0) for key, raw in match.groupdict().items()}
+    duration = timedelta(
+        days=parts["days"],
+        hours=parts["hours"],
+        minutes=parts["minutes"],
+        seconds=parts["seconds"],
+    )
+    if duration.total_seconds() <= 0:
+        raise ValueError("relative duration must be positive")
+    return duration
 
 
 WINDOW_ALIASES = {
