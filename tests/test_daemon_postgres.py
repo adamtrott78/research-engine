@@ -77,6 +77,10 @@ def test_daemon_backpressure_health_and_overnight_report():
 
     report = daemon.overnight_report(hours=24)
     assert {run["id"] for run in report["runs"]} == {"run:one", "run:two"}
-    assert report["model_usage"] == {"input_tokens": 0, "output_tokens": 0}
+    assert report["model_usage"] == {
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "by_tier_model": {},
+    }
     assert report["human_reviews"][0]["run_id"] == "run:one"
     assert report["health"]["runs"]["RUNNING"] == 1

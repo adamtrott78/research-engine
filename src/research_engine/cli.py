@@ -67,11 +67,26 @@ def main() -> None:
     daemon.add_argument("--stale-worker-seconds", type=int, default=900)
     daemon.add_argument("--submit-topic")
     daemon.add_argument("--run-id")
+    daemon.add_argument(
+        "--policy-json",
+        help="JSON object persisted as research_runs.policy for a submitted run",
+    )
 
     report = sub.add_parser("overnight-report")
     report.add_argument("--hours", type=float, default=12.0)
     report.add_argument("--max-active-runs", type=int, default=4)
     report.add_argument("--max-pending-human", type=int, default=8)
+
+    budget_status = sub.add_parser("budget-status")
+    budget_status.add_argument("run_id")
+
+    budget_resume = sub.add_parser("budget-resume")
+    budget_resume.add_argument("run_id")
+    budget_resume.add_argument(
+        "--budgets-json",
+        required=True,
+        help="JSON object merged into policy.budgets before explicit resume",
+    )
 
     args = p.parse_args()
     if args.cmd == "artifact-put":
@@ -157,9 +172,11 @@ def main() -> None:
         )
         submitted = None
         if args.submit_topic:
+            policy = json.loads(args.policy_json) if args.policy_json else None
             submitted = service.submit_run(
                 topic=args.submit_topic,
                 run_id=args.run_id,
+                policy=policy,
             )
         result = service.run_forever(max_ticks=args.max_ticks)
         result["submitted_run_id"] = submitted
@@ -175,3 +192,14 @@ def main() -> None:
             ),
         )
         print(json.dumps(service.overnight_report(hours=args.hours), default=str))
+    elif args.cmd == "budget-status":
+        from .daemon import daemon_from_env
+
+        service = daemon_from_env(with_workers=False)
+        print(json.dumps(service.budget_status(args.run_id), default=str))
+    elif args.cmd == "budget-resume":
+        from .daemon import daemon_from_env
+
+        service = daemon_from_env(with_workers=False)
+        budgets = json.loads(args.budgets_json)
+        print(json.dumps(service.resume_budget(args.run_id, budgets=budgets), default=str))
