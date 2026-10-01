@@ -246,6 +246,27 @@ Allowance reset timestamps derived from relative UI text are grouped with a
 precision-aware tolerance. Raw observations remain durable, and a whole-percent
 bucket transition is not treated as an exact percentage cost.
 
+### Repeated radius A/B calibration
+
+When a single replay cannot distinguish model nondeterminism from a context-window
+effect, use the stopped-daemon repeated A/B runner on one explicit historical
+VERIFY source:
+
+```bash
+bash deploy/run-verify-ab-batch.sh job:<source-id> 3
+```
+
+The second argument is replays per radius and defaults to 3. The runner caps it at
+12 per radius, performs radius 0 first and radius 1 second, and never materializes
+scientific state. It asks for exactly three whole usage-limit pastes: before the
+radius-0 phase, between phases, and after the radius-1 phase. Each phase reports
+agreement counts plus exact replay input/cached/output/reasoning-token statistics.
+This separates exact token-cost comparison from the product UI's quantized plan-
+allowance measurement.
+
+The runner requires the daemon to remain inactive/dead before, during, and after
+every semantic call and never starts sustained research.
+
 ## Allowance behavior
 
 ChatGPT-authenticated Codex consumes the plan's Codex/Work allowance. Production
