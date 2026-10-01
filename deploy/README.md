@@ -109,6 +109,42 @@ API-development/testing. Its daemon service is behind the
 Do not use that profile for production operation under the ChatGPT-plan
 constraint.
 
+## Operations HUD and allowance observations
+
+The monitoring surfaces are read-only with respect to scientific state.
+
+Record a ChatGPT/Codex plan reading from the product UI:
+
+```bash
+research-engine allowance-observe \
+  --window 5h \
+  --used-percent 16 \
+  --approximate \
+  --note "acceptance/launch calibration seed"
+```
+
+Record weekly usage the same way with `--window weekly`. Add
+`--resets-at 2026-10-01T20:00:00-04:00` when the reset time is known.
+
+Inspect a machine-readable snapshot:
+
+```bash
+research-engine ops-snapshot --run-id rf-open-world-corpus-expansion-v1
+```
+
+Launch the terminal HUD:
+
+```bash
+research-engine hud --run-id rf-open-world-corpus-expansion-v1
+```
+
+Use `--once --no-color` for a static/plain-text snapshot. The HUD reports
+`CALIBRATING` rather than an exhaustion ETA until at least two usable
+observations exist in the same allowance window.
+
+PostgreSQL is authoritative for worker/job/usage/allowance telemetry. HUD
+rendering failure must not change research state.
+
 ## Allowance behavior
 
 ChatGPT-authenticated Codex consumes the plan's Codex/Work allowance. Production

@@ -287,15 +287,39 @@ class OrchestratorStore:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    INSERT INTO research_workers(id, supported_tiers, metadata, state, last_heartbeat_at)
-                    VALUES (%s,%s,%s,'ACTIVE',now())
+                    INSERT INTO research_workers(
+                      id, logical_agent_id, supported_tiers, metadata, state,
+                      host_name, process_id, code_sha, backend, model,
+                      reasoning_effort, last_heartbeat_at
+                    )
+                    VALUES (
+                      %s,%s,%s,%s,'ACTIVE',%s,%s,%s,%s,%s,%s,now()
+                    )
                     ON CONFLICT(id) DO UPDATE SET
+                      logical_agent_id = EXCLUDED.logical_agent_id,
                       supported_tiers = EXCLUDED.supported_tiers,
                       metadata = EXCLUDED.metadata,
                       state = 'ACTIVE',
+                      host_name = EXCLUDED.host_name,
+                      process_id = EXCLUDED.process_id,
+                      code_sha = EXCLUDED.code_sha,
+                      backend = EXCLUDED.backend,
+                      model = EXCLUDED.model,
+                      reasoning_effort = EXCLUDED.reasoning_effort,
                       last_heartbeat_at = now()
                     """,
-                    (worker_id, tiers, Jsonb(metadata or {})),
+                    (
+                        worker_id,
+                        (metadata or {}).get("logical_agent_id"),
+                        tiers,
+                        Jsonb(metadata or {}),
+                        (metadata or {}).get("host_name"),
+                        (metadata or {}).get("process_id"),
+                        (metadata or {}).get("code_sha"),
+                        (metadata or {}).get("backend"),
+                        (metadata or {}).get("model"),
+                        (metadata or {}).get("reasoning_effort"),
+                    ),
                 )
             conn.commit()
 
@@ -674,23 +698,65 @@ class OrchestratorStore:
                 execution = result.get("_execution") if isinstance(result, dict) else None
                 usage = execution.get("usage") if isinstance(execution, dict) else None
                 if isinstance(execution, dict) and isinstance(usage, dict):
+                    web_search = execution.get("web_search")
+                    web_events = (
+                        web_search.get("events")
+                        if isinstance(web_search, dict)
+                        else []
+                    )
                     cur.execute(
                         """
                         INSERT INTO research_usage_events(
-                          run_id,job_id,executor_tier,provider,model,
-                          input_tokens,output_tokens
+                          run_id,job_id,job_type,executor_tier,
+                          worker_id,logical_agent_id,attempt_no,
+                          provider,model,reasoning_effort,
+                          input_tokens,cached_input_tokens,
+                          output_tokens,reasoning_output_tokens,
+                          wall_time_ms,queue_wait_ms,web_search_count
                         )
-                        VALUES (%s,%s,%s,%s,%s,%s,%s)
+                        SELECT
+                          %s,%s,%s,%s,
+                          %s,w.logical_agent_id,%s,
+                          %s,%s,%s,
+                          %s,%s,%s,%s,
+                          GREATEST(
+                            0,
+                            ROUND(
+                              EXTRACT(EPOCH FROM (a.finished_at-a.started_at))*1000
+                            )
+                          )::bigint,
+                          GREATEST(
+                            0,
+                            ROUND(
+                              EXTRACT(EPOCH FROM (a.started_at-j.available_at))*1000
+                            )
+                          )::bigint,
+                          %s
+                        FROM research_jobs j
+                        JOIN research_job_attempts a
+                          ON a.job_id=j.id AND a.attempt_no=%s
+                        LEFT JOIN research_workers w ON w.id=%s
+                        WHERE j.id=%s
                         ON CONFLICT(job_id) DO NOTHING
                         """,
                         (
                             job.run_id,
                             job.id,
+                            str(job.job_type),
                             str(job.executor_tier),
+                            worker_id,
+                            job.attempt_count,
                             str(execution.get("provider") or "unknown"),
                             execution.get("model"),
+                            execution.get("reasoning_effort"),
                             int(usage.get("input_tokens") or 0),
+                            int(usage.get("cached_input_tokens") or 0),
                             int(usage.get("output_tokens") or 0),
+                            int(usage.get("reasoning_output_tokens") or 0),
+                            len(web_events or []),
+                            job.attempt_count,
+                            worker_id,
+                            job.id,
                         ),
                     )
             conn.commit()
@@ -1358,6 +1424,7 @@ class AgentWorker:
         executors: dict[ExecutorTier, JobExecutor],
         lease_seconds: int = 120,
         backoff_provider: str | None = None,
+        worker_metadata: dict[str, Any] | None = None,
     ):
         self.worker_id = worker_id
         self.queue = queue
@@ -1366,7 +1433,12 @@ class AgentWorker:
         self.executors = executors
         self.lease_seconds = lease_seconds
         self.backoff_provider = backoff_provider
-        queue.register_worker(worker_id, self.supported_tiers)
+        self.worker_metadata = dict(worker_metadata or {})
+        queue.register_worker(
+            worker_id,
+            self.supported_tiers,
+            metadata=self.worker_metadata,
+        )
 
     def run_once(self) -> ResearchJob | None:
         if (

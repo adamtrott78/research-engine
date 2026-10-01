@@ -1,0 +1,150 @@
+from datetime import datetime, timedelta, timezone
+
+from research_engine.ops import _forecast_observations, render_hud
+
+
+def test_allowance_forecast_calibrates_then_estimates():
+    start = datetime(2026, 10, 1, 12, tzinfo=timezone.utc)
+    one = _forecast_observations(
+        [
+            {
+                "percent_used": 16.0,
+                "observed_at": start,
+                "reset_at": None,
+                "approximate": True,
+            }
+        ],
+        now=start,
+    )
+    assert one["confidence"] == "CALIBRATING"
+    assert one["burn_percent_per_hour"] is None
+    assert one["eta_hours"] is None
+
+    two = _forecast_observations(
+        [
+            {
+                "percent_used": 16.0,
+                "observed_at": start,
+                "reset_at": None,
+                "approximate": True,
+            },
+            {
+                "percent_used": 20.0,
+                "observed_at": start + timedelta(hours=1),
+                "reset_at": None,
+                "approximate": False,
+            },
+        ],
+        now=start + timedelta(hours=1),
+    )
+    assert two["confidence"] == "LOW"
+    assert two["burn_percent_per_hour"] == 4.0
+    assert two["eta_hours"] == 20.0
+
+
+def test_allowance_forecast_does_not_cross_reset_drop():
+    start = datetime(2026, 10, 1, 12, tzinfo=timezone.utc)
+    rows = [
+        {
+            "percent_used": 80.0,
+            "observed_at": start,
+            "reset_at": None,
+            "approximate": False,
+        },
+        {
+            "percent_used": 5.0,
+            "observed_at": start + timedelta(hours=1),
+            "reset_at": None,
+            "approximate": False,
+        },
+        {
+            "percent_used": 9.0,
+            "observed_at": start + timedelta(hours=2),
+            "reset_at": None,
+            "approximate": False,
+        },
+    ]
+    forecast = _forecast_observations(rows, now=start + timedelta(hours=2))
+    assert forecast["observations"] == 2
+    assert forecast["burn_percent_per_hour"] == 4.0
+
+
+def test_hud_renders_core_panels():
+    snapshot = {
+        "captured_at": "2026-10-01T16:00:00+00:00",
+        "systemd": {
+            "available": True,
+            "ActiveState": "inactive",
+            "SubState": "dead",
+        },
+        "run": {
+            "id": "run:test",
+            "status": "RUNNING",
+            "current_phase": "DISCOVERY",
+            "human_gate_state": "NOT_REQUIRED",
+        },
+        "allowance": {
+            "FIVE_HOUR": {
+                "percent_used": 16.0,
+                "confidence": "CALIBRATING",
+                "burn_percent_per_hour": None,
+                "eta_hours": None,
+                "reset_at": None,
+            },
+            "WEEKLY": {
+                "percent_used": None,
+                "confidence": "NO_DATA",
+            },
+        },
+        "agents": [
+            {
+                "logical_agent_id": "semantic:cheap:0",
+                "state": "ACTIVE",
+                "model": "gpt-5.6-luna",
+                "current_job_type": "DISCOVERY",
+                "current_job_elapsed_seconds": 5,
+                "heartbeat_age_seconds": 2,
+                "calls": 1,
+                "input_tokens": 100,
+                "output_tokens": 10,
+            }
+        ],
+        "pipeline": {
+            "discovered": 2,
+            "retained": 0,
+            "acquired": 0,
+            "extracted": 0,
+            "verified": 0,
+            "checkpointed": 0,
+            "syntheses": 0,
+            "evidence_objects": 0,
+            "gaps": 0,
+            "novelty_search": {},
+            "novelty_arbitrations": 0,
+        },
+        "throughput": {},
+        "queue": {
+            "by_status": {"RUNNING": 1},
+            "oldest_queue_age_seconds": None,
+            "expired_leases": 0,
+        },
+        "usage": {
+            "totals": {
+                "calls": 1,
+                "input_tokens": 100,
+                "cached_input_tokens": 20,
+                "output_tokens": 10,
+                "reasoning_output_tokens": 3,
+            }
+        },
+        "efficiency": {},
+        "alerts": [],
+    }
+    rendered = render_hud(snapshot, color=False)
+    assert "RESEARCH ENGINE HUD" in rendered
+    assert "ALLOWANCE" in rendered
+    assert "16.0% used" in rendered
+    assert "CALIBRATING" in rendered
+    assert "semantic:cheap:0" in rendered
+    assert "PIPELINE" in rendered
+    assert "QUEUE / ALERTS" in rendered

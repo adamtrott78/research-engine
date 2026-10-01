@@ -281,12 +281,29 @@ CREATE INDEX IF NOT EXISTS research_runs_status_idx ON research_runs(status, upd
 
 CREATE TABLE IF NOT EXISTS research_workers (
     id TEXT PRIMARY KEY,
+    logical_agent_id TEXT,
     supported_tiers TEXT[] NOT NULL,
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
     state TEXT NOT NULL DEFAULT 'ACTIVE',
+    host_name TEXT,
+    process_id INTEGER,
+    code_sha TEXT,
+    backend TEXT,
+    model TEXT,
+    reasoning_effort TEXT,
     last_heartbeat_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE research_workers
+    ADD COLUMN IF NOT EXISTS logical_agent_id TEXT,
+    ADD COLUMN IF NOT EXISTS host_name TEXT,
+    ADD COLUMN IF NOT EXISTS process_id INTEGER,
+    ADD COLUMN IF NOT EXISTS code_sha TEXT,
+    ADD COLUMN IF NOT EXISTS backend TEXT,
+    ADD COLUMN IF NOT EXISTS model TEXT,
+    ADD COLUMN IF NOT EXISTS reasoning_effort TEXT;
+CREATE INDEX IF NOT EXISTS research_workers_logical_agent_idx
+    ON research_workers(logical_agent_id, created_at);
 
 CREATE TABLE IF NOT EXISTS research_provider_backoffs (
     provider TEXT PRIMARY KEY,
@@ -345,17 +362,169 @@ CREATE TABLE IF NOT EXISTS research_usage_events (
     id BIGSERIAL PRIMARY KEY,
     run_id TEXT NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
     job_id TEXT NOT NULL UNIQUE REFERENCES research_jobs(id) ON DELETE CASCADE,
+    job_type TEXT,
     executor_tier TEXT NOT NULL,
+    worker_id TEXT REFERENCES research_workers(id),
+    logical_agent_id TEXT,
+    attempt_no INTEGER,
     provider TEXT NOT NULL,
     model TEXT,
+    reasoning_effort TEXT,
     input_tokens BIGINT NOT NULL DEFAULT 0 CHECK (input_tokens >= 0),
+    cached_input_tokens BIGINT NOT NULL DEFAULT 0 CHECK (cached_input_tokens >= 0),
     output_tokens BIGINT NOT NULL DEFAULT 0 CHECK (output_tokens >= 0),
+    reasoning_output_tokens BIGINT NOT NULL DEFAULT 0 CHECK (reasoning_output_tokens >= 0),
+    wall_time_ms BIGINT CHECK (wall_time_ms IS NULL OR wall_time_ms >= 0),
+    queue_wait_ms BIGINT CHECK (queue_wait_ms IS NULL OR queue_wait_ms >= 0),
+    web_search_count INTEGER NOT NULL DEFAULT 0 CHECK (web_search_count >= 0),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE research_usage_events
+    ADD COLUMN IF NOT EXISTS job_type TEXT,
+    ADD COLUMN IF NOT EXISTS worker_id TEXT REFERENCES research_workers(id),
+    ADD COLUMN IF NOT EXISTS logical_agent_id TEXT,
+    ADD COLUMN IF NOT EXISTS attempt_no INTEGER,
+    ADD COLUMN IF NOT EXISTS reasoning_effort TEXT,
+    ADD COLUMN IF NOT EXISTS cached_input_tokens BIGINT NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS reasoning_output_tokens BIGINT NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS wall_time_ms BIGINT,
+    ADD COLUMN IF NOT EXISTS queue_wait_ms BIGINT,
+    ADD COLUMN IF NOT EXISTS web_search_count INTEGER NOT NULL DEFAULT 0;
 CREATE INDEX IF NOT EXISTS research_usage_run_idx
     ON research_usage_events(run_id, created_at);
 CREATE INDEX IF NOT EXISTS research_usage_tier_idx
     ON research_usage_events(run_id, executor_tier, created_at);
+CREATE INDEX IF NOT EXISTS research_usage_agent_idx
+    ON research_usage_events(logical_agent_id, created_at);
+CREATE INDEX IF NOT EXISTS research_usage_worker_idx
+    ON research_usage_events(worker_id, created_at);
+
+CREATE TABLE IF NOT EXISTS research_allowance_observations (
+    id BIGSERIAL PRIMARY KEY,
+    window_type TEXT NOT NULL CHECK (window_type IN ('FIVE_HOUR','WEEKLY')),
+    percent_used NUMERIC(5,2) NOT NULL CHECK (percent_used >= 0 AND percent_used <= 100),
+    observed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    reset_at TIMESTAMPTZ,
+    source TEXT NOT NULL DEFAULT 'MANUAL_UI',
+    approximate BOOLEAN NOT NULL DEFAULT FALSE,
+    note TEXT,
+    usage_event_highwater BIGINT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS research_allowance_observations_window_idx
+    ON research_allowance_observations(window_type, observed_at);
+
+-- Migration-safe observability backfill from preserved authoritative records.
+UPDATE research_workers
+SET logical_agent_id = COALESCE(
+        logical_agent_id,
+        metadata->>'logical_agent_id',
+        CASE
+          WHEN id ~ ':deterministic:[0-9]+$'
+          THEN 'deterministic:' || substring(id from ':deterministic:([0-9]+)$')
+          WHEN id ~ ':cheap:[0-9]+$'
+          THEN 'semantic:cheap:' || substring(id from ':cheap:([0-9]+)$')
+          WHEN id ~ ':standard:[0-9]+$'
+          THEN 'semantic:standard:' || substring(id from ':standard:([0-9]+)$')
+          WHEN id ~ ':strong:[0-9]+$'
+          THEN 'semantic:strong:' || substring(id from ':strong:([0-9]+)$')
+          ELSE NULL
+        END
+    ),
+    host_name = COALESCE(host_name, metadata->>'host_name'),
+    process_id = COALESCE(
+        process_id,
+        CASE
+          WHEN (metadata->>'process_id') ~ '^[0-9]+$'
+          THEN (metadata->>'process_id')::integer
+          ELSE NULL
+        END
+    ),
+    code_sha = COALESCE(code_sha, metadata->>'code_sha'),
+    backend = COALESCE(backend, metadata->>'backend'),
+    model = COALESCE(model, metadata->>'model'),
+    reasoning_effort = COALESCE(
+        reasoning_effort,
+        metadata->>'reasoning_effort'
+    );
+
+WITH completed_attempt AS (
+    SELECT DISTINCT ON (a.job_id)
+           a.job_id,
+           a.attempt_no,
+           a.worker_id,
+           a.started_at,
+           a.finished_at
+    FROM research_job_attempts a
+    WHERE a.status='COMPLETED'
+    ORDER BY a.job_id, a.attempt_no DESC
+)
+UPDATE research_usage_events u
+SET job_type = COALESCE(u.job_type, j.job_type),
+    worker_id = COALESCE(u.worker_id, a.worker_id),
+    logical_agent_id = COALESCE(
+        u.logical_agent_id,
+        w.logical_agent_id,
+        w.metadata->>'logical_agent_id'
+    ),
+    attempt_no = COALESCE(u.attempt_no, a.attempt_no),
+    reasoning_effort = COALESCE(
+        u.reasoning_effort,
+        j.result #>> '{_execution,reasoning_effort}'
+    ),
+    cached_input_tokens = CASE
+        WHEN u.cached_input_tokens = 0
+        THEN COALESCE(
+            (j.result #>> '{_execution,usage,cached_input_tokens}')::bigint,
+            0
+        )
+        ELSE u.cached_input_tokens
+    END,
+    reasoning_output_tokens = CASE
+        WHEN u.reasoning_output_tokens = 0
+        THEN COALESCE(
+            (j.result #>> '{_execution,usage,reasoning_output_tokens}')::bigint,
+            0
+        )
+        ELSE u.reasoning_output_tokens
+    END,
+    wall_time_ms = COALESCE(
+        u.wall_time_ms,
+        CASE WHEN a.finished_at IS NOT NULL
+             THEN GREATEST(
+                 0,
+                 ROUND(EXTRACT(EPOCH FROM (a.finished_at-a.started_at))*1000)
+             )::bigint
+             ELSE NULL
+        END
+    ),
+    queue_wait_ms = COALESCE(
+        u.queue_wait_ms,
+        CASE WHEN a.started_at IS NOT NULL
+             THEN GREATEST(
+                 0,
+                 ROUND(EXTRACT(EPOCH FROM (a.started_at-j.available_at))*1000)
+             )::bigint
+             ELSE NULL
+        END
+    ),
+    web_search_count = CASE
+        WHEN u.web_search_count = 0
+        THEN COALESCE(
+            jsonb_array_length(
+                COALESCE(
+                    j.result #> '{_execution,web_search,events}',
+                    '[]'::jsonb
+                )
+            ),
+            0
+        )
+        ELSE u.web_search_count
+    END
+FROM research_jobs j
+LEFT JOIN completed_attempt a ON a.job_id=j.id
+LEFT JOIN research_workers w ON w.id=a.worker_id
+WHERE u.job_id=j.id;
 
 CREATE TABLE IF NOT EXISTS semantic_materializations (
     job_id TEXT PRIMARY KEY REFERENCES research_jobs(id) ON DELETE CASCADE,

@@ -677,6 +677,7 @@ def daemon_from_env(
             workers.append(
                 deterministic_worker_from_env(
                     worker_id=f"{prefix}:deterministic:{index}",
+                    logical_agent_id=f"deterministic:{index}",
                     lease_seconds=lease_seconds,
                 )
             )
@@ -686,6 +687,7 @@ def daemon_from_env(
                     semantic_worker_from_env(
                         tiers=[tier],
                         worker_id=f"{prefix}:{str(tier).lower()}:{index}",
+                        logical_agent_id=f"semantic:{str(tier).lower()}:{index}",
                         lease_seconds=lease_seconds,
                     )
                 )
