@@ -19,6 +19,10 @@ def main() -> None:
     f = sub.add_parser("check-fidelity")
     f.add_argument("fixture")
 
+    arxiv = sub.add_parser("arxiv-acquire")
+    arxiv.add_argument("arxiv_id")
+    arxiv.add_argument("--root", required=True)
+
     args = p.parse_args()
     if args.cmd == "artifact-put":
         receipt = ContentAddressedArtifactStore(args.root).put_file(args.path)
@@ -28,3 +32,16 @@ def main() -> None:
         s = FidelitySummary(**data["summary"])
         s.assert_promotion_safe()
         print(json.dumps({"result":"PASS","semantic_preservation_rate":s.semantic_preservation_rate}))
+    elif args.cmd == "arxiv-acquire":
+        from .arxiv import ArxivProvider
+        result = ArxivProvider(ContentAddressedArtifactStore(args.root)).acquire_pdf(args.arxiv_id)
+        print(json.dumps({
+            "arxiv_id": result.arxiv_id,
+            "url": result.versioned_pdf_url,
+            "resolved_url": result.resolved_url,
+            "media_type": result.media_type,
+            "artifact_id": result.receipt.artifact_id,
+            "sha256": result.receipt.sha256,
+            "byte_size": result.receipt.byte_size,
+            "path": str(result.receipt.path),
+        }))
