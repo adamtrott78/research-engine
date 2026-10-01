@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, Iterable, Protocol
@@ -105,6 +106,39 @@ def acquisition_candidate_supported(item: dict[str, Any]) -> bool:
     from .deterministic_executor import arxiv_id_from_uri
 
     return arxiv_id_from_uri(str(item.get("source_uri") or "")) is not None
+
+
+def canonical_acquisition_candidate(
+    item: dict[str, Any],
+) -> dict[str, Any] | None:
+    from .deterministic_executor import arxiv_id_from_uri
+
+    arxiv_id = arxiv_id_from_uri(str(item.get("source_uri") or ""))
+    if arxiv_id is None:
+        return None
+
+    base_id = re.sub(r"v\d+$", "", arxiv_id)
+    canonical = dict(item)
+    canonical["discovery_id"] = str(item.get("id") or "")
+    canonical["id"] = f"arxiv:{base_id}"
+    return canonical
+
+
+def canonical_acquisition_candidates(
+    items: Iterable[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    canonical: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for item in items:
+        normalized = canonical_acquisition_candidate(item)
+        if normalized is None:
+            continue
+        work_id = str(normalized["id"])
+        if work_id in seen:
+            continue
+        seen.add(work_id)
+        canonical.append(normalized)
+    return canonical
 
 
 @dataclass(frozen=True)
@@ -229,11 +263,13 @@ class OrchestratorStore:
                     (run_id, topic, Jsonb(policy or {})),
                 )
             conn.commit()
+        initial_discovery = {"topic": topic}
+        initial_discovery.update(dict(discovery_payload or {}))
         self.enqueue(
             run_id=run_id,
             job_type=JobType.DISCOVERY,
             idempotency_key="stage:discovery",
-            payload=discovery_payload or {"topic": topic},
+            payload=initial_discovery,
             priority=100,
         )
         return run_id
@@ -273,6 +309,23 @@ class OrchestratorStore:
                 if cur.rowcount != 1:
                     raise ValueError(f"worker not registered: {worker_id}")
             conn.commit()
+
+    def verified_work_ids(self, work_ids: Iterable[str]) -> set[str]:
+        selected = sorted({str(work_id) for work_id in work_ids if work_id})
+        if not selected:
+            return set()
+        with self.store.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT DISTINCT work_id
+                    FROM evidence_objects
+                    WHERE work_id = ANY(%s)
+                      AND verification_state='MACHINE_CHECKED'
+                    """,
+                    (selected,),
+                )
+                return {str(row[0]) for row in cur.fetchall()}
 
     def provider_backoff(self, provider: str) -> dict[str, Any] | None:
         with self.store.connect() as conn:
@@ -1014,23 +1067,71 @@ class ResearchPlanner:
                 discovery[0],
                 screen[0],
             )
+            existing_acquisition_keys = {
+                job.idempotency_key
+                for job in jobs
+                if job.job_type == JobType.ACQUIRE
+            }
+
+            # Preserve unsupported retained candidates as explicit cancelled
+            # acquisition jobs. Raw discovery/screen results remain available
+            # for future adapters.
             for item in retained:
-                key = str(item["id"])
-                supported = acquisition_candidate_supported(item)
+                if acquisition_candidate_supported(item):
+                    continue
+                digest = hashlib.sha256(
+                    json.dumps(
+                        item,
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ).encode("utf-8")
+                ).hexdigest()[:16]
+                idem = f"acquire-unsupported:{digest}"
+                if idem in existing_acquisition_keys:
+                    continue
                 job_id = self.queue.enqueue(
                     run_id=run_id,
                     job_type=JobType.ACQUIRE,
-                    idempotency_key=f"acquire:{key}",
+                    idempotency_key=idem,
                     payload={"item": item},
                     depends_on=[screen[0].id],
                     priority=80,
-                    status="QUEUED" if supported else "CANCELLED",
+                    status="CANCELLED",
                 )
-                if not supported:
+                self.queue.annotate_cancelled(
+                    job_id,
+                    {
+                        "type": "SKIPPED_UNSUPPORTED_SOURCE_PROVIDER",
+                        "source_uri": item.get("source_uri"),
+                    },
+                )
+                existing_acquisition_keys.add(idem)
+
+            canonical_items = canonical_acquisition_candidates(retained)
+            verified_existing = self.queue.verified_work_ids(
+                item["id"] for item in canonical_items
+            )
+            for item in canonical_items:
+                key = str(item["id"])
+                idem = f"acquire:{key}"
+                if idem in existing_acquisition_keys:
+                    continue
+                already_verified = key in verified_existing
+                job_id = self.queue.enqueue(
+                    run_id=run_id,
+                    job_type=JobType.ACQUIRE,
+                    idempotency_key=idem,
+                    payload={"item": item},
+                    depends_on=[screen[0].id],
+                    priority=80,
+                    status="CANCELLED" if already_verified else "QUEUED",
+                )
+                if already_verified:
                     self.queue.annotate_cancelled(
                         job_id,
                         {
-                            "type": "SKIPPED_UNSUPPORTED_SOURCE_PROVIDER",
+                            "type": "SKIPPED_ALREADY_VERIFIED_WORK",
+                            "work_id": key,
                             "source_uri": item.get("source_uri"),
                         },
                     )
@@ -1066,23 +1167,46 @@ class ResearchPlanner:
             if discovery and screen_done
             else []
         )
-        retained_count = sum(
-            1 for item in retained_items
-            if acquisition_candidate_supported(item)
-        )
+        acquisition_jobs = [
+            j for j in jobs
+            if j.job_type == JobType.ACQUIRE
+            and j.status != "CANCELLED"
+        ]
+        retained_count = len(acquisition_jobs)
         verifies = [j for j in jobs if j.job_type == JobType.VERIFY]
-        if screen_done and retained_items and retained_count == 0:
+
+        if screen_done and not retained_items:
             self.queue.ensure_human_review(
                 run_id,
                 {
                     "topic": state["topic"],
-                    "reason": "NO_ACQUIRABLE_SOURCES",
-                    "screened_candidate_ids": [
-                        str(item.get("id")) for item in retained_items
-                    ],
+                    "reason": "NO_RELEVANT_CANDIDATES",
+                    "bounded_discovery_count": len(
+                        bounded_discovery_candidates(discovery[0])
+                    ),
                 },
             )
             return
+
+        if screen_done and retained_items and retained_count == 0:
+            cancelled = [
+                j for j in jobs
+                if j.job_type == JobType.ACQUIRE
+                and j.status == "CANCELLED"
+            ]
+            self.queue.ensure_human_review(
+                run_id,
+                {
+                    "topic": state["topic"],
+                    "reason": "NO_NEW_ACQUIRABLE_SOURCES",
+                    "screened_candidate_ids": [
+                        str(item.get("id")) for item in retained_items
+                    ],
+                    "cancelled_acquisition_count": len(cancelled),
+                },
+            )
+            return
+
         if retained_count == len(verifies) and retained_count > 0 and all(
             j.status == "COMPLETED" for j in verifies
         ):

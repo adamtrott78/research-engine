@@ -591,20 +591,293 @@ def test_planner_skips_unsupported_retained_sources_without_failing_run():
 
     planner.reconcile(run_id)
 
-    acquisitions = {
-        job.payload["item"]["id"]: job
-        for job in queue.jobs(run_id, JobType.ACQUIRE)
-    }
-    assert acquisitions["arxiv:one"].status == "QUEUED"
-    assert acquisitions["publisher:two"].status == "CANCELLED"
+    acquisitions = queue.jobs(run_id, JobType.ACQUIRE)
+    supported = next(
+        job for job in acquisitions
+        if job.status == "QUEUED"
+    )
+    unsupported = next(
+        job for job in acquisitions
+        if job.status == "CANCELLED"
+    )
+    assert supported.payload["item"]["id"] == "arxiv:2601.00001"
+    assert supported.payload["item"]["discovery_id"] == "arxiv:one"
+    assert unsupported.payload["item"]["id"] == "publisher:two"
     assert queue.run_state(run_id)["status"] == "RUNNING"
 
     with store.connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 "SELECT last_error FROM research_jobs WHERE id=%s",
-                (acquisitions["publisher:two"].id,),
+                (unsupported.id,),
             )
             detail = cur.fetchone()[0]
     assert detail["type"] == "SKIPPED_UNSUPPORTED_SOURCE_PROVIDER"
     assert detail["source_uri"] == "https://publisher.example/article/2"
+
+
+@pytest.mark.integration
+def test_cross_run_dedupe_skips_verified_arxiv_work_and_collapses_versions():
+    dsn = os.getenv("RESEARCH_ENGINE_DATABASE_URL")
+    if not dsn:
+        pytest.skip("RESEARCH_ENGINE_DATABASE_URL not set")
+    pytest.importorskip("psycopg")
+
+    from psycopg.types.json import Jsonb
+
+    from research_engine.orchestration import (
+        JobType,
+        OrchestratorStore,
+        ResearchPlanner,
+    )
+    from research_engine.postgres import PostgresStore
+
+    store = PostgresStore(dsn)
+    store.initialize(Path(__file__).parents[1] / "sql" / "schema.sql")
+    queue = OrchestratorStore(store)
+    planner = ResearchPlanner(queue)
+
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                TRUNCATE research_usage_events, human_review_requests,
+                         semantic_materializations, research_job_attempts,
+                         research_jobs, research_workers, research_runs,
+                         verification_events, evidence_relations, evidence_objects,
+                         source_locators, extraction_runs, acquisition_attempts,
+                         discovery_runs, external_identifiers, source_artifacts,
+                         work_versions, works CASCADE
+                """
+            )
+            cur.execute(
+                """
+                INSERT INTO works(id,title)
+                VALUES ('arxiv:2108.01656','Already Verified')
+                """
+            )
+            cur.execute(
+                """
+                INSERT INTO evidence_objects(
+                  id,evidence_type,work_id,source_level,
+                  normalized_form,verification_state
+                )
+                VALUES (
+                  'evidence:existing','result','arxiv:2108.01656',
+                  'FULLTEXT_PDF_TEXT','existing verified evidence',
+                  'MACHINE_CHECKED'
+                )
+                """
+            )
+        conn.commit()
+
+    run_id = "run:cross-run-dedupe"
+    queue.create_run(
+        run_id=run_id,
+        topic="cross-run corpus dedupe",
+        discovery_payload={"candidate_limit": 3},
+    )
+    discovery = queue.jobs(run_id, JobType.DISCOVERY)[0]
+    assert discovery.payload["topic"] == "cross-run corpus dedupe"
+    assert discovery.payload["candidate_limit"] == 3
+    discovered = [
+        {
+            "id": "model:old-v1",
+            "title": "Already Verified",
+            "source_uri": "https://arxiv.org/abs/2108.01656v1",
+            "rationale": "rediscovered",
+        },
+        {
+            "id": "model:old-v3",
+            "title": "Already Verified Updated Metadata",
+            "source_uri": "https://arxiv.org/pdf/2108.01656v3.pdf",
+            "rationale": "duplicate version hit",
+        },
+        {
+            "id": "model:new",
+            "title": "New Work",
+            "source_uri": "https://arxiv.org/abs/2601.00004v2",
+            "rationale": "new",
+        },
+    ]
+
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE research_jobs
+                SET status='COMPLETED', result=%s
+                WHERE id=%s
+                """,
+                (Jsonb({"candidates": discovered}), discovery.id),
+            )
+        conn.commit()
+
+    planner.reconcile(run_id)
+    screen = queue.jobs(run_id, JobType.SCREEN)[0]
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE research_jobs
+                SET status='COMPLETED', result=%s
+                WHERE id=%s
+                """,
+                (Jsonb({"retained": discovered}), screen.id),
+            )
+        conn.commit()
+
+    planner.reconcile(run_id)
+
+    acquisitions = queue.jobs(run_id, JobType.ACQUIRE)
+    assert len(acquisitions) == 2
+
+    old = next(
+        job for job in acquisitions
+        if job.payload["item"]["id"] == "arxiv:2108.01656"
+    )
+    new = next(
+        job for job in acquisitions
+        if job.payload["item"]["id"] == "arxiv:2601.00004"
+    )
+
+    assert old.status == "CANCELLED"
+    assert new.status == "QUEUED"
+    assert queue.run_state(run_id)["status"] == "RUNNING"
+
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT last_error FROM research_jobs WHERE id=%s",
+                (old.id,),
+            )
+            detail = cur.fetchone()[0]
+
+    assert detail["type"] == "SKIPPED_ALREADY_VERIFIED_WORK"
+    assert detail["work_id"] == "arxiv:2108.01656"
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    ("retain_mode", "expected_reason"),
+    [
+        ("none", "NO_RELEVANT_CANDIDATES"),
+        ("verified_only", "NO_NEW_ACQUIRABLE_SOURCES"),
+    ],
+)
+def test_empty_or_already_known_screen_results_reach_human_gate(
+    retain_mode,
+    expected_reason,
+):
+    dsn = os.getenv("RESEARCH_ENGINE_DATABASE_URL")
+    if not dsn:
+        pytest.skip("RESEARCH_ENGINE_DATABASE_URL not set")
+    pytest.importorskip("psycopg")
+
+    from psycopg.types.json import Jsonb
+
+    from research_engine.orchestration import (
+        JobType,
+        OrchestratorStore,
+        ResearchPlanner,
+    )
+    from research_engine.postgres import PostgresStore
+
+    store = PostgresStore(dsn)
+    store.initialize(Path(__file__).parents[1] / "sql" / "schema.sql")
+    queue = OrchestratorStore(store)
+    planner = ResearchPlanner(queue)
+
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                TRUNCATE research_usage_events, human_review_requests,
+                         semantic_materializations, research_job_attempts,
+                         research_jobs, research_workers, research_runs,
+                         verification_events, evidence_relations, evidence_objects,
+                         source_locators, extraction_runs, acquisition_attempts,
+                         discovery_runs, external_identifiers, source_artifacts,
+                         work_versions, works CASCADE
+                """
+            )
+            cur.execute(
+                """
+                INSERT INTO works(id,title)
+                VALUES ('arxiv:2108.01656','Known Work')
+                """
+            )
+            cur.execute(
+                """
+                INSERT INTO evidence_objects(
+                  id,evidence_type,work_id,source_level,
+                  normalized_form,verification_state
+                )
+                VALUES (
+                  'evidence:known','result','arxiv:2108.01656',
+                  'FULLTEXT_PDF_TEXT','known','MACHINE_CHECKED'
+                )
+                """
+            )
+        conn.commit()
+
+    run_id = f"run:empty-screen:{retain_mode}"
+    queue.create_run(
+        run_id=run_id,
+        topic="empty screen liveness",
+        discovery_payload={"candidate_limit": 1},
+    )
+    discovery = queue.jobs(run_id, JobType.DISCOVERY)[0]
+    candidate = {
+        "id": "model:known",
+        "title": "Known Work",
+        "source_uri": "https://arxiv.org/abs/2108.01656v2",
+        "rationale": "fixture",
+    }
+
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE research_jobs
+                SET status='COMPLETED', result=%s
+                WHERE id=%s
+                """,
+                (Jsonb({"candidates": [candidate]}), discovery.id),
+            )
+        conn.commit()
+
+    planner.reconcile(run_id)
+    screen = queue.jobs(run_id, JobType.SCREEN)[0]
+    retained = [] if retain_mode == "none" else [candidate]
+
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE research_jobs
+                SET status='COMPLETED', result=%s
+                WHERE id=%s
+                """,
+                (Jsonb({"retained": retained}), screen.id),
+            )
+        conn.commit()
+
+    planner.reconcile(run_id)
+
+    state = queue.run_state(run_id)
+    assert state["status"] == "WAITING_HUMAN"
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT status,payload
+                FROM human_review_requests
+                WHERE run_id=%s
+                """,
+                (run_id,),
+            )
+            review = cur.fetchone()
+    assert review is not None
+    assert review[0] == "PENDING"
+    assert review[1]["reason"] == expected_reason

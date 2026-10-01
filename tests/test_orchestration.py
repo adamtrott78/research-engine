@@ -7,6 +7,7 @@ from research_engine.orchestration import (
     _job_id,
     acquisition_candidate_supported,
     bounded_discovery_candidates,
+    canonical_acquisition_candidate,
     bounded_gap_candidates,
     canonical_screened_candidates,
 )
@@ -125,3 +126,18 @@ def test_discovery_cap_and_screening_preserve_original_candidate_metadata():
             "source_uri": "https://publisher.example/paper",
         }
     ) is False
+
+
+
+def test_canonical_acquisition_candidate_derives_stable_arxiv_work_id():
+    item = {
+        "id": "model:anything",
+        "title": "Versioned arXiv paper",
+        "source_uri": "https://arxiv.org/abs/2108.01656v3",
+        "rationale": "fixture",
+    }
+    canonical = canonical_acquisition_candidate(item)
+    assert canonical is not None
+    assert canonical["id"] == "arxiv:2108.01656"
+    assert canonical["discovery_id"] == "model:anything"
+    assert canonical["source_uri"] == item["source_uri"]
