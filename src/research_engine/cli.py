@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+from datetime import datetime
 from pathlib import Path
 
 from .artifact_store import ContentAddressedArtifactStore
@@ -120,6 +121,31 @@ def main() -> None:
         required=True,
         help="JSON object persisted as the durable human review decision",
     )
+
+    ops_snapshot = sub.add_parser("ops-snapshot")
+    ops_snapshot.add_argument("--run-id")
+    ops_snapshot.add_argument(
+        "--windows",
+        default="1,5",
+        help="comma-separated rolling windows in hours",
+    )
+
+    hud = sub.add_parser("hud")
+    hud.add_argument("--run-id")
+    hud.add_argument("--refresh-seconds", type=float, default=2.0)
+    hud.add_argument("--once", action="store_true")
+    hud.add_argument("--no-color", action="store_true")
+
+    allowance = sub.add_parser("allowance-observe")
+    allowance.add_argument(
+        "--window",
+        required=True,
+        choices=["5h", "weekly"],
+    )
+    allowance.add_argument("--used-percent", required=True, type=float)
+    allowance.add_argument("--resets-at")
+    allowance.add_argument("--note")
+    allowance.add_argument("--approximate", action="store_true")
 
     budget_status = sub.add_parser("budget-status")
     budget_status.add_argument("run_id")
@@ -290,6 +316,52 @@ def main() -> None:
                 default=str,
             )
         )
+    elif args.cmd == "ops-snapshot":
+        from .ops import service_from_env
+
+        windows = tuple(
+            float(part.strip())
+            for part in args.windows.split(",")
+            if part.strip()
+        )
+        service = service_from_env()
+        print(
+            json.dumps(
+                service.snapshot(
+                    run_id=args.run_id,
+                    windows=windows,
+                ),
+                default=str,
+            )
+        )
+    elif args.cmd == "hud":
+        from .ops import hud_loop, service_from_env
+
+        hud_loop(
+            service_from_env(),
+            run_id=args.run_id,
+            refresh_seconds=args.refresh_seconds,
+            once=args.once,
+            color=not args.no_color,
+        )
+    elif args.cmd == "allowance-observe":
+        from .ops import service_from_env
+
+        reset_at = None
+        if args.resets_at:
+            reset_at = datetime.fromisoformat(
+                args.resets_at.replace("Z", "+00:00")
+            )
+            if reset_at.tzinfo is None:
+                raise ValueError("--resets-at must include a timezone")
+        observation = service_from_env().observe_allowance(
+            window=args.window,
+            percent_used=args.used_percent,
+            reset_at=reset_at,
+            note=args.note,
+            approximate=args.approximate,
+        )
+        print(json.dumps(observation, default=str))
     elif args.cmd == "budget-status":
         from .daemon import daemon_from_env
 
