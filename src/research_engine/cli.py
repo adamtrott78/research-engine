@@ -157,6 +157,14 @@ def main() -> None:
     calibrate_verify = sub.add_parser("calibrate-verify")
     calibrate_verify.add_argument("run_id")
     calibrate_verify.add_argument("--source-job-id")
+    calibrate_verify.add_argument(
+        "--selector",
+        choices=["lowest", "median", "highest"],
+        default="median",
+    )
+
+    extract_audit = sub.add_parser("audit-extract-provenance")
+    extract_audit.add_argument("run_id")
 
     budget_status = sub.add_parser("budget-status")
     budget_status.add_argument("run_id")
@@ -406,7 +414,13 @@ def main() -> None:
         result = calibration_from_env().run(
             run_id=args.run_id,
             source_job_id=args.source_job_id,
+            selector=args.selector,
         )
+        print(json.dumps(result, default=str))
+    elif args.cmd == "audit-extract-provenance":
+        from .calibration import extraction_audit_from_env
+
+        result = extraction_audit_from_env().run(run_id=args.run_id)
         print(json.dumps(result, default=str))
     elif args.cmd == "budget-status":
         from .daemon import daemon_from_env
