@@ -2,12 +2,38 @@ from datetime import datetime, timedelta, timezone
 
 from research_engine.ops import (
     _forecast_observations,
+    parse_allowance_ui_paste,
     parse_relative_duration,
     relative_duration_precision_seconds,
     render_hud,
 )
 
 
+
+
+def test_parse_allowance_ui_paste_from_copied_product_block():
+    parsed = parse_allowance_ui_paste(
+        "5-hour limit\r\n"
+        "Resets in 1h 53m\r\n"
+        "84% left\r\n"
+        "\r\n"
+        "Weekly limit\r\n"
+        "Resets in 5d 7h\r\n"
+        "95% left\r\n"
+    )
+    assert parsed == {
+        "5h": {"left_percent": 84.0, "resets_in": "1h 53m"},
+        "weekly": {"left_percent": 95.0, "resets_in": "5d 7h"},
+    }
+
+
+def test_parse_allowance_ui_paste_accepts_markdown_wrapped_labels():
+    parsed = parse_allowance_ui_paste(
+        "**5-hour limit**\nResets in 1h 55m\n84% left\n"
+        "**Weekly limit**\nResets in 5d 7h\n95% left\n"
+    )
+    assert parsed["5h"]["left_percent"] == 84.0
+    assert parsed["weekly"]["resets_in"] == "5d 7h"
 
 
 def test_parse_relative_allowance_reset_duration():
