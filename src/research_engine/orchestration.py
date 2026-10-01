@@ -242,6 +242,86 @@ class OrchestratorStore:
                     raise ValueError(f"worker not registered: {worker_id}")
             conn.commit()
 
+    def provider_backoff(self, provider: str) -> dict[str, Any] | None:
+        with self.store.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT provider, blocked_until, reason, detail
+                    FROM research_provider_backoffs
+                    WHERE provider=%s AND blocked_until > now()
+                    """,
+                    (provider,),
+                )
+                row = cur.fetchone()
+        if row is None:
+            return None
+        return {
+            "provider": row[0],
+            "blocked_until": row[1],
+            "reason": row[2],
+            "detail": row[3],
+        }
+
+    def defer_for_provider_limit(
+        self,
+        job: ResearchJob,
+        worker_id: str,
+        error: dict[str, Any],
+        *,
+        provider: str,
+        retry_after_seconds: int,
+    ) -> None:
+        from psycopg.types.json import Jsonb
+
+        delay = max(60, int(retry_after_seconds))
+        with self.store.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE research_jobs
+                    SET status='QUEUED', last_error=%s, lease_owner=NULL,
+                        lease_expires_at=NULL,
+                        available_at=now() + make_interval(secs => %s),
+                        updated_at=now()
+                    WHERE id=%s AND status='RUNNING' AND lease_owner=%s
+                    """,
+                    (Jsonb(error), delay, job.id, worker_id),
+                )
+                if cur.rowcount != 1:
+                    raise ValueError(
+                        f"worker {worker_id} cannot defer job {job.id}"
+                    )
+                cur.execute(
+                    """
+                    UPDATE research_job_attempts
+                    SET status='DEFERRED_PLAN_LIMIT', finished_at=now(), detail=%s
+                    WHERE job_id=%s AND attempt_no=%s
+                    """,
+                    (Jsonb(error), job.id, job.attempt_count),
+                )
+                cur.execute(
+                    """
+                    INSERT INTO research_provider_backoffs(
+                      provider, blocked_until, reason, detail, updated_at
+                    )
+                    VALUES (
+                      %s, now() + make_interval(secs => %s),
+                      'CODEX_PLAN_LIMIT', %s, now()
+                    )
+                    ON CONFLICT(provider) DO UPDATE SET
+                      blocked_until=GREATEST(
+                        research_provider_backoffs.blocked_until,
+                        EXCLUDED.blocked_until
+                      ),
+                      reason=EXCLUDED.reason,
+                      detail=EXCLUDED.detail,
+                      updated_at=now()
+                    """,
+                    (provider, delay, Jsonb(error)),
+                )
+            conn.commit()
+
     def enqueue(
         self,
         *,
@@ -329,6 +409,85 @@ class OrchestratorStore:
                         AND r.status='RUNNING'
                         AND j.available_at <= now()
                         AND j.executor_tier = ANY(%s)
+                        AND (
+                          j.executor_tier='DETERMINISTIC'
+                          OR (
+                            (
+                              NULLIF(
+                                r.policy->'budgets'->>'max_input_tokens',
+                                ''
+                              ) IS NULL
+                              OR COALESCE((
+                                SELECT sum(u.input_tokens)
+                                FROM research_usage_events u
+                                WHERE u.run_id=r.id
+                              ),0) < (
+                                r.policy->'budgets'->>'max_input_tokens'
+                              )::bigint
+                            )
+                            AND (
+                              NULLIF(
+                                r.policy->'budgets'->>'max_output_tokens',
+                                ''
+                              ) IS NULL
+                              OR COALESCE((
+                                SELECT sum(u.output_tokens)
+                                FROM research_usage_events u
+                                WHERE u.run_id=r.id
+                              ),0) < (
+                                r.policy->'budgets'->>'max_output_tokens'
+                              )::bigint
+                            )
+                            AND (
+                              NULLIF(
+                                r.policy->'budgets'->>'max_semantic_jobs',
+                                ''
+                              ) IS NULL
+                              OR (
+                                COALESCE((
+                                  SELECT count(*)
+                                  FROM research_usage_events u
+                                  WHERE u.run_id=r.id
+                                ),0)
+                                + COALESCE((
+                                  SELECT count(*)
+                                  FROM research_jobs running
+                                  WHERE running.run_id=r.id
+                                    AND running.status='RUNNING'
+                                    AND running.executor_tier IN (
+                                      'CHEAP','STANDARD','STRONG'
+                                    )
+                                ),0)
+                              ) < (
+                                r.policy->'budgets'->>'max_semantic_jobs'
+                              )::bigint
+                            )
+                            AND (
+                              (
+                                r.policy->'budgets'->'max_jobs_by_tier'
+                                  ->>j.executor_tier
+                              ) IS NULL
+                              OR (
+                                COALESCE((
+                                  SELECT count(*)
+                                  FROM research_usage_events u
+                                  WHERE u.run_id=r.id
+                                    AND u.executor_tier=j.executor_tier
+                                ),0)
+                                + COALESCE((
+                                  SELECT count(*)
+                                  FROM research_jobs running
+                                  WHERE running.run_id=r.id
+                                    AND running.status='RUNNING'
+                                    AND running.executor_tier=j.executor_tier
+                                ),0)
+                              ) < (
+                                r.policy->'budgets'->'max_jobs_by_tier'
+                                  ->>j.executor_tier
+                              )::bigint
+                            )
+                          )
+                        )
                         AND NOT EXISTS (
                           SELECT 1
                           FROM unnest(j.depends_on) dep(job_id)
@@ -453,10 +612,22 @@ class OrchestratorStore:
     ) -> str:
         from psycopg.types.json import Jsonb
 
-        terminal = (not retryable) or job.attempt_count >= job.max_attempts
-        new_status = "FAILED" if terminal else "QUEUED"
         with self.store.connect() as conn:
             with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT count(*)::int
+                    FROM research_job_attempts
+                    WHERE job_id=%s
+                      AND status IN ('FAILED','RETRY','EXPIRED')
+                    """,
+                    (job.id,),
+                )
+                prior_failures = int(cur.fetchone()[0])
+                terminal = (not retryable) or (
+                    prior_failures + 1 >= job.max_attempts
+                )
+                new_status = "FAILED" if terminal else "QUEUED"
                 cur.execute(
                     """
                     UPDATE research_jobs
@@ -514,7 +685,17 @@ class OrchestratorStore:
                 )
                 jobs = [self._row_to_job(row) for row in cur.fetchall()]
                 for job in jobs:
-                    terminal = job.attempt_count >= job.max_attempts
+                    cur.execute(
+                        """
+                        SELECT count(*)::int
+                        FROM research_job_attempts
+                        WHERE job_id=%s
+                          AND status IN ('FAILED','RETRY','EXPIRED')
+                        """,
+                        (job.id,),
+                    )
+                    prior_failures = int(cur.fetchone()[0])
+                    terminal = prior_failures + 1 >= job.max_attempts
                     status = "FAILED" if terminal else "QUEUED"
                     cur.execute(
                         """
@@ -953,6 +1134,7 @@ class AgentWorker:
         supported_tiers: Iterable[ExecutorTier],
         executors: dict[ExecutorTier, JobExecutor],
         lease_seconds: int = 120,
+        backoff_provider: str | None = None,
     ):
         self.worker_id = worker_id
         self.queue = queue
@@ -960,9 +1142,15 @@ class AgentWorker:
         self.supported_tiers = tuple(supported_tiers)
         self.executors = executors
         self.lease_seconds = lease_seconds
+        self.backoff_provider = backoff_provider
         queue.register_worker(worker_id, self.supported_tiers)
 
     def run_once(self) -> ResearchJob | None:
+        if (
+            self.backoff_provider
+            and self.queue.provider_backoff(self.backoff_provider) is not None
+        ):
+            return None
         job = self.queue.lease_next(
             worker_id=self.worker_id,
             supported_tiers=self.supported_tiers,
@@ -982,17 +1170,29 @@ class AgentWorker:
         try:
             result = executor.execute(job)
         except JobExecutionError as exc:
-            self.queue.fail(
-                job,
-                self.worker_id,
-                {
-                    "type": type(exc).__name__,
-                    "code": exc.code,
-                    "message": str(exc),
-                    "detail": exc.detail,
-                },
-                retryable=exc.retryable,
-            )
+            error = {
+                "type": type(exc).__name__,
+                "code": exc.code,
+                "message": str(exc),
+                "detail": exc.detail,
+            }
+            if exc.code == "CODEX_PLAN_LIMIT" and self.backoff_provider:
+                self.queue.defer_for_provider_limit(
+                    job,
+                    self.worker_id,
+                    error,
+                    provider=self.backoff_provider,
+                    retry_after_seconds=int(
+                        exc.detail.get("retry_after_seconds") or 3600
+                    ),
+                )
+            else:
+                self.queue.fail(
+                    job,
+                    self.worker_id,
+                    error,
+                    retryable=exc.retryable,
+                )
         except Exception as exc:
             self.queue.fail(
                 job,
