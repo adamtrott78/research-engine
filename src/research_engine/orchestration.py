@@ -778,14 +778,14 @@ class OrchestratorStore:
                 cur.execute(
                     """
                     UPDATE research_jobs
-                    SET last_error=%s, updated_at=now()
-                    WHERE id=%s AND status='CANCELLED'
+                    SET status='CANCELLED', last_error=%s, updated_at=now()
+                    WHERE id=%s AND status IN ('QUEUED','CANCELLED')
                     """,
                     (Jsonb(detail), job_id),
                 )
                 if cur.rowcount != 1:
                     raise ValueError(
-                        f"job {job_id} is not in CANCELLED state"
+                        f"job {job_id} cannot be cancelled after starting"
                     )
             conn.commit()
 
