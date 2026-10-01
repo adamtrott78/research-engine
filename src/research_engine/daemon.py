@@ -216,39 +216,61 @@ class ResearchDaemon:
                     FROM research_jobs
                     WHERE run_id=%s
                       AND status IN ('QUEUED','RUNNING')
-                      AND executor_tier IN ('CHEAP','STANDARD','STRONG')
+                      AND executor_tier <> 'HUMAN'
                     GROUP BY executor_tier
                     ORDER BY executor_tier
                     """,
                     (run_id,),
                 )
-                pending_by_tier = dict(cur.fetchall())
+                pending_nonhuman_by_tier = dict(cur.fetchall())
 
         budgets = policy["budgets"]
         saturated_reasons: list[str] = []
-        reasons: list[str] = []
-        pending_semantic_jobs = sum(pending_by_tier.values())
+        blocked_pending_reasons: list[str] = []
+        saturated_tiers: set[str] = set()
+        global_saturated = False
+        pending_semantic_jobs = sum(
+            pending_nonhuman_by_tier.get(str(tier), 0)
+            for tier in SEMANTIC_TIERS
+        )
         max_input = budgets.get("max_input_tokens")
         max_output = budgets.get("max_output_tokens")
         max_jobs = budgets.get("max_semantic_jobs")
         if max_input is not None and input_tokens >= max_input:
             saturated_reasons.append("MAX_INPUT_TOKENS")
+            global_saturated = True
             if pending_semantic_jobs:
-                reasons.append("MAX_INPUT_TOKENS")
+                blocked_pending_reasons.append("MAX_INPUT_TOKENS")
         if max_output is not None and output_tokens >= max_output:
             saturated_reasons.append("MAX_OUTPUT_TOKENS")
+            global_saturated = True
             if pending_semantic_jobs:
-                reasons.append("MAX_OUTPUT_TOKENS")
+                blocked_pending_reasons.append("MAX_OUTPUT_TOKENS")
         if max_jobs is not None and semantic_jobs >= max_jobs:
             saturated_reasons.append("MAX_SEMANTIC_JOBS")
+            global_saturated = True
             if pending_semantic_jobs:
-                reasons.append("MAX_SEMANTIC_JOBS")
+                blocked_pending_reasons.append("MAX_SEMANTIC_JOBS")
         for tier, limit in budgets.get("max_jobs_by_tier", {}).items():
             if by_tier.get(tier, 0) >= limit:
                 reason = f"MAX_{tier}_JOBS"
                 saturated_reasons.append(reason)
-                if pending_by_tier.get(tier, 0):
-                    reasons.append(reason)
+                saturated_tiers.add(tier)
+                if pending_nonhuman_by_tier.get(tier, 0):
+                    blocked_pending_reasons.append(reason)
+
+        eligible_work = bool(
+            pending_nonhuman_by_tier.get(str(ExecutorTier.DETERMINISTIC), 0)
+        )
+        if not global_saturated:
+            eligible_work = eligible_work or any(
+                pending_nonhuman_by_tier.get(str(tier), 0)
+                and str(tier) not in saturated_tiers
+                for tier in SEMANTIC_TIERS
+            )
+
+        exhausted = bool(blocked_pending_reasons) and not eligible_work
+        reasons = blocked_pending_reasons if exhausted else []
 
         return {
             "run_id": run_id,
@@ -259,10 +281,11 @@ class ResearchDaemon:
                 "output_tokens": int(output_tokens),
                 "semantic_jobs": int(semantic_jobs),
                 "jobs_by_tier": by_tier,
-                "pending_jobs_by_tier": pending_by_tier,
+                "pending_jobs_by_tier": pending_nonhuman_by_tier,
             },
-            "exhausted": bool(reasons),
+            "exhausted": exhausted,
             "reasons": reasons,
+            "blocked_pending_reasons": blocked_pending_reasons,
             "saturated_reasons": saturated_reasons,
         }
 
