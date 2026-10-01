@@ -210,21 +210,45 @@ class ResearchDaemon:
                     (run_id,),
                 )
                 by_tier = dict(cur.fetchall())
+                cur.execute(
+                    """
+                    SELECT executor_tier,count(*)::int
+                    FROM research_jobs
+                    WHERE run_id=%s
+                      AND status IN ('QUEUED','RUNNING')
+                      AND executor_tier IN ('CHEAP','STANDARD','STRONG')
+                    GROUP BY executor_tier
+                    ORDER BY executor_tier
+                    """,
+                    (run_id,),
+                )
+                pending_by_tier = dict(cur.fetchall())
 
         budgets = policy["budgets"]
+        saturated_reasons: list[str] = []
         reasons: list[str] = []
+        pending_semantic_jobs = sum(pending_by_tier.values())
         max_input = budgets.get("max_input_tokens")
         max_output = budgets.get("max_output_tokens")
         max_jobs = budgets.get("max_semantic_jobs")
         if max_input is not None and input_tokens >= max_input:
-            reasons.append("MAX_INPUT_TOKENS")
+            saturated_reasons.append("MAX_INPUT_TOKENS")
+            if pending_semantic_jobs:
+                reasons.append("MAX_INPUT_TOKENS")
         if max_output is not None and output_tokens >= max_output:
-            reasons.append("MAX_OUTPUT_TOKENS")
+            saturated_reasons.append("MAX_OUTPUT_TOKENS")
+            if pending_semantic_jobs:
+                reasons.append("MAX_OUTPUT_TOKENS")
         if max_jobs is not None and semantic_jobs >= max_jobs:
-            reasons.append("MAX_SEMANTIC_JOBS")
+            saturated_reasons.append("MAX_SEMANTIC_JOBS")
+            if pending_semantic_jobs:
+                reasons.append("MAX_SEMANTIC_JOBS")
         for tier, limit in budgets.get("max_jobs_by_tier", {}).items():
             if by_tier.get(tier, 0) >= limit:
-                reasons.append(f"MAX_{tier}_JOBS")
+                reason = f"MAX_{tier}_JOBS"
+                saturated_reasons.append(reason)
+                if pending_by_tier.get(tier, 0):
+                    reasons.append(reason)
 
         return {
             "run_id": run_id,
@@ -235,9 +259,11 @@ class ResearchDaemon:
                 "output_tokens": int(output_tokens),
                 "semantic_jobs": int(semantic_jobs),
                 "jobs_by_tier": by_tier,
+                "pending_jobs_by_tier": pending_by_tier,
             },
             "exhausted": bool(reasons),
             "reasons": reasons,
+            "saturated_reasons": saturated_reasons,
         }
 
     def _enforce_budgets(self) -> list[str]:
@@ -325,10 +351,12 @@ class ResearchDaemon:
 
     def tick(self) -> DaemonTick:
         recovered = self.queue.recover_expired_leases()
-        budget_paused = self._enforce_budgets()
-        run_ids = self._active_run_ids()
-        for run_id in run_ids:
+        initial_runs = self._active_run_ids()
+        for run_id in initial_runs:
             self.planner.reconcile(run_id)
+
+        budget_paused = set(self._enforce_budgets())
+        run_ids = self._active_run_ids()
 
         processed = 0
         if self.workers:
@@ -339,12 +367,15 @@ class ResearchDaemon:
         current_runs = self._active_run_ids()
         for run_id in current_runs:
             self.planner.reconcile(run_id)
+        budget_paused.update(self._enforce_budgets())
 
         stale = self._mark_stale_workers()
         return DaemonTick(
             recovered_leases=len(recovered),
             jobs_processed=processed,
-            reconciled_runs=len(set(run_ids) | set(current_runs)),
+            reconciled_runs=len(
+                set(initial_runs) | set(run_ids) | set(current_runs)
+            ),
             stale_workers_marked=stale,
             budget_paused_runs=len(budget_paused),
         )
@@ -433,6 +464,23 @@ class ResearchDaemon:
                     """
                 )
                 expired_leases = cur.fetchone()[0]
+                cur.execute(
+                    """
+                    SELECT provider,blocked_until,reason,detail
+                    FROM research_provider_backoffs
+                    WHERE blocked_until > now()
+                    ORDER BY provider
+                    """
+                )
+                provider_backoffs = [
+                    {
+                        "provider": row[0],
+                        "blocked_until": row[1].isoformat(),
+                        "reason": row[2],
+                        "detail": row[3],
+                    }
+                    for row in cur.fetchall()
+                ]
         return {
             "captured_at": datetime.now(timezone.utc).isoformat(),
             "runs": run_counts,
@@ -441,6 +489,7 @@ class ResearchDaemon:
             "pending_human": pending_human,
             "budget_paused": budget_paused,
             "expired_leases": expired_leases,
+            "provider_backoffs": provider_backoffs,
             "admission": self.admission_status(),
         }
 
@@ -582,6 +631,18 @@ def daemon_from_env(
     from .worker_runtime import deterministic_worker_from_env, semantic_worker_from_env
 
     dsn = os.environ["RESEARCH_ENGINE_DATABASE_URL"]
+    if limits is None:
+        limits = DaemonLimits(
+            max_active_runs=int(
+                os.getenv("RESEARCH_ENGINE_MAX_ACTIVE_RUNS", "4")
+            ),
+            max_pending_human=int(
+                os.getenv("RESEARCH_ENGINE_MAX_PENDING_HUMAN", "8")
+            ),
+            stale_worker_seconds=int(
+                os.getenv("RESEARCH_ENGINE_STALE_WORKER_SECONDS", "900")
+            ),
+        )
     store = PostgresStore(dsn)
     queue = OrchestratorStore(store)
     planner = ResearchPlanner(queue)
