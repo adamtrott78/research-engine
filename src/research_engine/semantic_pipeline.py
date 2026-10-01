@@ -662,10 +662,13 @@ class SemanticResultMaterializer:
             """,
             (status, review_state, gap_id),
         )
+        canonical_result = copy.deepcopy(result)
+        canonical_result["search_count"] = len(job.payload.get("search_results", []))
         return {
             "novelty_challenge_id": challenge_id,
             "gap_candidate_id": gap_id,
             "status": status,
+            "canonical_result": canonical_result,
         }
 
 
