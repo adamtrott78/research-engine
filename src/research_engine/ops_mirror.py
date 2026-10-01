@@ -333,6 +333,7 @@ def render_chat_ops_markdown(mirror: dict[str, Any]) -> str:
         f"Captured: {_md(mirror.get('captured_at'))}",
         f"Daemon: {_md(daemon.get('active_state'))}/{_md(daemon.get('sub_state'))}",
         f"Run: {_md(run.get('id'))} — {_md(run.get('status'))} / {_md(run.get('current_phase'))} — gate {_md(run.get('human_gate_state'))}",
+        f"Checkpoint: {_md(run.get('knowledge_checkpoint_id'))} · updated {_md(run.get('updated_at'))}",
         "",
         "## Allowance",
         "",
@@ -356,19 +357,39 @@ def render_chat_ops_markdown(mirror: dict[str, Any]) -> str:
         "",
         "## Agents",
         "",
-        "| Agent | State | Model | Job | Heartbeat | Calls | Input | Output |",
-        "|---|---|---|---|---:|---:|---:|---:|",
+        "| Agent | State | Model | Code | Job | Heartbeat | Calls | Input | Output |",
+        "|---|---|---|---|---|---:|---:|---:|---:|",
     ]
     agents = list(mirror.get("agents") or [])
     if not agents:
-        lines.append("| none | - | - | - | - | 0 | 0 | 0 |")
+        lines.append("| none | - | - | - | - | - | 0 | 0 | 0 |")
     for raw in agents:
         row = _mapping(raw)
         lines.append(
             f"| {_md(row.get('logical_agent_id'))} | {_md(row.get('state'))} | "
-            f"{_md(row.get('model') or row.get('backend'))} | {_md(row.get('current_job_type'))} | "
-            f"{_duration(row.get('heartbeat_age_seconds'))} | {_n(row.get('calls'))} | "
-            f"{_n(row.get('input_tokens'))} | {_n(row.get('output_tokens'))} |"
+            f"{_md(row.get('model') or row.get('backend'))} | {_md(row.get('code_sha'))} | "
+            f"{_md(row.get('current_job_type'))} | {_duration(row.get('heartbeat_age_seconds'))} | "
+            f"{_n(row.get('calls'))} | {_n(row.get('input_tokens'))} | {_n(row.get('output_tokens'))} |"
+        )
+
+    lines.extend([
+        "",
+        "### Usage by agent",
+        "",
+        "| Agent | Model | Calls | Input | Cached | Output | Reasoning | Input share |",
+        "|---|---|---:|---:|---:|---:|---:|---:|",
+    ])
+    usage_agents = list(usage.get("by_agent") or [])
+    if not usage_agents:
+        lines.append("| none | - | 0 | 0 | 0 | 0 | 0 | - |")
+    for raw in usage_agents:
+        row = _mapping(raw)
+        share = _float(row.get("input_token_share"))
+        share_text = "-" if share is None else f"{100 * share:.1f}%"
+        lines.append(
+            f"| {_md(row.get('agent'))} | {_md(row.get('latest_model') or row.get('latest_provider'))} | "
+            f"{_n(row.get('calls'))} | {_n(row.get('input_tokens'))} | {_n(row.get('cached_input_tokens'))} | "
+            f"{_n(row.get('output_tokens'))} | {_n(row.get('reasoning_output_tokens'))} | {share_text} |"
         )
 
     lines.extend([
