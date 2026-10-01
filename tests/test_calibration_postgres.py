@@ -60,6 +60,7 @@ def test_verify_replay_calibration_is_operational_only(tmp_path: Path):
     from psycopg.types.json import Jsonb
 
     from research_engine.calibration import VerifyReplayCalibration
+    from research_engine.ops import OpsService
     from research_engine.postgres import PostgresStore
 
     store = PostgresStore(dsn)
@@ -223,3 +224,10 @@ def test_verify_replay_calibration_is_operational_only(tmp_path: Path):
     assert calibration[6] == 1
     assert calibration[7]["verified_equal"] is True
     assert calibration[7]["accepted_evidence_ids_equal"] is True
+
+    snapshot = OpsService(store).snapshot(run_id=run_id)
+    latest = snapshot["calibrations"][0]
+    assert latest["calibration_type"] == "VERIFY_CONTEXT_WINDOW"
+    assert latest["historical_input_tokens"] == 30000
+    assert latest["replay_input_tokens"] == 12000
+    assert latest["input_reduction_fraction"] == pytest.approx(0.6)
