@@ -245,7 +245,11 @@ Scientific novelty is challenged, never asserted automatically.
 
 
 JOB_INSTRUCTIONS: dict[JobType, str] = {
-    JobType.DISCOVERY: "Identify candidate scholarly works relevant to the supplied research topic or search task.",
+    JobType.DISCOVERY: (
+        "Identify candidate scholarly works relevant to the supplied research topic or search task. "
+        "Honor payload.candidate_limit when supplied. Honor payload.source_scope and other explicit "
+        "source constraints; when arXiv is required, return canonical arxiv.org abs/pdf source URIs."
+    ),
     JobType.SCREEN: "Screen supplied candidates for relevance. Retain only candidates supported by the supplied metadata/context.",
     JobType.EXTRACT: "Extract source-grounded evidence objects only from payload._research_context.pages. Quote raw_source_form from the source and provide the 1-based page_number. Do not use outside facts.",
     JobType.VERIFY: "Verify payload._research_context.authoritative_evidence against the exact source pages. accepted_evidence_ids must use the authoritative evidence IDs supplied in that context.",
