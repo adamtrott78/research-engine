@@ -331,6 +331,22 @@ CREATE TABLE IF NOT EXISTS research_job_attempts (
 CREATE INDEX IF NOT EXISTS research_job_attempts_job_idx
     ON research_job_attempts(job_id, attempt_no);
 
+CREATE TABLE IF NOT EXISTS research_usage_events (
+    id BIGSERIAL PRIMARY KEY,
+    run_id TEXT NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
+    job_id TEXT NOT NULL UNIQUE REFERENCES research_jobs(id) ON DELETE CASCADE,
+    executor_tier TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    model TEXT,
+    input_tokens BIGINT NOT NULL DEFAULT 0 CHECK (input_tokens >= 0),
+    output_tokens BIGINT NOT NULL DEFAULT 0 CHECK (output_tokens >= 0),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS research_usage_run_idx
+    ON research_usage_events(run_id, created_at);
+CREATE INDEX IF NOT EXISTS research_usage_tier_idx
+    ON research_usage_events(run_id, executor_tier, created_at);
+
 CREATE TABLE IF NOT EXISTS semantic_materializations (
     job_id TEXT PRIMARY KEY REFERENCES research_jobs(id) ON DELETE CASCADE,
     job_type TEXT NOT NULL,

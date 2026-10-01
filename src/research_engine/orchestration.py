@@ -293,7 +293,9 @@ class OrchestratorStore:
                     WITH candidate AS (
                       SELECT j.id
                       FROM research_jobs j
+                      JOIN research_runs r ON r.id=j.run_id
                       WHERE j.status='QUEUED'
+                        AND r.status='RUNNING'
                         AND j.available_at <= now()
                         AND j.executor_tier = ANY(%s)
                         AND NOT EXISTS (
@@ -384,6 +386,29 @@ class OrchestratorStore:
                     """,
                     (Jsonb({"result_recorded": True}), job.id, job.attempt_count),
                 )
+
+                execution = result.get("_execution") if isinstance(result, dict) else None
+                usage = execution.get("usage") if isinstance(execution, dict) else None
+                if isinstance(execution, dict) and isinstance(usage, dict):
+                    cur.execute(
+                        """
+                        INSERT INTO research_usage_events(
+                          run_id,job_id,executor_tier,provider,model,
+                          input_tokens,output_tokens
+                        )
+                        VALUES (%s,%s,%s,%s,%s,%s,%s)
+                        ON CONFLICT(job_id) DO NOTHING
+                        """,
+                        (
+                            job.run_id,
+                            job.id,
+                            str(job.executor_tier),
+                            str(execution.get("provider") or "unknown"),
+                            execution.get("model"),
+                            int(usage.get("input_tokens") or 0),
+                            int(usage.get("output_tokens") or 0),
+                        ),
+                    )
             conn.commit()
 
     def fail(

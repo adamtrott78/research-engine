@@ -17,6 +17,40 @@ class BackpressureError(RuntimeError):
     pass
 
 
+class BudgetPolicyError(ValueError):
+    pass
+
+
+SEMANTIC_TIERS = {
+    ExecutorTier.CHEAP,
+    ExecutorTier.STANDARD,
+    ExecutorTier.STRONG,
+}
+
+
+def validate_budget_policy(policy: dict[str, Any] | None) -> dict[str, Any]:
+    policy = dict(policy or {})
+    budgets = dict(policy.get("budgets") or {})
+    for key in ("max_input_tokens", "max_output_tokens", "max_semantic_jobs"):
+        if key in budgets:
+            value = budgets[key]
+            if not isinstance(value, int) or value < 0:
+                raise BudgetPolicyError(f"{key} must be a non-negative integer")
+    by_tier = dict(budgets.get("max_jobs_by_tier") or {})
+    allowed = {str(tier) for tier in SEMANTIC_TIERS}
+    unknown = sorted(set(by_tier) - allowed)
+    if unknown:
+        raise BudgetPolicyError(f"unknown semantic budget tiers: {unknown}")
+    for tier, value in by_tier.items():
+        if not isinstance(value, int) or value < 0:
+            raise BudgetPolicyError(
+                f"max_jobs_by_tier[{tier}] must be a non-negative integer"
+            )
+    budgets["max_jobs_by_tier"] = by_tier
+    policy["budgets"] = budgets
+    return policy
+
+
 @dataclass(frozen=True)
 class DaemonLimits:
     max_active_runs: int = 4
@@ -30,6 +64,7 @@ class DaemonTick:
     jobs_processed: int
     reconciled_runs: int
     stale_workers_marked: int
+    budget_paused_runs: int
 
 
 def worker_counts_from_env() -> dict[ExecutorTier, int]:
@@ -102,6 +137,7 @@ class ResearchDaemon:
         policy: dict[str, Any] | None = None,
         discovery_payload: dict[str, Any] | None = None,
     ) -> str:
+        policy = validate_budget_policy(policy)
         admission = self.admission_status()
         if not admission["allowed"]:
             raise BackpressureError(
@@ -122,6 +158,131 @@ class ResearchDaemon:
         if state["topic"] != topic:
             raise ValueError(f"research run {run_id} already exists for a different topic")
         return run_id
+
+    def budget_status(self, run_id: str) -> dict[str, Any]:
+        with self.queue.store.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT status,policy FROM research_runs WHERE id=%s",
+                    (run_id,),
+                )
+                row = cur.fetchone()
+                if row is None:
+                    raise ValueError(f"run not found: {run_id}")
+                status, policy = row
+                policy = validate_budget_policy(policy)
+                cur.execute(
+                    """
+                    SELECT COALESCE(sum(input_tokens),0)::bigint,
+                           COALESCE(sum(output_tokens),0)::bigint,
+                           count(*)::int
+                    FROM research_usage_events
+                    WHERE run_id=%s
+                    """,
+                    (run_id,),
+                )
+                input_tokens, output_tokens, semantic_jobs = cur.fetchone()
+                cur.execute(
+                    """
+                    SELECT executor_tier,count(*)::int
+                    FROM research_usage_events
+                    WHERE run_id=%s
+                    GROUP BY executor_tier
+                    ORDER BY executor_tier
+                    """,
+                    (run_id,),
+                )
+                by_tier = dict(cur.fetchall())
+
+        budgets = policy["budgets"]
+        reasons: list[str] = []
+        max_input = budgets.get("max_input_tokens")
+        max_output = budgets.get("max_output_tokens")
+        max_jobs = budgets.get("max_semantic_jobs")
+        if max_input is not None and input_tokens >= max_input:
+            reasons.append("MAX_INPUT_TOKENS")
+        if max_output is not None and output_tokens >= max_output:
+            reasons.append("MAX_OUTPUT_TOKENS")
+        if max_jobs is not None and semantic_jobs >= max_jobs:
+            reasons.append("MAX_SEMANTIC_JOBS")
+        for tier, limit in budgets.get("max_jobs_by_tier", {}).items():
+            if by_tier.get(tier, 0) >= limit:
+                reasons.append(f"MAX_{tier}_JOBS")
+
+        return {
+            "run_id": run_id,
+            "status": status,
+            "budgets": budgets,
+            "usage": {
+                "input_tokens": int(input_tokens),
+                "output_tokens": int(output_tokens),
+                "semantic_jobs": int(semantic_jobs),
+                "jobs_by_tier": by_tier,
+            },
+            "exhausted": bool(reasons),
+            "reasons": reasons,
+        }
+
+    def _enforce_budgets(self) -> list[str]:
+        paused: list[str] = []
+        for run_id in self._active_run_ids():
+            status = self.budget_status(run_id)
+            if not status["exhausted"]:
+                continue
+            with self.queue.store.connect() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        UPDATE research_runs
+                        SET status='PAUSED_BUDGET',
+                            human_gate_state='BUDGET_REVIEW',
+                            updated_at=now()
+                        WHERE id=%s AND status='RUNNING'
+                        """,
+                        (run_id,),
+                    )
+                    if cur.rowcount:
+                        paused.append(run_id)
+                conn.commit()
+        return paused
+
+    def resume_budget(
+        self,
+        run_id: str,
+        *,
+        budgets: dict[str, Any],
+    ) -> dict[str, Any]:
+        with self.queue.store.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT status,policy FROM research_runs WHERE id=%s FOR UPDATE",
+                    (run_id,),
+                )
+                row = cur.fetchone()
+                if row is None:
+                    raise ValueError(f"run not found: {run_id}")
+                status, policy = row
+                if status != "PAUSED_BUDGET":
+                    raise ValueError(
+                        f"run {run_id} is not paused for budget review"
+                    )
+                merged = dict(policy or {})
+                current = dict(merged.get("budgets") or {})
+                current.update(dict(budgets or {}))
+                merged["budgets"] = current
+                merged = validate_budget_policy(merged)
+                from psycopg.types.json import Jsonb
+                cur.execute(
+                    """
+                    UPDATE research_runs
+                    SET policy=%s,status='RUNNING',
+                        human_gate_state='NOT_REQUIRED',updated_at=now()
+                    WHERE id=%s
+                    """,
+                    (Jsonb(merged), run_id),
+                )
+            conn.commit()
+        return self.budget_status(run_id)
 
     def _mark_stale_workers(self) -> int:
         with self.queue.store.connect() as conn:
@@ -147,6 +308,7 @@ class ResearchDaemon:
 
     def tick(self) -> DaemonTick:
         recovered = self.queue.recover_expired_leases()
+        budget_paused = self._enforce_budgets()
         run_ids = self._active_run_ids()
         for run_id in run_ids:
             self.planner.reconcile(run_id)
@@ -167,6 +329,7 @@ class ResearchDaemon:
             jobs_processed=processed,
             reconciled_runs=len(set(run_ids) | set(current_runs)),
             stale_workers_marked=stale,
+            budget_paused_runs=len(budget_paused),
         )
 
     def run_forever(self, *, max_ticks: int | None = None) -> dict[str, Any]:
@@ -175,6 +338,7 @@ class ResearchDaemon:
             "recovered_leases": 0,
             "jobs_processed": 0,
             "stale_workers_marked": 0,
+            "budget_paused_runs": 0,
         }
         while True:
             tick = self.tick()
@@ -182,6 +346,7 @@ class ResearchDaemon:
             totals["recovered_leases"] += tick.recovered_leases
             totals["jobs_processed"] += tick.jobs_processed
             totals["stale_workers_marked"] += tick.stale_workers_marked
+            totals["budget_paused_runs"] += tick.budget_paused_runs
 
             if max_ticks is not None and ticks >= max_ticks:
                 return {
@@ -233,6 +398,18 @@ class ResearchDaemon:
                 pending_human = cur.fetchone()[0]
                 cur.execute(
                     """
+                    SELECT id,topic,policy
+                    FROM research_runs
+                    WHERE status='PAUSED_BUDGET'
+                    ORDER BY updated_at,id
+                    """
+                )
+                budget_paused = [
+                    {"id": row[0], "topic": row[1], "policy": row[2]}
+                    for row in cur.fetchall()
+                ]
+                cur.execute(
+                    """
                     SELECT count(*)::int
                     FROM research_jobs
                     WHERE status='RUNNING' AND lease_expires_at <= now()
@@ -245,6 +422,7 @@ class ResearchDaemon:
             "jobs": job_counts,
             "workers": workers,
             "pending_human": pending_human,
+            "budget_paused": budget_paused,
             "expired_leases": expired_leases,
             "admission": self.admission_status(),
         }
@@ -299,6 +477,16 @@ class ResearchDaemon:
                     (cutoff,),
                 )
                 jobs = cur.fetchall()
+                cur.execute(
+                    """
+                    SELECT executor_tier,provider,model,input_tokens,output_tokens
+                    FROM research_usage_events
+                    WHERE created_at >= %s
+                    ORDER BY created_at,id
+                    """,
+                    (cutoff,),
+                )
+                usage_rows = cur.fetchall()
 
                 cur.execute(
                     """
@@ -323,16 +511,11 @@ class ResearchDaemon:
                 ]
 
         by_type: dict[str, dict[str, int]] = {}
-        input_tokens = 0
-        output_tokens = 0
         failures = []
         for job_type, tier, status, result, last_error in jobs:
             key = f"{job_type}:{tier}"
             by_type.setdefault(key, {})
             by_type[key][status] = by_type[key].get(status, 0) + 1
-            inp, out = self._usage_from_result(result)
-            input_tokens += inp
-            output_tokens += out
             if status == "FAILED":
                 failures.append(
                     {
@@ -342,6 +525,20 @@ class ResearchDaemon:
                     }
                 )
 
+        usage_by_tier: dict[str, dict[str, int]] = {}
+        input_tokens = 0
+        output_tokens = 0
+        for tier, provider, model, inp, out in usage_rows:
+            input_tokens += int(inp)
+            output_tokens += int(out)
+            key = f"{tier}:{provider}:{model or 'unknown'}"
+            bucket = usage_by_tier.setdefault(
+                key, {"jobs": 0, "input_tokens": 0, "output_tokens": 0}
+            )
+            bucket["jobs"] += 1
+            bucket["input_tokens"] += int(inp)
+            bucket["output_tokens"] += int(out)
+
         return {
             "window_hours": hours,
             "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -350,6 +547,7 @@ class ResearchDaemon:
             "model_usage": {
                 "input_tokens": input_tokens,
                 "output_tokens": output_tokens,
+                "by_tier_model": usage_by_tier,
             },
             "failures": failures,
             "human_reviews": reviews,

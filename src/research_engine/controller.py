@@ -15,7 +15,13 @@ from .orchestration import (
 )
 
 
-TERMINAL_RUN_STATUSES = {"WAITING_HUMAN", "FAILED", "COMPLETED", "CANCELLED"}
+TERMINAL_RUN_STATUSES = {
+    "WAITING_HUMAN",
+    "PAUSED_BUDGET",
+    "FAILED",
+    "COMPLETED",
+    "CANCELLED",
+}
 
 
 @dataclass(frozen=True)
