@@ -51,6 +51,13 @@ def main() -> None:
     arxiv.add_argument("arxiv_id")
     arxiv.add_argument("--root", required=True)
 
+    auto = sub.add_parser("autonomous-run")
+    auto.add_argument("topic")
+    auto.add_argument("--run-id")
+    auto.add_argument("--poll-seconds", type=float, default=1.0)
+    auto.add_argument("--lease-seconds", type=int, default=300)
+    auto.add_argument("--max-cycles", type=int)
+
     args = p.parse_args()
     if args.cmd == "artifact-put":
         receipt = ContentAddressedArtifactStore(args.root).put_file(args.path)
@@ -99,3 +106,24 @@ def main() -> None:
             "byte_size": result.receipt.byte_size,
             "path": str(result.receipt.path),
         }))
+    elif args.cmd == "autonomous-run":
+        from .controller import controller_from_env
+
+        controller = controller_from_env(
+            lease_seconds=args.lease_seconds,
+            poll_seconds=args.poll_seconds,
+        )
+        result = controller.run(
+            topic=args.topic,
+            run_id=args.run_id,
+            max_cycles=args.max_cycles,
+        )
+        print(json.dumps({
+            "run_id": result.run_id,
+            "status": result.status,
+            "cycles": result.cycles,
+            "jobs_processed": result.jobs_processed,
+            "recovered_leases": result.recovered_leases,
+            "state": result.state,
+            "human_review": result.human_review,
+        }, default=str))
