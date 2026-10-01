@@ -13,6 +13,7 @@ def test_operator_shortcuts_are_bash_syntax_valid():
         root / "deploy" / "deploy-hud-paused.sh",
         root / "deploy" / "run-verify-calibration.sh",
         root / "deploy" / "run-verify-ab-batch.sh",
+        root / "deploy" / "publish-ops-mirror.sh",
     ]
     for path in paths:
         assert path.exists(), path
@@ -73,3 +74,18 @@ def test_verify_ab_batch_is_bounded_non_materializing_operator_flow():
     assert "DAEMON_MUST_REMAIN_STOPPED_FOR_VERIFY_AB_BATCH" in text
     assert "systemctl --user start" not in text
     assert " START" not in text
+
+
+def test_ops_mirror_publisher_uses_github_issue_not_git_commits_or_daemon_control():
+    root = Path(__file__).parents[1]
+    text = (root / "deploy" / "publish-ops-mirror.sh").read_text()
+    assert "research-engine\" ops-mirror" in text
+    assert "gh issue create" in text
+    assert "gh issue edit" in text
+    assert "gh issue comment" in text
+    assert "gh auth status" in text
+    assert "ops-snapshot" not in text
+    assert "git commit" not in text
+    assert "git push" not in text
+    assert "systemctl --user start" not in text
+    assert "systemctl --user stop" not in text
