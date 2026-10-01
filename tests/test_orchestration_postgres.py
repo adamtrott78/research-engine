@@ -678,6 +678,8 @@ def test_cross_run_dedupe_skips_verified_arxiv_work_and_collapses_versions():
         discovery_payload={"candidate_limit": 3},
     )
     discovery = queue.jobs(run_id, JobType.DISCOVERY)[0]
+    assert discovery.payload["topic"] == "cross-run corpus dedupe"
+    assert discovery.payload["candidate_limit"] == 3
     discovered = [
         {
             "id": "model:old-v1",
