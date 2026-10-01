@@ -13,7 +13,7 @@ if [[ ":$PATH:" != *":$bin_dir:"* ]]; then
     bashrc="$HOME/.bashrc"
     marker="# research-engine operator shortcuts"
     if ! grep -Fq "$marker" "$bashrc" 2>/dev/null; then
-        printf "\n%s\nexport PATH=\"$HOME/.local/bin:$PATH\"\n" "$marker" >> "$bashrc"
+        printf '\n%s\n%s\n' "$marker" 'export PATH="$HOME/.local/bin:$PATH"' >> "$bashrc"
     fi
 fi
 
