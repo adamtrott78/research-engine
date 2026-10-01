@@ -7,7 +7,12 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .artifact_store import ContentAddressedArtifactStore
-from .orchestration import JobExecutionError, JobType, ResearchJob
+from .orchestration import (
+    JobExecutionError,
+    JobType,
+    ResearchJob,
+    bounded_gap_candidates,
+)
 
 
 def _without_execution(result: dict[str, Any]) -> dict[str, Any]:
