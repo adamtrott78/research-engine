@@ -11,6 +11,7 @@ def test_operator_shortcuts_are_bash_syntax_valid():
         root / "deploy" / "operator" / "STATUS",
         root / "deploy" / "install-operator-shortcuts.sh",
         root / "deploy" / "deploy-hud-paused.sh",
+        root / "deploy" / "run-verify-calibration.sh",
     ]
     for path in paths:
         assert path.exists(), path
@@ -41,3 +42,12 @@ def test_paused_hud_deployer_uses_usage_ui_shape():
     assert "--left-percent" in text
     assert "--resets-in" in text
     assert "--used-percent" not in text
+
+
+def test_verify_calibration_runner_never_starts_daemon():
+    root = Path(__file__).parents[1]
+    text = (root / "deploy" / "run-verify-calibration.sh").read_text()
+    assert "calibrate-verify" in text
+    assert "DAEMON_MUST_REMAIN_STOPPED_FOR_VERIFY_CALIBRATION" in text
+    assert "systemctl --user start" not in text
+    assert " START" not in text
