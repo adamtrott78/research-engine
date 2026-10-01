@@ -9,7 +9,12 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from .orchestration import ExecutorTier, OrchestratorStore, ResearchPlanner
+from .orchestration import (
+    DEFAULT_FANOUT_LIMITS,
+    ExecutorTier,
+    OrchestratorStore,
+    ResearchPlanner,
+)
 from .postgres import PostgresStore
 
 
@@ -48,6 +53,18 @@ def validate_budget_policy(policy: dict[str, Any] | None) -> dict[str, Any]:
             )
     budgets["max_jobs_by_tier"] = by_tier
     policy["budgets"] = budgets
+
+    fanout = dict(policy.get("fanout") or {})
+    unknown_fanout = sorted(set(fanout) - set(DEFAULT_FANOUT_LIMITS))
+    if unknown_fanout:
+        raise BudgetPolicyError(f"unknown fanout limits: {unknown_fanout}")
+    normalized_fanout: dict[str, int] = {}
+    for key, default in DEFAULT_FANOUT_LIMITS.items():
+        value = fanout.get(key, default)
+        if not isinstance(value, int) or value <= 0:
+            raise BudgetPolicyError(f"{key} must be a positive integer")
+        normalized_fanout[key] = value
+    policy["fanout"] = normalized_fanout
     return policy
 
 
