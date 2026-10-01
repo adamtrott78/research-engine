@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "purpose": "Initial adapter candidates for research-engine-local-document-pipeline-v1. Presence here means benchmark candidate only, not production approval.",
+  "candidates": [
+    {
+      "adapter_id": "native-pdf",
+      "class": "DETERMINISTIC_LOCAL",
+      "role": [
+        "text-layer extraction",
+        "geometry",
+        "embedded images",
+        "page rendering",
+        "baseline"
+      ],
+      "install_state": "existing-minimal-dependencies",
+      "heavyweight_models": false,
+      "paid_api": false,
+      "license_review_required": false,
+      "lambda_validation_required": true
+    },
+    {
+      "adapter_id": "docling",
+      "class": "SPECIALIZED_LOCAL_MODEL",
+      "role": [
+        "layout",
+        "ocr",
+        "tables",
+        "document structure",
+        "markdown/json"
+      ],
+      "install_state": "not-installed",
+      "heavyweight_models": true,
+      "paid_api": false,
+      "license_review_required": true,
+      "lambda_validation_required": true
+    },
+    {
+      "adapter_id": "mineru",
+      "class": "SPECIALIZED_LOCAL_MODEL",
+      "role": [
+        "native-text path",
+        "ocr",
+        "layout",
+        "tables",
+        "formulas",
+        "markdown/json"
+      ],
+      "install_state": "not-installed",
+      "heavyweight_models": true,
+      "paid_api": false,
+      "license_review_required": true,
+      "lambda_validation_required": true
+    },
+    {
+      "adapter_id": "paddle-pp-structure-v3",
+      "class": "SPECIALIZED_LOCAL_MODEL",
+      "role": [
+        "layout",
+        "ocr",
+        "tables",
+        "formulas",
+        "charts",
+        "reading order",
+        "markdown"
+      ],
+      "install_state": "not-installed",
+      "heavyweight_models": true,
+      "paid_api": false,
+      "license_review_required": true,
+      "lambda_validation_required": true
+    },
+    {
+      "adapter_id": "marker-surya",
+      "class": "SPECIALIZED_LOCAL_MODEL",
+      "role": [
+        "native-text fast path",
+        "layout",
+        "ocr",
+        "tables",
+        "math",
+        "markdown/json",
+        "vlm fallback"
+      ],
+      "install_state": "not-installed",
+      "heavyweight_models": true,
+      "paid_api": false,
+      "license_review_required": true,
+      "lambda_validation_required": true
+    },
+    {
+      "adapter_id": "mathpix-manual-oracle",
+      "class": "HUMAN",
+      "role": [
+        "reference markdown",
+        "reference image links",
+        "benchmark oracle"
+      ],
+      "install_state": "user-desktop-only",
+      "heavyweight_models": false,
+      "paid_api": false,
+      "production_dependency": false,
+      "license_review_required": true,
+      "lambda_validation_required": false,
+      "notes": "User manually generates outputs under desktop annual allowance. Never call paid Mathpix API from production."
+    }
+  ]
+}
