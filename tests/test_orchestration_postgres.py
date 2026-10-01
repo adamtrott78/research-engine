@@ -12,7 +12,22 @@ class ScriptedExecutor:
     def execute(self, job):
         jt = str(job.job_type)
         if jt == "DISCOVERY":
-            return {"candidates": [{"id": "paper:a"}, {"id": "paper:b"}]}
+            return {
+                "candidates": [
+                    {
+                        "id": "paper:a",
+                        "title": "Paper A",
+                        "source_uri": "https://arxiv.org/abs/2601.00001",
+                        "rationale": "fixture",
+                    },
+                    {
+                        "id": "paper:b",
+                        "title": "Paper B",
+                        "source_uri": "https://arxiv.org/abs/2601.00002",
+                        "rationale": "fixture",
+                    },
+                ]
+            }
         if jt == "SCREEN":
             return {"retained": job.payload["candidates"]}
         if jt == "ACQUIRE":
