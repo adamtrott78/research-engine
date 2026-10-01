@@ -192,8 +192,11 @@ CREATE TABLE IF NOT EXISTS gap_candidates (
     id TEXT PRIMARY KEY,
     statement TEXT NOT NULL,
     gap_type TEXT NOT NULL,
+    knowledge_checkpoint_id TEXT NOT NULL REFERENCES knowledge_checkpoints(id),
+    motivating_evidence_ids TEXT[] NOT NULL DEFAULT '{}',
     novelty_status TEXT NOT NULL,
     rationale TEXT NOT NULL,
+    human_review_state TEXT NOT NULL DEFAULT 'NOT_REVIEWED',
     attributes JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -201,12 +204,21 @@ CREATE TABLE IF NOT EXISTS gap_candidates (
 CREATE TABLE IF NOT EXISTS novelty_challenges (
     id TEXT PRIMARY KEY,
     gap_candidate_id TEXT NOT NULL REFERENCES gap_candidates(id),
+    knowledge_checkpoint_id TEXT NOT NULL REFERENCES knowledge_checkpoints(id),
     result TEXT NOT NULL,
     search_provenance JSONB NOT NULL,
     counterevidence JSONB NOT NULL DEFAULT '[]'::jsonb,
     reasoning TEXT NOT NULL,
+    human_approval JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+CREATE INDEX IF NOT EXISTS gap_candidates_checkpoint_idx
+    ON gap_candidates(knowledge_checkpoint_id, novelty_status);
+CREATE INDEX IF NOT EXISTS novelty_challenges_candidate_idx
+    ON novelty_challenges(gap_candidate_id, created_at);
+CREATE INDEX IF NOT EXISTS novelty_challenges_checkpoint_idx
+    ON novelty_challenges(knowledge_checkpoint_id);
 
 CREATE TABLE IF NOT EXISTS research_programs (
     id TEXT PRIMARY KEY,
