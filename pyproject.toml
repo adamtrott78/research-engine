@@ -17,6 +17,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10"]
+openai = ["openai>=2,<3"]
 
 [project.scripts]
 research-engine = "research_engine.cli:main"
