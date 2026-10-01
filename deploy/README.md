@@ -91,6 +91,17 @@ ChatGPT-authenticated Codex consumes the plan's Codex/Work allowance. Production
 must pace or pause when that allowance is unavailable; it must never switch to a
 paid API key automatically.
 
+When Codex reports a plan/usage limit, the semantic provider enters a durable
+PostgreSQL-backed backoff window. The affected job is requeued without consuming
+its scientific retry budget, semantic workers keep heartbeating while they wait,
+and deterministic work may continue. If Codex provides a retry/reset duration,
+the daemon uses it; otherwise
+`RESEARCH_ENGINE_CODEX_PLAN_LIMIT_RETRY_SECONDS` supplies the fallback.
+
+Budget caps are enforced at lease admission. Per-tier saturation blocks only
+that tier while other eligible tiers can continue; a run enters
+`PAUSED_BUDGET` only when saturation leaves no eligible non-human work.
+
 ## Secrets
 
 The production Codex path requires no `OPENAI_API_KEY`. Never commit ChatGPT,
