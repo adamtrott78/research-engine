@@ -867,6 +867,17 @@ def test_empty_or_already_known_screen_results_reach_human_gate(
 
     state = queue.run_state(run_id)
     assert state["status"] == "WAITING_HUMAN"
-    review = queue.pending_human_review(run_id)
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT status,payload
+                FROM human_review_requests
+                WHERE run_id=%s
+                """,
+                (run_id,),
+            )
+            review = cur.fetchone()
     assert review is not None
-    assert review["payload"]["reason"] == expected_reason
+    assert review[0] == "PENDING"
+    assert review[1]["reason"] == expected_reason
