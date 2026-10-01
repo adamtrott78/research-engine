@@ -209,14 +209,14 @@ PY
         echo "$label observation already exists; skipping initial prompt."
         return
     fi
-    local used reset
-    read -r -p "Current $label USED percent [blank=skip]: " used
-    used="${used%\%}"
-    [ -n "$used" ] || return
-    read -r -p "$label reset ISO-8601 with offset [blank=unknown]: " reset
-    local args=(allowance-observe --window "$window" --used-percent "$used" --note "Initial live HUD observation")
-    if [ -n "$reset" ]; then
-        args+=(--resets-at "$reset")
+    local left reset_in
+    read -r -p "Current $label LEFT percent [blank=skip]: " left
+    left="${left%\%}"
+    [ -n "$left" ] || return
+    read -r -p "$label resets in [e.g. 3h 20m; blank=unknown]: " reset_in
+    local args=(allowance-observe --window "$window" --left-percent "$left" --note "Initial live HUD observation")
+    if [ -n "$reset_in" ]; then
+        args+=(--resets-in "$reset_in")
     fi
     "$venv/bin/research-engine" "${args[@]}"
 }

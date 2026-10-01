@@ -1,7 +1,15 @@
 from datetime import datetime, timedelta, timezone
 
-from research_engine.ops import _forecast_observations, render_hud
+from research_engine.ops import _forecast_observations, parse_relative_duration, render_hud
 
+
+
+
+def test_parse_relative_allowance_reset_duration():
+    assert parse_relative_duration("3h 20m") == timedelta(hours=3, minutes=20)
+    assert parse_relative_duration("5d 8h") == timedelta(days=5, hours=8)
+    assert parse_relative_duration("45m") == timedelta(minutes=45)
+    assert parse_relative_duration("3h20m") == timedelta(hours=3, minutes=20)
 
 def test_allowance_forecast_calibrates_then_estimates():
     start = datetime(2026, 10, 1, 12, tzinfo=timezone.utc)
