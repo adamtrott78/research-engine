@@ -121,3 +121,114 @@ def test_usage_ledger_pauses_and_explicitly_resumes_budgeted_run():
                 (run_id,),
             )
             assert cur.fetchone() == ("openai", "cheap-test", 10, 2)
+
+
+@pytest.mark.integration
+def test_saturated_unused_tier_does_not_pause_other_runnable_tier():
+    dsn = os.getenv("RESEARCH_ENGINE_DATABASE_URL")
+    if not dsn:
+        pytest.skip("RESEARCH_ENGINE_DATABASE_URL not set")
+
+    from research_engine.daemon import DaemonLimits, ResearchDaemon
+    from research_engine.orchestration import (
+        ExecutorTier,
+        JobType,
+        OrchestratorStore,
+        ResearchPlanner,
+    )
+    from research_engine.postgres import PostgresStore
+
+    store = PostgresStore(dsn)
+    store.initialize(Path(__file__).parents[1] / "sql" / "schema.sql")
+    queue = OrchestratorStore(store)
+    planner = ResearchPlanner(queue)
+
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                TRUNCATE research_usage_events, human_review_requests,
+                         semantic_materializations, research_job_attempts,
+                         research_jobs, research_workers, research_runs CASCADE
+                """
+            )
+        conn.commit()
+
+    run_id = "run:tier-budget-routing"
+    queue.create_run(
+        run_id=run_id,
+        topic="tier budget routing",
+        policy={
+            "budgets": {
+                "max_semantic_jobs": 10,
+                "max_jobs_by_tier": {
+                    "CHEAP": 1,
+                    "STANDARD": 5,
+                    "STRONG": 5,
+                },
+            }
+        },
+    )
+    queue.register_worker("worker:cheap-routing", [ExecutorTier.CHEAP])
+    cheap = queue.lease_next(
+        worker_id="worker:cheap-routing",
+        supported_tiers=[ExecutorTier.CHEAP],
+    )
+    assert cheap is not None
+    queue.complete(
+        cheap,
+        "worker:cheap-routing",
+        {
+            "candidates": [],
+            "_execution": {
+                "provider": "codex-chatgpt-plan",
+                "model": "cheap-test",
+                "usage": {"input_tokens": 1, "output_tokens": 1},
+            },
+        },
+    )
+
+    queue.enqueue(
+        run_id=run_id,
+        job_type=JobType.SYNTHESIZE,
+        idempotency_key="test:strong-after-cheap-cap",
+        payload={},
+        priority=200,
+    )
+
+    daemon = ResearchDaemon(
+        queue=queue,
+        planner=planner,
+        workers=[],
+        poll_seconds=0,
+        limits=DaemonLimits(),
+    )
+    budget = daemon.budget_status(run_id)
+    assert "MAX_CHEAP_JOBS" in budget["saturated_reasons"]
+    assert budget["exhausted"] is False
+    assert budget["reasons"] == []
+
+    tick = daemon.tick()
+    assert tick.budget_paused_runs == 0
+    assert queue.run_state(run_id)["status"] == "RUNNING"
+
+    queue.register_worker("worker:strong-routing", [ExecutorTier.STRONG])
+    strong = queue.lease_next(
+        worker_id="worker:strong-routing",
+        supported_tiers=[ExecutorTier.STRONG],
+    )
+    assert strong is not None
+    assert strong.job_type == JobType.SYNTHESIZE
+
+    # The saturated CHEAP tier remains admission-blocked.
+    queue.enqueue(
+        run_id=run_id,
+        job_type=JobType.SCREEN,
+        idempotency_key="test:cheap-blocked",
+        payload={},
+        priority=300,
+    )
+    assert queue.lease_next(
+        worker_id="worker:cheap-routing",
+        supported_tiers=[ExecutorTier.CHEAP],
+    ) is None
