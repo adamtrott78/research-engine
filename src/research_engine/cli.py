@@ -130,6 +130,19 @@ def main() -> None:
         help="comma-separated rolling windows in hours",
     )
 
+    ops_mirror = sub.add_parser("ops-mirror")
+    ops_mirror.add_argument("--run-id")
+    ops_mirror.add_argument(
+        "--windows",
+        default="1,5",
+        help="comma-separated rolling windows in hours",
+    )
+    ops_mirror.add_argument(
+        "--format",
+        choices=["markdown", "json"],
+        default="markdown",
+    )
+
     hud = sub.add_parser("hud")
     hud.add_argument("--run-id")
     hud.add_argument("--refresh-seconds", type=float, default=2.0)
@@ -359,6 +372,25 @@ def main() -> None:
                 default=str,
             )
         )
+    elif args.cmd == "ops-mirror":
+        from .ops import service_from_env
+        from .ops_mirror import build_chat_ops_mirror, render_chat_ops_markdown
+
+        windows = tuple(
+            float(part.strip())
+            for part in args.windows.split(",")
+            if part.strip()
+        )
+        mirror = build_chat_ops_mirror(
+            service_from_env().snapshot(
+                run_id=args.run_id,
+                windows=windows,
+            )
+        )
+        if args.format == "json":
+            print(json.dumps(mirror, default=str, sort_keys=True))
+        else:
+            print(render_chat_ops_markdown(mirror))
     elif args.cmd == "hud":
         from .ops import hud_loop, service_from_env
 
