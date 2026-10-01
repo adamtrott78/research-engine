@@ -451,8 +451,13 @@ class OpsService:
                     cur.execute(
                         """
                         SELECT count(*)::int
-                        FROM evidence_objects
-                        WHERE attributes->>'research_run_id'=%s
+                        FROM evidence_objects e
+                        WHERE e.attributes->>'semantic_job_id' IN (
+                          SELECT id
+                          FROM research_jobs
+                          WHERE run_id=%s
+                            AND job_type='EXTRACT'
+                        )
                         """,
                         (selected,),
                     )
@@ -539,7 +544,13 @@ class OpsService:
                           COALESCE(sum(cached_input_tokens),0)::bigint AS cached_input_tokens,
                           COALESCE(sum(output_tokens),0)::bigint AS output_tokens,
                           COALESCE(sum(reasoning_output_tokens),0)::bigint AS reasoning_output_tokens,
-                          COALESCE(sum(wall_time_ms),0)::bigint AS wall_time_ms
+                          COALESCE(sum(wall_time_ms),0)::bigint AS wall_time_ms,
+                          (array_agg(model ORDER BY created_at DESC)
+                            FILTER (WHERE model IS NOT NULL))[1] AS latest_model,
+                          (array_agg(reasoning_effort ORDER BY created_at DESC)
+                            FILTER (WHERE reasoning_effort IS NOT NULL))[1] AS latest_reasoning_effort,
+                          (array_agg(provider ORDER BY created_at DESC)
+                            FILTER (WHERE provider IS NOT NULL))[1] AS latest_provider
                         FROM research_usage_events
                         WHERE run_id=%s
                         GROUP BY COALESCE(logical_agent_id,worker_id,'unknown')
@@ -615,9 +626,18 @@ class OpsService:
                                 "host_name": row.get("host_name"),
                                 "process_id": row.get("process_id"),
                                 "code_sha": row.get("code_sha"),
-                                "backend": row.get("backend"),
-                                "model": row.get("model"),
-                                "reasoning_effort": row.get("reasoning_effort"),
+                                "backend": (
+                                    row.get("backend")
+                                    or usage.get("latest_provider")
+                                ),
+                                "model": (
+                                    row.get("model")
+                                    or usage.get("latest_model")
+                                ),
+                                "reasoning_effort": (
+                                    row.get("reasoning_effort")
+                                    or usage.get("latest_reasoning_effort")
+                                ),
                                 "current_job_id": row.get("current_job_id"),
                                 "current_job_type": row.get("current_job_type"),
                                 "current_job_elapsed_seconds": (
@@ -664,9 +684,14 @@ class OpsService:
                         cur.execute(
                             """
                             SELECT count(*)::int
-                            FROM evidence_objects
-                            WHERE attributes->>'research_run_id'=%s
-                              AND created_at >= %s
+                            FROM evidence_objects e
+                            WHERE e.attributes->>'semantic_job_id' IN (
+                              SELECT id
+                              FROM research_jobs
+                              WHERE run_id=%s
+                                AND job_type='EXTRACT'
+                            )
+                              AND e.created_at >= %s
                             """,
                             (selected, cutoff),
                         )
