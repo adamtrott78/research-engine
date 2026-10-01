@@ -334,6 +334,7 @@ class OpsService:
                 agents: list[dict[str, Any]] = []
                 usage_by_agent: list[dict[str, Any]] = []
                 usage_by_model: list[dict[str, Any]] = []
+                usage_by_job_type: list[dict[str, Any]] = []
                 pipeline: dict[str, Any] = {}
                 queue: dict[str, Any] = {}
                 throughputs: dict[str, Any] = {}
@@ -581,6 +582,27 @@ class OpsService:
 
                     cur.execute(
                         """
+                        SELECT
+                          COALESCE(job_type,'UNKNOWN') AS job_type,
+                          executor_tier,
+                          count(*)::int AS calls,
+                          COALESCE(sum(input_tokens),0)::bigint AS input_tokens,
+                          COALESCE(sum(cached_input_tokens),0)::bigint AS cached_input_tokens,
+                          COALESCE(sum(output_tokens),0)::bigint AS output_tokens,
+                          COALESCE(sum(reasoning_output_tokens),0)::bigint AS reasoning_output_tokens,
+                          COALESCE(sum(wall_time_ms),0)::bigint AS wall_time_ms,
+                          COALESCE(sum(web_search_count),0)::bigint AS web_search_count
+                        FROM research_usage_events
+                        WHERE run_id=%s
+                        GROUP BY COALESCE(job_type,'UNKNOWN'),executor_tier
+                        ORDER BY input_tokens DESC,job_type
+                        """,
+                        (selected,),
+                    )
+                    usage_by_job_type = _dict_rows(cur)
+
+                    cur.execute(
+                        """
                         WITH latest AS (
                           SELECT DISTINCT ON (COALESCE(logical_agent_id,id))
                             id,COALESCE(logical_agent_id,id) AS logical_agent_id,
@@ -808,6 +830,7 @@ class OpsService:
                 "totals": usage_totals,
                 "by_agent": usage_by_agent,
                 "by_model": usage_by_model,
+                "by_job_type": usage_by_job_type,
             },
             "efficiency": efficiency,
             "provider_backoffs": backoffs,
@@ -927,6 +950,24 @@ def render_hud(snapshot: dict[str, Any], *, color: bool = True) -> str:
                 f"total {_fmt_count(eff.get('total_tokens_per_verified_source'))} | "
                 f"calls {_fmt_count(eff.get('semantic_calls_per_verified_source'))}"
             ),
+            "",
+            "USAGE BY STAGE",
+            f"{'stage':20} {'tier':9} {'calls':>5} {'input':>10} {'cached':>10} {'output':>9} {'reason':>9} {'web':>5}",
+        ]
+    )
+    for row in snapshot.get("usage", {}).get("by_job_type", []):
+        lines.append(
+            f"{str(row.get('job_type','-'))[:20]:20} "
+            f"{str(row.get('executor_tier','-'))[:9]:9} "
+            f"{int(row.get('calls') or 0):5d} "
+            f"{_fmt_count(row.get('input_tokens',0)):>10} "
+            f"{_fmt_count(row.get('cached_input_tokens',0)):>10} "
+            f"{_fmt_count(row.get('output_tokens',0)):>9} "
+            f"{_fmt_count(row.get('reasoning_output_tokens',0)):>9} "
+            f"{int(row.get('web_search_count') or 0):5d}"
+        )
+    lines.extend(
+        [
             "",
             "QUEUE / ALERTS",
             (
