@@ -287,9 +287,11 @@ class CodexExecExecutor:
 
         if proc.returncode != 0:
             stderr = (proc.stderr or "").strip()
-            message = stderr[-2000:] or f"Codex exec exited {proc.returncode}"
-            lowered = stderr.lower()
-            if _is_plan_limit(message):
+            stdout = (proc.stdout or "").strip()
+            combined = "\n".join(part for part in (stderr, stdout) if part)
+            message = combined[-2000:] or f"Codex exec exited {proc.returncode}"
+            lowered = combined.lower()
+            if _is_plan_limit(combined):
                 raise _codex_error(
                     message,
                     fallback_code="CODEX_EXEC_FAILED",
