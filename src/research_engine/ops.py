@@ -713,7 +713,23 @@ class OpsService:
         for row in backoffs:
             row["blocked_until"] = _iso(row["blocked_until"])
 
+        systemd = _systemd_state()
+        daemon_offline = (
+            systemd.get("available")
+            and systemd.get("ActiveState") != "active"
+        )
+        if daemon_offline:
+            for agent in agents:
+                agent["effective_state"] = "OFFLINE"
+        else:
+            for agent in agents:
+                agent["effective_state"] = agent.get("state")
+
         alerts = []
+        if daemon_offline:
+            alerts.append(
+                "daemon is inactive; persisted run is paused operationally"
+            )
         if queue.get("by_status", {}).get("FAILED"):
             alerts.append(f"{queue['by_status']['FAILED']} failed job(s)")
         if queue.get("expired_leases"):
@@ -728,7 +744,7 @@ class OpsService:
 
         return {
             "captured_at": now.isoformat(),
-            "systemd": _systemd_state(),
+            "systemd": systemd,
             "run": run,
             "allowance": allowance,
             "agents": agents,
@@ -800,7 +816,7 @@ def render_hud(snapshot: dict[str, Any], *, color: bool = True) -> str:
         model = agent.get("model") or agent.get("backend") or "-"
         lines.append(
             f"{str(agent.get('logical_agent_id','-'))[:24]:24} "
-            f"{str(agent.get('state','-'))[:8]:8} "
+            f"{str(agent.get('effective_state') or agent.get('state','-'))[:8]:8} "
             f"{str(model)[:16]:16} "
             f"{str(job)[:18]:18} "
             f"{_fmt_duration(agent.get('current_job_elapsed_seconds')):8} "
