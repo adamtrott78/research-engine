@@ -4,6 +4,8 @@ from types import SimpleNamespace
 import os
 import pytest
 
+from research_engine.artifact_store import ContentAddressedArtifactStore
+
 
 class ScriptedSemanticExecutor:
     def execute(self, job):
