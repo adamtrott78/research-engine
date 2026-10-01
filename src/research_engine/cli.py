@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from .artifact_store import ContentAddressedArtifactStore
@@ -142,8 +142,15 @@ def main() -> None:
         required=True,
         choices=["5h", "weekly"],
     )
-    allowance.add_argument("--used-percent", required=True, type=float)
-    allowance.add_argument("--resets-at")
+    percent_group = allowance.add_mutually_exclusive_group(required=True)
+    percent_group.add_argument("--used-percent", type=float)
+    percent_group.add_argument("--left-percent", type=float)
+    reset_group = allowance.add_mutually_exclusive_group()
+    reset_group.add_argument("--resets-at")
+    reset_group.add_argument(
+        "--resets-in",
+        help="relative duration such as '3h 20m' or '5d 8h'",
+    )
     allowance.add_argument("--note")
     allowance.add_argument("--approximate", action="store_true")
 
@@ -345,7 +352,15 @@ def main() -> None:
             color=not args.no_color,
         )
     elif args.cmd == "allowance-observe":
-        from .ops import service_from_env
+        from .ops import parse_relative_duration, service_from_env
+
+        observed_at = datetime.now(timezone.utc)
+        if args.left_percent is not None:
+            percent_used = 100.0 - float(args.left_percent)
+        else:
+            percent_used = float(args.used_percent)
+        if not 0 <= percent_used <= 100:
+            raise ValueError("allowance percentage must resolve to [0,100] used")
 
         reset_at = None
         if args.resets_at:
@@ -354,12 +369,16 @@ def main() -> None:
             )
             if reset_at.tzinfo is None:
                 raise ValueError("--resets-at must include a timezone")
+        elif args.resets_in:
+            reset_at = observed_at + parse_relative_duration(args.resets_in)
+
         observation = service_from_env().observe_allowance(
             window=args.window,
-            percent_used=args.used_percent,
+            percent_used=percent_used,
             reset_at=reset_at,
             note=args.note,
             approximate=args.approximate,
+            observed_at=observed_at,
         )
         print(json.dumps(observation, default=str))
     elif args.cmd == "budget-status":
