@@ -36,6 +36,17 @@ def main() -> None:
         help="exit after this many empty polls; omit for daemon mode",
     )
 
+    dw = sub.add_parser("deterministic-worker")
+    dw.add_argument("--worker-id")
+    dw.add_argument("--poll-seconds", type=float, default=2.0)
+    dw.add_argument("--lease-seconds", type=int, default=300)
+    dw.add_argument(
+        "--max-idle-polls",
+        type=int,
+        default=None,
+        help="exit after this many empty polls; omit for daemon mode",
+    )
+
     arxiv = sub.add_parser("arxiv-acquire")
     arxiv.add_argument("arxiv_id")
     arxiv.add_argument("--root", required=True)
@@ -59,6 +70,16 @@ def main() -> None:
         )
         completed = run_semantic_worker_loop(
             tiers=tiers,
+            worker_id=args.worker_id,
+            poll_seconds=args.poll_seconds,
+            lease_seconds=args.lease_seconds,
+            max_idle_polls=args.max_idle_polls,
+        )
+        print(json.dumps({"result": "STOPPED", "jobs_processed": completed}))
+    elif args.cmd == "deterministic-worker":
+        from .worker_runtime import run_deterministic_worker_loop
+
+        completed = run_deterministic_worker_loop(
             worker_id=args.worker_id,
             poll_seconds=args.poll_seconds,
             lease_seconds=args.lease_seconds,
