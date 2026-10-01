@@ -1159,6 +1159,7 @@ class AgentWorker:
             self.backoff_provider
             and self.queue.provider_backoff(self.backoff_provider) is not None
         ):
+            self.queue.worker_heartbeat(self.worker_id)
             return None
         job = self.queue.lease_next(
             worker_id=self.worker_id,
