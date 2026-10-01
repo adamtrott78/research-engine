@@ -5,7 +5,6 @@ import socket
 import time
 from typing import Iterable
 
-from .openai_executor import OpenAIResponsesExecutor
 from .orchestration import (
     AgentWorker,
     ExecutorTier,
@@ -13,6 +12,19 @@ from .orchestration import (
     ResearchPlanner,
 )
 from .postgres import PostgresStore
+
+
+def _semantic_delegate(tier: ExecutorTier):
+    backend = os.getenv("RESEARCH_ENGINE_SEMANTIC_BACKEND", "codex").strip().lower()
+    if backend == "codex":
+        from .codex_executor import CodexExecExecutor
+
+        return CodexExecExecutor(tier=tier)
+    if backend == "openai_api":
+        from .openai_executor import OpenAIResponsesExecutor
+
+        return OpenAIResponsesExecutor(tier=tier)
+    raise ValueError(f"unsupported RESEARCH_ENGINE_SEMANTIC_BACKEND: {backend}")
 
 
 def semantic_worker_from_env(
@@ -42,7 +54,7 @@ def semantic_worker_from_env(
     materializer = SemanticResultMaterializer(store=store)
     executors = {
         tier: AuthoritativeSemanticExecutor(
-            delegate=OpenAIResponsesExecutor(tier=tier),
+            delegate=_semantic_delegate(tier),
             hydrator=hydrator,
             materializer=materializer,
         )
