@@ -188,7 +188,13 @@ def controller_from_env(
         store=store,
         artifact_root=artifact_root,
     )
-    hydrator = ResearchContextHydrator(store=store, artifact_root=artifact_root)
+    hydrator = ResearchContextHydrator(
+        store=store,
+        artifact_root=artifact_root,
+        verify_page_radius=int(
+            os.getenv("RESEARCH_ENGINE_VERIFY_PAGE_RADIUS", "0")
+        ),
+    )
     materializer = SemanticResultMaterializer(store=store)
 
     workers: list[AgentWorker] = [
