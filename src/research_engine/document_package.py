@@ -49,6 +49,13 @@ class CandidateClass(StrEnum):
     HUMAN = "HUMAN"
 
 
+class OracleImageMode(StrEnum):
+    REMOTE_IMAGES = "REMOTE_IMAGES"
+    LOCAL_IMAGES = "LOCAL_IMAGES"
+    MIXED = "MIXED"
+    NO_IMAGES = "NO_IMAGES"
+
+
 def _validate_sha256(value: str) -> str:
     if len(value) != 64 or any(c not in "0123456789abcdef" for c in value):
         raise ValueError("sha256 must be 64 lowercase hex characters")
@@ -265,12 +272,34 @@ class DocumentBenchmarkCase(BaseModel):
     difficulty_tags: tuple[str, ...]
     source_location: str
     mathpix_oracle_location: str | None = None
+    mathpix_oracle_sha256: str | None = None
+    mathpix_image_mode: OracleImageMode | None = None
     expected_features: dict[str, int | bool | str | list[str]] = Field(
         default_factory=dict
     )
     notes: str | None = None
 
     _source_sha = field_validator("source_pdf_sha256")(_validate_sha256)
+
+    @field_validator("mathpix_oracle_sha256")
+    @classmethod
+    def validate_optional_oracle_sha(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return _validate_sha256(value)
+
+    @model_validator(mode="after")
+    def validate_oracle_metadata(self) -> "DocumentBenchmarkCase":
+        if self.mathpix_oracle_location is None:
+            if self.mathpix_oracle_sha256 is not None or self.mathpix_image_mode is not None:
+                raise ValueError(
+                    "Mathpix oracle metadata requires mathpix_oracle_location"
+                )
+        elif self.mathpix_oracle_sha256 is None:
+            raise ValueError(
+                "mathpix_oracle_location requires mathpix_oracle_sha256"
+            )
+        return self
 
 
 class ResourceMetrics(BaseModel):
