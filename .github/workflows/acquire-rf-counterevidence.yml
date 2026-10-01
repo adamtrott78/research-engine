@@ -1,0 +1,58 @@
+name: Acquire RF novelty counterevidence
+
+on:
+  push:
+    branches: [acquire-rf-counterevidence]
+
+permissions:
+  contents: read
+
+jobs:
+  acquire:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Acquire exact arXiv PDFs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --quiet "pypdf>=5,<7"
+          mkdir -p out
+
+          cat > out/sources.tsv <<'EOF'
+          arxiv_id	url
+          2605.15593v1	https://arxiv.org/pdf/2605.15593v1
+          2606.12718v1	https://arxiv.org/pdf/2606.12718v1
+          EOF
+
+          printf 'arxiv_id\turl\tbytes\tsha256\tpdf_magic\tpages\n' > out/receipt.tsv
+
+          tail -n +2 out/sources.tsv | while IFS=$'\t' read -r id url; do
+            dst="out/\${id}.pdf"
+            curl -L --fail --retry 4 --retry-delay 2 --connect-timeout 20 --max-time 180 \
+              -A "research-engine/0.1 exact-source acquisition" \
+              "\${url}" -o "\${dst}"
+
+            magic="$(head -c 5 "\${dst}")"
+            test "\${magic}" = "%PDF-"
+            bytes="$(wc -c < "\${dst}")"
+            sha="$(sha256sum "\${dst}" | awk '{print $1}')"
+            pages="$(python - "\${dst}" <<'PY'
+import sys
+from pypdf import PdfReader
+print(len(PdfReader(sys.argv[1]).pages))
+PY
+)"
+            printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
+              "\${id}" "\${url}" "\${bytes}" "\${sha}" "\${magic}" "\${pages}" >> out/receipt.tsv
+          done
+
+          (cd out && sha256sum ./*.pdf > SHA256SUMS)
+          cat out/receipt.tsv
+
+      - name: Upload exact-source bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: rf-counterevidence-exact-sources
+          path: out/
+          if-no-files-found: error
+          retention-days: 7
