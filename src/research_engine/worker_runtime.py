@@ -70,3 +70,54 @@ def run_semantic_worker_loop(
             continue
         idle = 0
         completed += 1
+
+
+def deterministic_worker_from_env(
+    *,
+    worker_id: str | None = None,
+    lease_seconds: int = 300,
+) -> AgentWorker:
+    from .deterministic_executor import DeterministicResearchExecutor
+
+    dsn = os.environ["RESEARCH_ENGINE_DATABASE_URL"]
+    artifact_root = os.environ["RESEARCH_ENGINE_ARTIFACT_ROOT"]
+    store = PostgresStore(dsn)
+    queue = OrchestratorStore(store)
+    planner = ResearchPlanner(queue)
+    executor = DeterministicResearchExecutor(
+        store=store,
+        artifact_root=artifact_root,
+    )
+    return AgentWorker(
+        worker_id=worker_id or f"deterministic:{socket.gethostname()}:{os.getpid()}",
+        queue=queue,
+        planner=planner,
+        supported_tiers=[ExecutorTier.DETERMINISTIC],
+        executors={ExecutorTier.DETERMINISTIC: executor},
+        lease_seconds=lease_seconds,
+    )
+
+
+def run_deterministic_worker_loop(
+    *,
+    worker_id: str | None = None,
+    poll_seconds: float = 2.0,
+    lease_seconds: int = 300,
+    max_idle_polls: int | None = None,
+) -> int:
+    worker = deterministic_worker_from_env(
+        worker_id=worker_id,
+        lease_seconds=lease_seconds,
+    )
+    idle = 0
+    completed = 0
+    while True:
+        job = worker.run_once()
+        if job is None:
+            idle += 1
+            if max_idle_polls is not None and idle >= max_idle_polls:
+                return completed
+            time.sleep(poll_seconds)
+            continue
+        idle = 0
+        completed += 1
