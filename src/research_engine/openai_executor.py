@@ -13,6 +13,11 @@ from .orchestration import (
 )
 
 
+SEARCH_JOB_TYPES = {
+    JobType.DISCOVERY,
+    JobType.NOVELTY_SEARCH,
+}
+
 SEMANTIC_JOB_TYPES = {
     JobType.DISCOVERY,
     JobType.SCREEN,
@@ -281,6 +286,49 @@ def _find_refusal(response: Any) -> str | None:
     return None
 
 
+def _web_search_provenance(response: Any) -> dict[str, Any]:
+    calls: list[dict[str, Any]] = []
+    sources: list[dict[str, Any]] = []
+    seen_urls: set[str] = set()
+
+    for item in _attr(response, "output", []) or []:
+        item_type = _attr(item, "type")
+        if item_type == "web_search_call":
+            calls.append(
+                {
+                    "id": _attr(item, "id"),
+                    "action": _as_jsonable(_attr(item, "action")),
+                }
+            )
+            continue
+        if item_type != "message":
+            continue
+        for content in _attr(item, "content", []) or []:
+            for annotation in _attr(content, "annotations", []) or []:
+                if _attr(annotation, "type") != "url_citation":
+                    continue
+                nested = _attr(annotation, "url_citation")
+                source = nested if nested is not None else annotation
+                url = str(_attr(source, "url", "") or "")
+                if not url or url in seen_urls:
+                    continue
+                seen_urls.add(url)
+                sources.append(
+                    {
+                        "url": url,
+                        "title": _attr(source, "title"),
+                        "start_index": _attr(source, "start_index"),
+                        "end_index": _attr(source, "end_index"),
+                    }
+                )
+
+    return {
+        "mode": "live",
+        "calls": calls,
+        "sources": sources,
+    }
+
+
 class OpenAIResponsesExecutor:
     """Semantic JobExecutor backed by OpenAI Responses structured outputs."""
 
@@ -328,23 +376,28 @@ class OpenAIResponsesExecutor:
             "payload": job.payload,
         }
 
+        request: dict[str, Any] = {
+            "model": self.profile.model,
+            "store": False,
+            "reasoning": {"effort": self.profile.reasoning_effort},
+            "instructions": COMMON_INSTRUCTIONS + "\n" + JOB_INSTRUCTIONS[job.job_type],
+            "input": json.dumps(payload, sort_keys=True),
+            "max_output_tokens": self.profile.max_output_tokens,
+            "text": {
+                "format": {
+                    "type": "json_schema",
+                    "name": f"research_engine_{str(job.job_type).lower()}_result",
+                    "strict": True,
+                    "schema": schema,
+                }
+            },
+        }
+        if job.job_type in SEARCH_JOB_TYPES:
+            request["tools"] = [{"type": "web_search"}]
+            request["tool_choice"] = "required"
+
         try:
-            response = self.client.responses.create(
-                model=self.profile.model,
-                store=False,
-                reasoning={"effort": self.profile.reasoning_effort},
-                instructions=COMMON_INSTRUCTIONS + "\n" + JOB_INSTRUCTIONS[job.job_type],
-                input=json.dumps(payload, sort_keys=True),
-                max_output_tokens=self.profile.max_output_tokens,
-                text={
-                    "format": {
-                        "type": "json_schema",
-                        "name": f"research_engine_{str(job.job_type).lower()}_result",
-                        "strict": True,
-                        "schema": schema,
-                    }
-                },
-            )
+            response = self.client.responses.create(**request)
         except Exception as exc:
             raise JobExecutionError(
                 f"OpenAI request failed: {exc}",
@@ -402,7 +455,7 @@ class OpenAIResponsesExecutor:
                 retryable=True,
             )
 
-        result["_execution"] = {
+        execution = {
             "provider": "openai",
             "model": _attr(response, "model", self.profile.model),
             "response_id": _attr(response, "id"),
@@ -410,4 +463,7 @@ class OpenAIResponsesExecutor:
             "reasoning_effort": self.profile.reasoning_effort,
             "usage": _as_jsonable(_attr(response, "usage")),
         }
+        if job.job_type in SEARCH_JOB_TYPES:
+            execution["web_search"] = _web_search_provenance(response)
+        result["_execution"] = execution
         return result

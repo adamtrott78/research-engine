@@ -52,13 +52,13 @@ def job(job_type, tier, payload=None):
     )
 
 
-def response(output):
+def response(output, output_items=None):
     return SimpleNamespace(
         id="resp_123",
         model="model-used",
         status="completed",
         output_text=json.dumps(output),
-        output=[],
+        output=output_items or [],
         usage=SimpleNamespace(input_tokens=10, output_tokens=5),
     )
 
@@ -100,6 +100,8 @@ def test_discovery_uses_structured_output_and_records_execution_metadata():
     assert call["model"] == "gpt-5.6-luna"
     assert call["reasoning"] == {"effort": "low"}
     assert call["store"] is False
+    assert call["tools"] == [{"type": "web_search"}]
+    assert call["tool_choice"] == "required"
     assert call["text"]["format"]["type"] == "json_schema"
     assert call["text"]["format"]["strict"] is True
 
@@ -163,3 +165,78 @@ def test_model_executor_rejects_deterministic_and_human_tiers():
         OpenAIResponsesExecutor(tier=ExecutorTier.DETERMINISTIC, client=fake)
     with pytest.raises(ValueError):
         OpenAIResponsesExecutor(tier=ExecutorTier.HUMAN, client=fake)
+
+
+def test_search_jobs_capture_web_call_and_url_source_provenance():
+    search_call = SimpleNamespace(
+        type="web_search_call",
+        id="ws_123",
+        action={"type": "search", "queries": ["open set RF fingerprinting"]},
+    )
+    citation = SimpleNamespace(
+        type="url_citation",
+        url="https://arxiv.org/abs/2605.15593",
+        title="Dynamic and Open-Set RF Fingerprinting",
+        start_index=1,
+        end_index=20,
+    )
+    message = SimpleNamespace(
+        type="message",
+        content=[
+            SimpleNamespace(
+                type="output_text",
+                annotations=[citation],
+            )
+        ],
+    )
+    fake = FakeClient(
+        response(
+            {
+                "candidates": [
+                    {
+                        "id": "paper:1",
+                        "title": "Paper",
+                        "source_uri": "https://arxiv.org/abs/2605.15593",
+                        "rationale": "counterevidence",
+                    }
+                ]
+            },
+            [search_call, message],
+        )
+    )
+    result = OpenAIResponsesExecutor(
+        tier=ExecutorTier.CHEAP,
+        client=fake,
+    ).execute(job(JobType.DISCOVERY, ExecutorTier.CHEAP, {"topic": "RF"}))
+
+    provenance = result["_execution"]["web_search"]
+    assert provenance["mode"] == "live"
+    assert provenance["calls"][0]["id"] == "ws_123"
+    assert provenance["calls"][0]["action"]["queries"] == [
+        "open set RF fingerprinting"
+    ]
+    assert provenance["sources"] == [
+        {
+            "url": "https://arxiv.org/abs/2605.15593",
+            "title": "Dynamic and Open-Set RF Fingerprinting",
+            "start_index": 1,
+            "end_index": 20,
+        }
+    ]
+
+
+def test_non_search_semantic_jobs_do_not_receive_web_tool():
+    fake = FakeClient(
+        response(
+            {
+                "retained": [],
+            }
+        )
+    )
+    OpenAIResponsesExecutor(
+        tier=ExecutorTier.CHEAP,
+        client=fake,
+    ).execute(job(JobType.SCREEN, ExecutorTier.CHEAP, {"candidates": []}))
+    call = fake.responses.calls[0]
+    assert "tools" not in call
+    assert "tool_choice" not in call

@@ -188,7 +188,6 @@ def test_authoritative_semantic_cycle_materializes_scientific_state_and_replays(
         conn.commit()
 
     run_id = "research-run:authoritative-agent-v1"
-    queue.create_run(run_id=run_id, topic="dynamic open-set RF fingerprinting")
     planner = ResearchPlanner(queue)
 
     artifact_root = tmp_path / "artifacts"
@@ -249,13 +248,23 @@ def test_authoritative_semantic_cycle_materializes_scientific_state_and_replays(
         ),
     ]
 
-    for _ in range(50):
-        for worker in workers:
-            worker.run_until_idle()
-        planner.reconcile(run_id)
-        if queue.run_state(run_id)["status"] == "WAITING_HUMAN":
-            break
+    from research_engine.controller import AutonomousResearchController
 
+    controller = AutonomousResearchController(
+        queue=queue,
+        planner=planner,
+        workers=workers,
+        poll_seconds=0,
+    )
+    controller_result = controller.run(
+        topic="dynamic open-set RF fingerprinting",
+        run_id=run_id,
+        max_cycles=50,
+    )
+
+    assert controller_result.status == "WAITING_HUMAN"
+    assert controller_result.human_review["status"] == "PENDING"
+    assert controller_result.jobs_processed > 0
     state = queue.run_state(run_id)
     assert state["status"] == "WAITING_HUMAN"
     assert state["knowledge_checkpoint_id"].startswith("knowledge-checkpoint:sha256:")
