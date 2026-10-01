@@ -265,6 +265,85 @@ CREATE TABLE IF NOT EXISTS execution_bridge_plans (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+
+CREATE TABLE IF NOT EXISTS research_runs (
+    id TEXT PRIMARY KEY,
+    topic TEXT NOT NULL,
+    status TEXT NOT NULL,
+    current_phase TEXT NOT NULL,
+    policy JSONB NOT NULL DEFAULT '{}'::jsonb,
+    knowledge_checkpoint_id TEXT REFERENCES knowledge_checkpoints(id),
+    human_gate_state TEXT NOT NULL DEFAULT 'NOT_REQUIRED',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS research_runs_status_idx ON research_runs(status, updated_at);
+
+CREATE TABLE IF NOT EXISTS research_workers (
+    id TEXT PRIMARY KEY,
+    supported_tiers TEXT[] NOT NULL,
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+    state TEXT NOT NULL DEFAULT 'ACTIVE',
+    last_heartbeat_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS research_jobs (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
+    job_type TEXT NOT NULL,
+    executor_tier TEXT NOT NULL,
+    status TEXT NOT NULL,
+    priority INTEGER NOT NULL DEFAULT 0,
+    idempotency_key TEXT NOT NULL,
+    payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+    result JSONB,
+    depends_on TEXT[] NOT NULL DEFAULT '{}',
+    attempt_count INTEGER NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
+    max_attempts INTEGER NOT NULL DEFAULT 3 CHECK (max_attempts > 0),
+    lease_owner TEXT REFERENCES research_workers(id),
+    lease_expires_at TIMESTAMPTZ,
+    available_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    last_error JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE(run_id, idempotency_key)
+);
+CREATE INDEX IF NOT EXISTS research_jobs_queue_idx
+    ON research_jobs(status, executor_tier, available_at, priority DESC, created_at);
+CREATE INDEX IF NOT EXISTS research_jobs_run_type_idx
+    ON research_jobs(run_id, job_type, status);
+CREATE INDEX IF NOT EXISTS research_jobs_lease_idx
+    ON research_jobs(status, lease_expires_at);
+
+CREATE TABLE IF NOT EXISTS research_job_attempts (
+    id BIGSERIAL PRIMARY KEY,
+    job_id TEXT NOT NULL REFERENCES research_jobs(id) ON DELETE CASCADE,
+    attempt_no INTEGER NOT NULL,
+    worker_id TEXT NOT NULL,
+    executor_tier TEXT NOT NULL,
+    status TEXT NOT NULL,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    finished_at TIMESTAMPTZ,
+    detail JSONB NOT NULL DEFAULT '{}'::jsonb,
+    UNIQUE(job_id, attempt_no)
+);
+CREATE INDEX IF NOT EXISTS research_job_attempts_job_idx
+    ON research_job_attempts(job_id, attempt_no);
+
+CREATE TABLE IF NOT EXISTS human_review_requests (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
+    job_id TEXT NOT NULL UNIQUE REFERENCES research_jobs(id) ON DELETE CASCADE,
+    status TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    decision JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    decided_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS human_review_requests_status_idx
+    ON human_review_requests(status, created_at);
+
 CREATE TABLE IF NOT EXISTS embeddings (
     id BIGSERIAL PRIMARY KEY,
     record_type TEXT NOT NULL,
