@@ -117,7 +117,7 @@ def canonical_acquisition_candidate(
     if arxiv_id is None:
         return None
 
-    base_id = re.sub(r"v\\d+$", "", arxiv_id)
+    base_id = re.sub(r"v\d+$", "", arxiv_id)
     canonical = dict(item)
     canonical["discovery_id"] = str(item.get("id") or "")
     canonical["id"] = f"arxiv:{base_id}"
