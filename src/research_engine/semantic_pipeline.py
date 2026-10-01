@@ -557,6 +557,10 @@ class SemanticResultMaterializer:
 
         checkpoint_id = self._run_checkpoint(cur, job.run_id)
         canonical = copy.deepcopy(_without_execution(result))
+        cur.execute("SELECT policy FROM research_runs WHERE id=%s", (job.run_id,))
+        row = cur.fetchone()
+        policy = (row[0] if row else {}) or {}
+        canonical["gaps"] = bounded_gap_candidates(canonical, policy)
         gap_ids: list[str] = []
         for index, gap in enumerate(canonical.get("gaps", []), start=1):
             proposed_id = str(gap.get("id") or index)
