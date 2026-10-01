@@ -263,11 +263,13 @@ class OrchestratorStore:
                     (run_id, topic, Jsonb(policy or {})),
                 )
             conn.commit()
+        initial_discovery = {"topic": topic}
+        initial_discovery.update(dict(discovery_payload or {}))
         self.enqueue(
             run_id=run_id,
             job_type=JobType.DISCOVERY,
             idempotency_key="stage:discovery",
-            payload=discovery_payload or {"topic": topic},
+            payload=initial_discovery,
             priority=100,
         )
         return run_id
