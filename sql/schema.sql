@@ -420,52 +420,22 @@ SET logical_agent_id = COALESCE(
         logical_agent_id,
         metadata->>'logical_agent_id',
         CASE
-          WHEN id ~ ':deterministic:[0-9]+    host_name = COALESCE(host_name, metadata->>'host_name'),
+          WHEN id ~ ':deterministic:[0-9]+$'
+          THEN 'deterministic:' || substring(id from ':deterministic:([0-9]+)$')
+          WHEN id ~ ':cheap:[0-9]+$'
+          THEN 'semantic:cheap:' || substring(id from ':cheap:([0-9]+)$')
+          WHEN id ~ ':standard:[0-9]+$'
+          THEN 'semantic:standard:' || substring(id from ':standard:([0-9]+)$')
+          WHEN id ~ ':strong:[0-9]+$'
+          THEN 'semantic:strong:' || substring(id from ':strong:([0-9]+)$')
+          ELSE NULL
+        END
+    ),
+    host_name = COALESCE(host_name, metadata->>'host_name'),
     process_id = COALESCE(
         process_id,
         CASE
-          WHEN (metadata->>'process_id') ~ '^[0-9]+
-    job_id TEXT PRIMARY KEY REFERENCES research_jobs(id) ON DELETE CASCADE,
-    job_type TEXT NOT NULL,
-    status TEXT NOT NULL CHECK (status IN ('PENDING','COMPLETED')),
-    semantic_result JSONB NOT NULL,
-    materialized_result JSONB,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS semantic_materializations_status_idx
-    ON semantic_materializations(status, updated_at);
-
-CREATE TABLE IF NOT EXISTS human_review_requests (
-    id TEXT PRIMARY KEY,
-    run_id TEXT NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
-    job_id TEXT NOT NULL UNIQUE REFERENCES research_jobs(id) ON DELETE CASCADE,
-    status TEXT NOT NULL,
-    payload JSONB NOT NULL,
-    decision JSONB,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    decided_at TIMESTAMPTZ
-);
-CREATE INDEX IF NOT EXISTS human_review_requests_status_idx
-    ON human_review_requests(status, created_at);
-
-CREATE TABLE IF NOT EXISTS embeddings (
-    id BIGSERIAL PRIMARY KEY,
-    record_type TEXT NOT NULL,
-    record_id TEXT NOT NULL,
-    model TEXT NOT NULL,
-    model_version TEXT,
-    dimensions INTEGER NOT NULL CHECK (dimensions > 0),
-    source_content_hash TEXT NOT NULL,
-    embedding VECTOR NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE(record_type, record_id, model, model_version, source_content_hash)
-);
-CREATE INDEX IF NOT EXISTS embeddings_record_idx ON embeddings(record_type, record_id);
--- Intentionally no HNSW/IVFFlat index in v1. Exact NN is the baseline.
-
-COMMIT;
-
+          WHEN (metadata->>'process_id') ~ '^[0-9]+$'
           THEN (metadata->>'process_id')::integer
           ELSE NULL
         END
@@ -530,10 +500,13 @@ SET job_type = COALESCE(u.job_type, j.job_type),
     ),
     queue_wait_ms = COALESCE(
         u.queue_wait_ms,
-        GREATEST(
-            0,
-            ROUND(EXTRACT(EPOCH FROM (a.started_at-j.available_at))*1000)
-        )::bigint
+        CASE WHEN a.started_at IS NOT NULL
+             THEN GREATEST(
+                 0,
+                 ROUND(EXTRACT(EPOCH FROM (a.started_at-j.available_at))*1000)
+             )::bigint
+             ELSE NULL
+        END
     ),
     web_search_count = CASE
         WHEN u.web_search_count = 0
