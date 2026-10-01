@@ -43,6 +43,10 @@ def test_ops_snapshot_attributes_usage_and_forecasts_allowance():
         topic="ops telemetry",
         discovery_payload={"candidate_limit": 2},
     )
+    pre = ops.snapshot(run_id=run_id, windows=(1, 5))
+    assert pre["pipeline"]["discovered"] == 0
+    assert pre["run"]["status"] == "RUNNING"
+
     queue.register_worker(
         "daemon:test:123:cheap:0",
         [ExecutorTier.CHEAP],
