@@ -378,8 +378,10 @@ class OpsService:
                         (selected,),
                     )
                     discovery = _one_dict(cur)
-                    candidates = list((discovery or {}).get("result", {}).get("candidates") or [])
-                    limit = (discovery or {}).get("payload", {}).get("candidate_limit")
+                    discovery_result = (discovery or {}).get("result") or {}
+                    discovery_payload = (discovery or {}).get("payload") or {}
+                    candidates = list(discovery_result.get("candidates") or [])
+                    limit = discovery_payload.get("candidate_limit")
                     if isinstance(limit, int) and limit > 0:
                         candidates = candidates[:limit]
                     candidate_ids = {str(x.get("id")) for x in candidates if x.get("id") is not None}
@@ -394,9 +396,10 @@ class OpsService:
                         (selected,),
                     )
                     screen = _one_dict(cur)
+                    screen_result = (screen or {}).get("result") or {}
                     retained = [
                         item
-                        for item in list((screen or {}).get("result", {}).get("retained") or [])
+                        for item in list(screen_result.get("retained") or [])
                         if str(item.get("id")) in candidate_ids
                     ]
 
