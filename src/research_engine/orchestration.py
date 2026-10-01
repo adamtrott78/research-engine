@@ -75,6 +75,38 @@ def bounded_gap_candidates(
     return bounded
 
 
+def bounded_discovery_candidates(job: "ResearchJob") -> list[dict[str, Any]]:
+    candidates = list((job.result or {}).get("candidates") or [])
+    limit = job.payload.get("candidate_limit")
+    if isinstance(limit, int) and limit > 0:
+        candidates = candidates[:limit]
+    return [dict(item) for item in candidates]
+
+
+def canonical_screened_candidates(
+    discovery_job: "ResearchJob",
+    screen_job: "ResearchJob",
+) -> list[dict[str, Any]]:
+    discovered = bounded_discovery_candidates(discovery_job)
+    retained_ids = {
+        str(item.get("id"))
+        for item in list((screen_job.result or {}).get("retained") or [])
+        if item.get("id") is not None
+    }
+    return [
+        item
+        for item in discovered
+        if str(item.get("id")) in retained_ids
+    ]
+
+
+def acquisition_candidate_supported(item: dict[str, Any]) -> bool:
+    # Import lazily to keep the orchestration module independent at import time.
+    from .deterministic_executor import arxiv_id_from_uri
+
+    return arxiv_id_from_uri(str(item.get("source_uri") or "")) is not None
+
+
 @dataclass(frozen=True)
 class ResearchJob:
     id: str
@@ -734,6 +766,29 @@ class OrchestratorStore:
             conn.commit()
         return recovered
 
+    def annotate_cancelled(
+        self,
+        job_id: str,
+        detail: dict[str, Any],
+    ) -> None:
+        from psycopg.types.json import Jsonb
+
+        with self.store.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE research_jobs
+                    SET last_error=%s, updated_at=now()
+                    WHERE id=%s AND status='CANCELLED'
+                    """,
+                    (Jsonb(detail), job_id),
+                )
+                if cur.rowcount != 1:
+                    raise ValueError(
+                        f"job {job_id} is not in CANCELLED state"
+                    )
+            conn.commit()
+
     def cancel_queued_except(
         self,
         *,
@@ -945,25 +1000,40 @@ class ResearchPlanner:
                 run_id=run_id,
                 job_type=JobType.SCREEN,
                 idempotency_key="stage:screen",
-                payload={"candidates": discovery[0].result.get("candidates", [])},
+                payload={
+                    "candidates": bounded_discovery_candidates(discovery[0])
+                },
                 depends_on=[discovery[0].id],
                 priority=90,
             )
 
         jobs = self.queue.jobs(run_id)
         screen = self._completed(jobs, JobType.SCREEN)
-        if screen:
-            retained = screen[0].result.get("retained", [])
+        if screen and discovery:
+            retained = canonical_screened_candidates(
+                discovery[0],
+                screen[0],
+            )
             for item in retained:
                 key = str(item["id"])
-                self.queue.enqueue(
+                supported = acquisition_candidate_supported(item)
+                job_id = self.queue.enqueue(
                     run_id=run_id,
                     job_type=JobType.ACQUIRE,
                     idempotency_key=f"acquire:{key}",
                     payload={"item": item},
                     depends_on=[screen[0].id],
                     priority=80,
+                    status="QUEUED" if supported else "CANCELLED",
                 )
+                if not supported:
+                    self.queue.annotate_cancelled(
+                        job_id,
+                        {
+                            "type": "SKIPPED_UNSUPPORTED_SOURCE_PROVIDER",
+                            "source_uri": item.get("source_uri"),
+                        },
+                    )
 
         jobs = self.queue.jobs(run_id)
         for job in self._completed(jobs, JobType.ACQUIRE):
@@ -991,8 +1061,28 @@ class ResearchPlanner:
 
         jobs = self.queue.jobs(run_id)
         screen_done = self._completed(jobs, JobType.SCREEN)
-        retained_count = len(screen_done[0].result.get("retained", [])) if screen_done else 0
+        retained_items = (
+            canonical_screened_candidates(discovery[0], screen_done[0])
+            if discovery and screen_done
+            else []
+        )
+        retained_count = sum(
+            1 for item in retained_items
+            if acquisition_candidate_supported(item)
+        )
         verifies = [j for j in jobs if j.job_type == JobType.VERIFY]
+        if screen_done and retained_items and retained_count == 0:
+            self.queue.ensure_human_review(
+                run_id,
+                {
+                    "topic": state["topic"],
+                    "reason": "NO_ACQUIRABLE_SOURCES",
+                    "screened_candidate_ids": [
+                        str(item.get("id")) for item in retained_items
+                    ],
+                },
+            )
+            return
         if retained_count == len(verifies) and retained_count > 0 and all(
             j.status == "COMPLETED" for j in verifies
         ):
