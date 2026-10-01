@@ -356,7 +356,11 @@ def main() -> None:
             color=not args.no_color,
         )
     elif args.cmd == "allowance-observe":
-        from .ops import parse_relative_duration, service_from_env
+        from .ops import (
+            parse_relative_duration,
+            relative_duration_precision_seconds,
+            service_from_env,
+        )
 
         observed_at = datetime.now(timezone.utc)
         if args.left_percent is not None:
@@ -366,7 +370,9 @@ def main() -> None:
         if not 0 <= percent_used <= 100:
             raise ValueError("allowance percentage must resolve to [0,100] used")
 
+        percent_quantum = 1.0 if args.left_percent is not None else None
         reset_at = None
+        reset_precision_seconds = None
         if args.resets_at:
             reset_at = datetime.fromisoformat(
                 args.resets_at.replace("Z", "+00:00")
@@ -375,13 +381,22 @@ def main() -> None:
                 raise ValueError("--resets-at must include a timezone")
         elif args.resets_in:
             reset_at = observed_at + parse_relative_duration(args.resets_in)
+            reset_precision_seconds = relative_duration_precision_seconds(
+                args.resets_in
+            )
 
         observation = service_from_env().observe_allowance(
             window=args.window,
             percent_used=percent_used,
             reset_at=reset_at,
             note=args.note,
-            approximate=args.approximate,
+            approximate=(
+                args.approximate
+                or percent_quantum is not None
+                or reset_precision_seconds is not None
+            ),
+            percent_quantum=percent_quantum,
+            reset_precision_seconds=reset_precision_seconds,
             observed_at=observed_at,
         )
         print(json.dumps(observation, default=str))
