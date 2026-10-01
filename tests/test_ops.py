@@ -1,6 +1,11 @@
 from datetime import datetime, timedelta, timezone
 
-from research_engine.ops import _forecast_observations, parse_relative_duration, render_hud
+from research_engine.ops import (
+    _forecast_observations,
+    parse_relative_duration,
+    relative_duration_precision_seconds,
+    render_hud,
+)
 
 
 
@@ -10,6 +15,74 @@ def test_parse_relative_allowance_reset_duration():
     assert parse_relative_duration("5d 8h") == timedelta(days=5, hours=8)
     assert parse_relative_duration("45m") == timedelta(minutes=45)
     assert parse_relative_duration("3h20m") == timedelta(hours=3, minutes=20)
+    assert relative_duration_precision_seconds("3h 20m") == 60
+    assert relative_duration_precision_seconds("5d 8h") == 3600
+    assert relative_duration_precision_seconds("45m") == 60
+
+
+def test_allowance_forecast_groups_reset_jitter_and_censors_whole_percent_ui():
+    start = datetime(2026, 10, 1, 12, tzinfo=timezone.utc)
+    rows = [
+        {
+            "window_type": "FIVE_HOUR",
+            "percent_used": 14.0,
+            "percent_quantum": 1.0,
+            "observed_at": start,
+            "reset_at": start + timedelta(hours=3, minutes=20),
+            "reset_precision_seconds": 60,
+            "approximate": True,
+        },
+        {
+            "window_type": "FIVE_HOUR",
+            "percent_used": 15.0,
+            "percent_quantum": 1.0,
+            "observed_at": start + timedelta(minutes=15),
+            "reset_at": start + timedelta(hours=3, minutes=20, seconds=35),
+            "reset_precision_seconds": 60,
+            "approximate": True,
+        },
+    ]
+    forecast = _forecast_observations(
+        rows,
+        now=start + timedelta(minutes=15),
+        window_type="FIVE_HOUR",
+    )
+    assert forecast["observations"] == 2
+    assert forecast["censored"] is True
+    assert forecast["burn_percent_per_hour"] is None
+    assert forecast["burn_percent_per_hour_bounds"] == [0.0, 12.0]
+    assert forecast["percent_used_bounds"] == [14.0, 16.0]
+    assert forecast["reset_window_tolerance_seconds"] == 120.0
+
+
+def test_allowance_forecast_still_splits_distinct_reset_windows():
+    start = datetime(2026, 10, 1, 12, tzinfo=timezone.utc)
+    rows = [
+        {
+            "window_type": "FIVE_HOUR",
+            "percent_used": 14.0,
+            "observed_at": start,
+            "reset_at": start + timedelta(hours=3),
+            "reset_precision_seconds": 60,
+            "approximate": True,
+        },
+        {
+            "window_type": "FIVE_HOUR",
+            "percent_used": 15.0,
+            "observed_at": start + timedelta(minutes=15),
+            "reset_at": start + timedelta(hours=8),
+            "reset_precision_seconds": 60,
+            "approximate": True,
+        },
+    ]
+    forecast = _forecast_observations(
+        rows,
+        now=start + timedelta(minutes=15),
+        window_type="FIVE_HOUR",
+    )
+    assert forecast["observations"] == 1
+    assert forecast["confidence"] == "CALIBRATING"
+
 
 def test_allowance_forecast_calibrates_then_estimates():
     start = datetime(2026, 10, 1, 12, tzinfo=timezone.utc)
