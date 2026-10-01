@@ -10,6 +10,7 @@ def test_operator_shortcuts_are_bash_syntax_valid():
         root / "deploy" / "operator" / "HUD",
         root / "deploy" / "operator" / "STATUS",
         root / "deploy" / "install-operator-shortcuts.sh",
+        root / "deploy" / "deploy-hud-paused.sh",
     ]
     for path in paths:
         assert path.exists(), path
