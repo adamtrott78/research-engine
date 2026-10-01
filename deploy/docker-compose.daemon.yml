@@ -1,5 +1,7 @@
 services:
   daemon:
+    profiles:
+      - openai-api-development
     build:
       context: .
       dockerfile: Dockerfile
@@ -10,6 +12,7 @@ services:
     environment:
       RESEARCH_ENGINE_DATABASE_URL: postgresql://research_engine:research_engine@db:5432/research_engine
       RESEARCH_ENGINE_ARTIFACT_ROOT: /var/lib/research-engine/artifacts
+      RESEARCH_ENGINE_SEMANTIC_BACKEND: openai_api
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       RESEARCH_ENGINE_DETERMINISTIC_WORKERS: ${RESEARCH_ENGINE_DETERMINISTIC_WORKERS:-2}
       RESEARCH_ENGINE_CHEAP_WORKERS: ${RESEARCH_ENGINE_CHEAP_WORKERS:-4}
