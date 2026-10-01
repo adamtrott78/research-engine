@@ -220,6 +220,15 @@ def test_ops_snapshot_attributes_usage_and_forecasts_allowance():
     assert snapshot["usage"]["totals"]["cached_input_tokens"] == 20
     assert snapshot["usage"]["totals"]["reasoning_output_tokens"] == 3
     assert snapshot["usage"]["by_agent"][0]["agent"] == "semantic:cheap:0"
+    discovery_usage = next(
+        row for row in snapshot["usage"]["by_job_type"]
+        if row["job_type"] == "DISCOVERY"
+    )
+    assert discovery_usage["calls"] == 1
+    assert discovery_usage["input_tokens"] == 100
+    assert discovery_usage["cached_input_tokens"] == 20
+    assert discovery_usage["reasoning_output_tokens"] == 3
+    assert discovery_usage["web_search_count"] == 1
     assert snapshot["allowance"]["FIVE_HOUR"]["burn_percent_per_hour"] == pytest.approx(4.0)
     assert snapshot["allowance"]["FIVE_HOUR"]["eta_hours"] == pytest.approx(20.0)
     cheap = next(
