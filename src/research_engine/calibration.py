@@ -305,6 +305,16 @@ class VerifyReplayCalibration:
 
 
 def service_from_env(*, delegate: Any | None = None) -> VerifyReplayCalibration:
+    if delegate is None:
+        backend = os.getenv(
+            "RESEARCH_ENGINE_SEMANTIC_BACKEND",
+            "codex",
+        ).strip().lower()
+        if backend != "codex":
+            raise ValueError(
+                "VERIFY replay calibration is production Codex-only; "
+                f"configured backend is {backend!r}"
+            )
     return VerifyReplayCalibration(
         store=PostgresStore(os.environ["RESEARCH_ENGINE_DATABASE_URL"]),
         artifact_root=os.environ["RESEARCH_ENGINE_ARTIFACT_ROOT"],
