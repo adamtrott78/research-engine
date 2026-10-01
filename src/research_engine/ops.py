@@ -335,6 +335,7 @@ class OpsService:
                 usage_by_agent: list[dict[str, Any]] = []
                 usage_by_model: list[dict[str, Any]] = []
                 usage_by_job_type: list[dict[str, Any]] = []
+                calibrations: list[dict[str, Any]] = []
                 pipeline: dict[str, Any] = {}
                 queue: dict[str, Any] = {}
                 throughputs: dict[str, Any] = {}
@@ -603,6 +604,25 @@ class OpsService:
 
                     cur.execute(
                         """
+                        SELECT
+                          id,calibration_type,source_job_id,
+                          model,reasoning_effort,configuration,
+                          context_page_count,context_char_count,evidence_count,
+                          historical_input_tokens,historical_cached_input_tokens,
+                          replay_input_tokens,replay_cached_input_tokens,
+                          replay_output_tokens,replay_reasoning_output_tokens,
+                          wall_time_ms,outcome_agreement,created_at
+                        FROM research_calibration_events
+                        WHERE source_run_id=%s
+                        ORDER BY created_at DESC,id DESC
+                        LIMIT 5
+                        """,
+                        (selected,),
+                    )
+                    calibrations = _dict_rows(cur)
+
+                    cur.execute(
+                        """
                         WITH latest AS (
                           SELECT DISTINCT ON (COALESCE(logical_agent_id,id))
                             id,COALESCE(logical_agent_id,id) AS logical_agent_id,
@@ -833,6 +853,46 @@ class OpsService:
                 "by_job_type": usage_by_job_type,
             },
             "efficiency": efficiency,
+            "calibrations": [
+                {
+                    **row,
+                    "created_at": _iso(row.get("created_at")),
+                    "input_reduction_fraction": (
+                        (
+                            int(row["historical_input_tokens"])
+                            - int(row["replay_input_tokens"])
+                        )
+                        / int(row["historical_input_tokens"])
+                        if int(row["historical_input_tokens"]) > 0
+                        else None
+                    ),
+                    "uncached_input_reduction_fraction": (
+                        (
+                            max(
+                                0,
+                                int(row["historical_input_tokens"])
+                                - int(row["historical_cached_input_tokens"]),
+                            )
+                            - max(
+                                0,
+                                int(row["replay_input_tokens"])
+                                - int(row["replay_cached_input_tokens"]),
+                            )
+                        )
+                        / max(
+                            1,
+                            int(row["historical_input_tokens"])
+                            - int(row["historical_cached_input_tokens"]),
+                        )
+                        if (
+                            int(row["historical_input_tokens"])
+                            - int(row["historical_cached_input_tokens"])
+                        ) > 0
+                        else None
+                    ),
+                }
+                for row in calibrations
+            ],
             "provider_backoffs": backoffs,
             "alerts": alerts,
         }
@@ -966,6 +1026,38 @@ def render_hud(snapshot: dict[str, Any], *, color: bool = True) -> str:
             f"{_fmt_count(row.get('reasoning_output_tokens',0)):>9} "
             f"{int(row.get('web_search_count') or 0):5d}"
         )
+    calibrations = snapshot.get("calibrations") or []
+    if calibrations:
+        lines.extend(
+            [
+                "",
+                "CALIBRATION",
+                f"{'type':22} {'model':16} {'old input':>10} {'replay':>10} {'saved':>8} {'pages':>5} {'evid':>5} {'agree':>10}",
+            ]
+        )
+        for row in calibrations:
+            agreement = row.get("outcome_agreement") or {}
+            agree = (
+                "YES"
+                if (
+                    agreement.get("verified_equal")
+                    and agreement.get("accepted_evidence_ids_equal")
+                )
+                else "CHECK"
+            )
+            reduction = row.get("input_reduction_fraction")
+            saved = "-" if reduction is None else f"{100*reduction:.1f}%"
+            lines.append(
+                f"{str(row.get('calibration_type','-'))[:22]:22} "
+                f"{str(row.get('model') or '-')[:16]:16} "
+                f"{_fmt_count(row.get('historical_input_tokens',0)):>10} "
+                f"{_fmt_count(row.get('replay_input_tokens',0)):>10} "
+                f"{saved:>8} "
+                f"{int(row.get('context_page_count') or 0):5d} "
+                f"{int(row.get('evidence_count') or 0):5d} "
+                f"{agree:>10}"
+            )
+
     lines.extend(
         [
             "",

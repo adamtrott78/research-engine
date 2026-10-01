@@ -154,6 +154,10 @@ def main() -> None:
     allowance.add_argument("--note")
     allowance.add_argument("--approximate", action="store_true")
 
+    calibrate_verify = sub.add_parser("calibrate-verify")
+    calibrate_verify.add_argument("run_id")
+    calibrate_verify.add_argument("--source-job-id")
+
     budget_status = sub.add_parser("budget-status")
     budget_status.add_argument("run_id")
 
@@ -381,6 +385,14 @@ def main() -> None:
             observed_at=observed_at,
         )
         print(json.dumps(observation, default=str))
+    elif args.cmd == "calibrate-verify":
+        from .calibration import service_from_env as calibration_from_env
+
+        result = calibration_from_env().run(
+            run_id=args.run_id,
+            source_job_id=args.source_job_id,
+        )
+        print(json.dumps(result, default=str))
     elif args.cmd == "budget-status":
         from .daemon import daemon_from_env
 

@@ -414,6 +414,37 @@ CREATE TABLE IF NOT EXISTS research_allowance_observations (
 CREATE INDEX IF NOT EXISTS research_allowance_observations_window_idx
     ON research_allowance_observations(window_type, observed_at);
 
+CREATE TABLE IF NOT EXISTS research_calibration_events (
+    id BIGSERIAL PRIMARY KEY,
+    calibration_type TEXT NOT NULL,
+    source_run_id TEXT NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
+    source_job_id TEXT NOT NULL REFERENCES research_jobs(id) ON DELETE CASCADE,
+    executor_tier TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    model TEXT,
+    reasoning_effort TEXT,
+    code_sha TEXT,
+    configuration JSONB NOT NULL DEFAULT '{}'::jsonb,
+    context_page_count INTEGER NOT NULL DEFAULT 0 CHECK (context_page_count >= 0),
+    context_char_count BIGINT NOT NULL DEFAULT 0 CHECK (context_char_count >= 0),
+    evidence_count INTEGER NOT NULL DEFAULT 0 CHECK (evidence_count >= 0),
+    historical_input_tokens BIGINT NOT NULL DEFAULT 0 CHECK (historical_input_tokens >= 0),
+    historical_cached_input_tokens BIGINT NOT NULL DEFAULT 0 CHECK (historical_cached_input_tokens >= 0),
+    historical_output_tokens BIGINT NOT NULL DEFAULT 0 CHECK (historical_output_tokens >= 0),
+    replay_input_tokens BIGINT NOT NULL DEFAULT 0 CHECK (replay_input_tokens >= 0),
+    replay_cached_input_tokens BIGINT NOT NULL DEFAULT 0 CHECK (replay_cached_input_tokens >= 0),
+    replay_output_tokens BIGINT NOT NULL DEFAULT 0 CHECK (replay_output_tokens >= 0),
+    replay_reasoning_output_tokens BIGINT NOT NULL DEFAULT 0 CHECK (replay_reasoning_output_tokens >= 0),
+    wall_time_ms BIGINT NOT NULL DEFAULT 0 CHECK (wall_time_ms >= 0),
+    outcome_agreement JSONB NOT NULL DEFAULT '{}'::jsonb,
+    result_summary JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS research_calibration_source_idx
+    ON research_calibration_events(source_run_id, source_job_id, created_at);
+CREATE INDEX IF NOT EXISTS research_calibration_type_idx
+    ON research_calibration_events(calibration_type, created_at);
+
 -- Migration-safe observability backfill from preserved authoritative records.
 UPDATE research_workers
 SET logical_agent_id = COALESCE(
