@@ -753,3 +753,118 @@ def test_cross_run_dedupe_skips_verified_arxiv_work_and_collapses_versions():
 
     assert detail["type"] == "SKIPPED_ALREADY_VERIFIED_WORK"
     assert detail["work_id"] == "arxiv:2108.01656"
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    ("retain_mode", "expected_reason"),
+    [
+        ("none", "NO_RELEVANT_CANDIDATES"),
+        ("verified_only", "NO_NEW_ACQUIRABLE_SOURCES"),
+    ],
+)
+def test_empty_or_already_known_screen_results_reach_human_gate(
+    retain_mode,
+    expected_reason,
+):
+    dsn = os.getenv("RESEARCH_ENGINE_DATABASE_URL")
+    if not dsn:
+        pytest.skip("RESEARCH_ENGINE_DATABASE_URL not set")
+    pytest.importorskip("psycopg")
+
+    from psycopg.types.json import Jsonb
+
+    from research_engine.orchestration import (
+        JobType,
+        OrchestratorStore,
+        ResearchPlanner,
+    )
+    from research_engine.postgres import PostgresStore
+
+    store = PostgresStore(dsn)
+    store.initialize(Path(__file__).parents[1] / "sql" / "schema.sql")
+    queue = OrchestratorStore(store)
+    planner = ResearchPlanner(queue)
+
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                TRUNCATE research_usage_events, human_review_requests,
+                         semantic_materializations, research_job_attempts,
+                         research_jobs, research_workers, research_runs,
+                         verification_events, evidence_relations, evidence_objects,
+                         source_locators, extraction_runs, acquisition_attempts,
+                         discovery_runs, external_identifiers, source_artifacts,
+                         work_versions, works CASCADE
+                """
+            )
+            cur.execute(
+                """
+                INSERT INTO works(id,title)
+                VALUES ('arxiv:2108.01656','Known Work')
+                """
+            )
+            cur.execute(
+                """
+                INSERT INTO evidence_objects(
+                  id,evidence_type,work_id,source_level,
+                  normalized_form,verification_state
+                )
+                VALUES (
+                  'evidence:known','result','arxiv:2108.01656',
+                  'FULLTEXT_PDF_TEXT','known','MACHINE_CHECKED'
+                )
+                """
+            )
+        conn.commit()
+
+    run_id = f"run:empty-screen:{retain_mode}"
+    queue.create_run(
+        run_id=run_id,
+        topic="empty screen liveness",
+        discovery_payload={"candidate_limit": 1},
+    )
+    discovery = queue.jobs(run_id, JobType.DISCOVERY)[0]
+    candidate = {
+        "id": "model:known",
+        "title": "Known Work",
+        "source_uri": "https://arxiv.org/abs/2108.01656v2",
+        "rationale": "fixture",
+    }
+
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE research_jobs
+                SET status='COMPLETED', result=%s
+                WHERE id=%s
+                """,
+                (Jsonb({"candidates": [candidate]}), discovery.id),
+            )
+        conn.commit()
+
+    planner.reconcile(run_id)
+    screen = queue.jobs(run_id, JobType.SCREEN)[0]
+    retained = [] if retain_mode == "none" else [candidate]
+
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE research_jobs
+                SET status='COMPLETED', result=%s
+                WHERE id=%s
+                """,
+                (Jsonb({"retained": retained}), screen.id),
+            )
+        conn.commit()
+
+    planner.reconcile(run_id)
+
+    state = queue.run_state(run_id)
+    assert state["status"] == "WAITING_HUMAN"
+    review = queue.pending_human_review(run_id)
+    assert review is not None
+    assert review["payload"]["reason"] == expected_reason
