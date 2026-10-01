@@ -849,20 +849,22 @@ class ResearchPlanner:
         gap_jobs = self._completed(jobs, JobType.GAP_GENERATE)
         if gap_jobs:
             gaps = bounded_gap_candidates(gap_jobs[0].result, policy)
+            existing_by_key = {job.idempotency_key: job for job in jobs}
             allowed_search_keys: set[str] = set()
             for gap in gaps:
                 gap_id = str(gap["id"])
                 for index, query in enumerate(gap.get("search_queries", [])):
                     key = f"novelty-search:{gap_id}:{index}"
                     allowed_search_keys.add(key)
-                    self.queue.enqueue(
-                        run_id=run_id,
-                        job_type=JobType.NOVELTY_SEARCH,
-                        idempotency_key=key,
-                        payload={"gap": gap, "query": query},
-                        depends_on=[gap_jobs[0].id],
-                        priority=30,
-                    )
+                    if key not in existing_by_key:
+                        self.queue.enqueue(
+                            run_id=run_id,
+                            job_type=JobType.NOVELTY_SEARCH,
+                            idempotency_key=key,
+                            payload={"gap": gap, "query": query},
+                            depends_on=[gap_jobs[0].id],
+                            priority=30,
+                        )
             self.queue.cancel_queued_except(
                 run_id=run_id,
                 job_type=JobType.NOVELTY_SEARCH,
@@ -891,20 +893,21 @@ class ResearchPlanner:
                 ):
                     arbitration_key = f"novelty-arbitrate:{gap_id}"
                     allowed_arbitration_keys.add(arbitration_key)
-                    self.queue.enqueue(
-                        run_id=run_id,
-                        job_type=JobType.NOVELTY_ARBITRATE,
-                        idempotency_key=arbitration_key,
-                        payload={
-                            "gap": gap,
-                            "search_results": [
-                                {"query": j.payload["query"], "result": j.result}
-                                for j in searches
-                            ],
-                        },
-                        depends_on=[j.id for j in searches],
-                        priority=20,
-                    )
+                    if arbitration_key not in {job.idempotency_key for job in jobs}:
+                        self.queue.enqueue(
+                            run_id=run_id,
+                            job_type=JobType.NOVELTY_ARBITRATE,
+                            idempotency_key=arbitration_key,
+                            payload={
+                                "gap": gap,
+                                "search_results": [
+                                    {"query": j.payload["query"], "result": j.result}
+                                    for j in searches
+                                ],
+                            },
+                            depends_on=[j.id for j in searches],
+                            priority=20,
+                        )
             self.queue.cancel_queued_except(
                 run_id=run_id,
                 job_type=JobType.NOVELTY_ARBITRATE,
