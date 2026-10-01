@@ -85,6 +85,18 @@ def main() -> None:
         help="JSON object persisted as research_runs.policy for a submitted run",
     )
 
+    submit = sub.add_parser("submit-run")
+    submit.add_argument("topic")
+    submit.add_argument("--run-id")
+    submit.add_argument(
+        "--policy-json",
+        help="JSON object persisted as research_runs.policy",
+    )
+    submit.add_argument(
+        "--discovery-json",
+        help="JSON object used as the initial DISCOVERY job payload",
+    )
+
     report = sub.add_parser("overnight-report")
     report.add_argument("--hours", type=float, default=12.0)
     report.add_argument(
@@ -213,6 +225,36 @@ def main() -> None:
         result = service.run_forever(max_ticks=args.max_ticks)
         result["submitted_run_id"] = submitted
         print(json.dumps(result, default=str))
+    elif args.cmd == "submit-run":
+        from .daemon import daemon_from_env
+
+        service = daemon_from_env(with_workers=False)
+        policy = json.loads(args.policy_json) if args.policy_json else None
+        discovery = (
+            json.loads(args.discovery_json)
+            if args.discovery_json
+            else None
+        )
+        if policy is not None and not isinstance(policy, dict):
+            raise ValueError("--policy-json must be a JSON object")
+        if discovery is not None and not isinstance(discovery, dict):
+            raise ValueError("--discovery-json must be a JSON object")
+        run_id = service.submit_run(
+            topic=args.topic,
+            run_id=args.run_id,
+            policy=policy,
+            discovery_payload=discovery,
+        )
+        print(
+            json.dumps(
+                {
+                    "run_id": run_id,
+                    "status": service.queue.run_state(run_id)["status"],
+                    "admission": service.admission_status(),
+                },
+                default=str,
+            )
+        )
     elif args.cmd == "overnight-report":
         from .daemon import DaemonLimits, daemon_from_env
 
