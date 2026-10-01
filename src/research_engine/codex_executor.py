@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import tempfile
 from dataclasses import dataclass
@@ -22,6 +23,69 @@ from .orchestration import ExecutorTier, JobExecutionError, ResearchJob
 class CodexModelProfile:
     model: str
     reasoning_effort: str
+
+
+_PLAN_LIMIT_MARKERS = (
+    "usage limit",
+    "rate limit",
+    "limit reached",
+    "quota exceeded",
+    "you've hit your",
+    "you have hit your",
+)
+
+
+def _is_plan_limit(message: str) -> bool:
+    lowered = message.lower()
+    return any(marker in lowered for marker in _PLAN_LIMIT_MARKERS)
+
+
+def _plan_limit_retry_after_seconds(message: str) -> int:
+    default = int(
+        os.getenv("RESEARCH_ENGINE_CODEX_PLAN_LIMIT_RETRY_SECONDS", "3600")
+    )
+    lowered = message.lower()
+    match = re.search(
+        r"(?:try again|reset(?:s)?|available)[^\n.]{0,80}?\bin\s+"
+        r"((?:\d+\s*(?:hours?|hrs?|h|minutes?|mins?|m|seconds?|secs?|s)"
+        r"[,\s]*)+)",
+        lowered,
+    )
+    if match is None:
+        return max(60, default)
+
+    seconds = 0
+    for value, unit in re.findall(
+        r"(\d+)\s*(hours?|hrs?|h|minutes?|mins?|m|seconds?|secs?|s)",
+        match.group(1),
+    ):
+        amount = int(value)
+        if unit.startswith("h"):
+            seconds += amount * 3600
+        elif unit.startswith("m"):
+            seconds += amount * 60
+        else:
+            seconds += amount
+    return max(60, seconds or default)
+
+
+def _codex_error(
+    message: str,
+    *,
+    fallback_code: str,
+    retryable: bool = True,
+    detail: dict[str, Any] | None = None,
+) -> JobExecutionError:
+    code = "CODEX_PLAN_LIMIT" if _is_plan_limit(message) else fallback_code
+    merged = dict(detail or {})
+    if code == "CODEX_PLAN_LIMIT":
+        merged["retry_after_seconds"] = _plan_limit_retry_after_seconds(message)
+    return JobExecutionError(
+        message,
+        code=code,
+        retryable=retryable,
+        detail=merged,
+    )
 
 
 def profiles_from_env() -> dict[ExecutorTier, CodexModelProfile]:
@@ -102,16 +166,18 @@ class CodexExecExecutor:
 
             etype = event.get("type")
             if etype == "turn.failed":
-                raise JobExecutionError(
-                    str((event.get("error") or {}).get("message") or "Codex turn failed"),
-                    code="CODEX_TURN_FAILED",
-                    retryable=True,
+                message = str(
+                    (event.get("error") or {}).get("message") or "Codex turn failed"
+                )
+                raise _codex_error(
+                    message,
+                    fallback_code="CODEX_TURN_FAILED",
                 )
             if etype == "error":
-                raise JobExecutionError(
-                    str(event.get("message") or "Codex exec error"),
-                    code="CODEX_STREAM_ERROR",
-                    retryable=True,
+                message = str(event.get("message") or "Codex exec error")
+                raise _codex_error(
+                    message,
+                    fallback_code="CODEX_STREAM_ERROR",
                 )
             if etype == "turn.completed":
                 usage = dict(event.get("usage") or {})
@@ -221,15 +287,20 @@ class CodexExecExecutor:
 
         if proc.returncode != 0:
             stderr = (proc.stderr or "").strip()
+            message = stderr[-2000:] or f"Codex exec exited {proc.returncode}"
             lowered = stderr.lower()
-            if "usage limit" in lowered or "rate limit" in lowered or "limit reached" in lowered:
-                code = "CODEX_PLAN_LIMIT"
-            elif "login" in lowered or "authentication" in lowered or "unauthorized" in lowered:
+            if _is_plan_limit(message):
+                raise _codex_error(
+                    message,
+                    fallback_code="CODEX_EXEC_FAILED",
+                    detail={"returncode": proc.returncode},
+                )
+            if "login" in lowered or "authentication" in lowered or "unauthorized" in lowered:
                 code = "CODEX_AUTH_REQUIRED"
             else:
                 code = "CODEX_EXEC_FAILED"
             raise JobExecutionError(
-                stderr[-2000:] or f"Codex exec exited {proc.returncode}",
+                message,
                 code=code,
                 retryable=code not in {"CODEX_AUTH_REQUIRED", "CODEX_NOT_INSTALLED"},
                 detail={"returncode": proc.returncode},
