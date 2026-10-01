@@ -195,6 +195,41 @@ closed rather than silently broadening context.
 This separation is intentional: VERIFY is a provenance check, not a second
 full-paper extraction pass.
 
+## VERIFY replay calibration
+
+Before resuming sustained research, the optimized VERIFY context can be measured
+against a completed historical VERIFY job without mutating scientific state.
+
+Run with the daemon stopped:
+
+```bash
+bash deploy/run-verify-calibration.sh
+```
+
+The runner:
+
+- requires `research-engine-daemon.service` to remain `inactive/dead`;
+- records fresh pre/post 5-hour and weekly allowance UI observations;
+- selects the median historical VERIFY job by recorded input tokens unless a
+  source job is specified directly through the CLI;
+- rehydrates that exact job using the current VERIFY page-window policy;
+- performs exactly one STANDARD/Terra semantic replay;
+- bypasses the semantic materializer, so no evidence object, verification event,
+  checkpoint, gap, or human-review state is changed;
+- persists the A/B measurement in `research_calibration_events`;
+- exposes the result in the HUD CALIBRATION panel.
+
+Direct use is also available:
+
+```bash
+research-engine calibrate-verify rf-open-world-corpus-expansion-v1
+```
+
+A context optimization is not considered quality-safe merely because it saves
+tokens. Compare both `verified_equal` and `accepted_evidence_ids_equal`.
+If either differs, keep sustained research stopped and increase
+`RESEARCH_ENGINE_VERIFY_PAGE_RADIUS` before another calibration.
+
 ## Allowance behavior
 
 ChatGPT-authenticated Codex consumes the plan's Codex/Work allowance. Production
