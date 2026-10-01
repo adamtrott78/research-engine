@@ -58,6 +58,21 @@ def main() -> None:
     auto.add_argument("--lease-seconds", type=int, default=300)
     auto.add_argument("--max-cycles", type=int)
 
+    daemon = sub.add_parser("daemon")
+    daemon.add_argument("--poll-seconds", type=float, default=2.0)
+    daemon.add_argument("--lease-seconds", type=int, default=300)
+    daemon.add_argument("--max-ticks", type=int)
+    daemon.add_argument("--max-active-runs", type=int, default=4)
+    daemon.add_argument("--max-pending-human", type=int, default=8)
+    daemon.add_argument("--stale-worker-seconds", type=int, default=900)
+    daemon.add_argument("--submit-topic")
+    daemon.add_argument("--run-id")
+
+    report = sub.add_parser("overnight-report")
+    report.add_argument("--hours", type=float, default=12.0)
+    report.add_argument("--max-active-runs", type=int, default=4)
+    report.add_argument("--max-pending-human", type=int, default=8)
+
     args = p.parse_args()
     if args.cmd == "artifact-put":
         receipt = ContentAddressedArtifactStore(args.root).put_file(args.path)
@@ -127,3 +142,36 @@ def main() -> None:
             "state": result.state,
             "human_review": result.human_review,
         }, default=str))
+    elif args.cmd == "daemon":
+        from .daemon import DaemonLimits, daemon_from_env
+
+        limits = DaemonLimits(
+            max_active_runs=args.max_active_runs,
+            max_pending_human=args.max_pending_human,
+            stale_worker_seconds=args.stale_worker_seconds,
+        )
+        service = daemon_from_env(
+            poll_seconds=args.poll_seconds,
+            lease_seconds=args.lease_seconds,
+            limits=limits,
+        )
+        submitted = None
+        if args.submit_topic:
+            submitted = service.submit_run(
+                topic=args.submit_topic,
+                run_id=args.run_id,
+            )
+        result = service.run_forever(max_ticks=args.max_ticks)
+        result["submitted_run_id"] = submitted
+        print(json.dumps(result, default=str))
+    elif args.cmd == "overnight-report":
+        from .daemon import DaemonLimits, daemon_from_env
+
+        service = daemon_from_env(
+            with_workers=False,
+            limits=DaemonLimits(
+                max_active_runs=args.max_active_runs,
+                max_pending_human=args.max_pending_human,
+            ),
+        )
+        print(json.dumps(service.overnight_report(hours=args.hours), default=str))
