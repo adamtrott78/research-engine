@@ -506,3 +506,105 @@ def test_codex_plan_limit_defers_without_consuming_failure_budget():
                 (final.id,),
             )
             assert cur.fetchone()[0] == 3
+
+
+@pytest.mark.integration
+def test_planner_skips_unsupported_retained_sources_without_failing_run():
+    dsn = os.getenv("RESEARCH_ENGINE_DATABASE_URL")
+    if not dsn:
+        pytest.skip("RESEARCH_ENGINE_DATABASE_URL not set")
+    pytest.importorskip("psycopg")
+
+    from psycopg.types.json import Jsonb
+
+    from research_engine.orchestration import (
+        JobType,
+        OrchestratorStore,
+        ResearchPlanner,
+    )
+    from research_engine.postgres import PostgresStore
+
+    store = PostgresStore(dsn)
+    store.initialize(Path(__file__).parents[1] / "sql" / "schema.sql")
+    queue = OrchestratorStore(store)
+    planner = ResearchPlanner(queue)
+
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                TRUNCATE research_usage_events, human_review_requests,
+                         semantic_materializations, research_job_attempts,
+                         research_jobs, research_workers, research_runs CASCADE
+                """
+            )
+        conn.commit()
+
+    run_id = "run:unsupported-source-skip"
+    queue.create_run(
+        run_id=run_id,
+        topic="supported acquisition routing",
+        discovery_payload={"candidate_limit": 2},
+    )
+    discovery = queue.jobs(run_id, JobType.DISCOVERY)[0]
+    discovered = [
+        {
+            "id": "arxiv:one",
+            "title": "Supported",
+            "source_uri": "https://arxiv.org/abs/2601.00001",
+            "rationale": "supported",
+        },
+        {
+            "id": "publisher:two",
+            "title": "Unsupported",
+            "source_uri": "https://publisher.example/article/2",
+            "rationale": "unsupported adapter",
+        },
+    ]
+
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE research_jobs
+                SET status='COMPLETED', result=%s
+                WHERE id=%s
+                """,
+                (Jsonb({"candidates": discovered}), discovery.id),
+            )
+        conn.commit()
+
+    planner.reconcile(run_id)
+    screen = queue.jobs(run_id, JobType.SCREEN)[0]
+
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE research_jobs
+                SET status='COMPLETED', result=%s
+                WHERE id=%s
+                """,
+                (Jsonb({"retained": discovered}), screen.id),
+            )
+        conn.commit()
+
+    planner.reconcile(run_id)
+
+    acquisitions = {
+        job.payload["item"]["id"]: job
+        for job in queue.jobs(run_id, JobType.ACQUIRE)
+    }
+    assert acquisitions["arxiv:one"].status == "QUEUED"
+    assert acquisitions["publisher:two"].status == "CANCELLED"
+    assert queue.run_state(run_id)["status"] == "RUNNING"
+
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT last_error FROM research_jobs WHERE id=%s",
+                (acquisitions["publisher:two"].id,),
+            )
+            detail = cur.fetchone()[0]
+    assert detail["type"] == "SKIPPED_UNSUPPORTED_SOURCE_PROVIDER"
+    assert detail["source_uri"] == "https://publisher.example/article/2"
