@@ -1,0 +1,266 @@
+{
+  "fixture_version": 1,
+  "provenance": {
+    "purpose": "Add the two 2026 RF papers that materially changed the pilot novelty challenges as first-class full-text structured corpus evidence.",
+    "fidelity": "FULLTEXT_STRUCTURED",
+    "exact_byte_promotion_pending": true,
+    "sources": [
+      {
+        "arxiv_id": "2605.15593v1",
+        "uri": "https://arxiv.org/pdf/2605.15593v1",
+        "pages": 11
+      },
+      {
+        "arxiv_id": "2606.12718v1",
+        "uri": "https://arxiv.org/pdf/2606.12718v1",
+        "pages": 11
+      }
+    ]
+  },
+  "works": [
+    {
+      "id": "work:arxiv:2605.15593",
+      "title": "Dynamic and Open-Set RF Fingerprinting and Localization in Crowded Indoor Environments through Contrastive Channel State Information Learning",
+      "publication_year": 2026,
+      "attributes": {
+        "domain": "RF fingerprinting",
+        "arxiv_id": "2605.15593",
+        "authors": [
+          "Fawaz Abdul Razak",
+          "Yasin Yilmaz"
+        ]
+      }
+    },
+    {
+      "id": "work:arxiv:2606.12718",
+      "title": "Out-of-Distribution (OOD) Detectors for Open-Set RF Fingerprinting",
+      "publication_year": 2026,
+      "attributes": {
+        "domain": "open-set RF fingerprinting",
+        "arxiv_id": "2606.12718",
+        "authors": [
+          "Sudeepta Mondal",
+          "Ganesh Sundaramoorthi"
+        ]
+      }
+    }
+  ],
+  "work_versions": [
+    {
+      "id": "work-version:arxiv:2605.15593v1:structured",
+      "work_id": "work:arxiv:2605.15593",
+      "version_label": "arXiv v1 full-text structured"
+    },
+    {
+      "id": "work-version:arxiv:2606.12718v1:structured",
+      "work_id": "work:arxiv:2606.12718",
+      "version_label": "arXiv v1 full-text structured"
+    }
+  ],
+  "source_artifacts": [],
+  "extraction_runs": [
+    {
+      "id": "extract:2605.15593v1:web-fulltext:v1",
+      "work_version_id": "work-version:arxiv:2605.15593v1:structured",
+      "source_artifact_id": null,
+      "source_level": "FULLTEXT_STRUCTURED",
+      "extractor_identity": "research-engine:web-pdf-fulltext",
+      "warnings": [
+        "Exact PDF bytes were not materialized by this executor; source URI/page anchors are preserved for later byte-hash promotion."
+      ]
+    },
+    {
+      "id": "extract:2606.12718v1:web-fulltext:v1",
+      "work_version_id": "work-version:arxiv:2606.12718v1:structured",
+      "source_artifact_id": null,
+      "source_level": "FULLTEXT_STRUCTURED",
+      "extractor_identity": "research-engine:web-pdf-fulltext",
+      "warnings": [
+        "Exact PDF bytes were not materialized by this executor; source URI/page anchors are preserved for later byte-hash promotion."
+      ]
+    }
+  ],
+  "source_locators": [],
+  "evidence_objects": [
+    {
+      "id": "ev:2605:method:contracsi-open-set",
+      "evidence_type": "METHOD",
+      "work_id": "work:arxiv:2605.15593",
+      "work_version_id": "work-version:arxiv:2605.15593v1:structured",
+      "source_level": "FULLTEXT_STRUCTURED",
+      "normalized_form": "ContraCSI extends CSI-based RF fingerprinting to open-set authentication using a GEM-CUSUM verifier over learned embeddings before closed-set classification.",
+      "extraction_run_id": "extract:2605.15593v1:web-fulltext:v1",
+      "extractor_identity": "research-engine:web-pdf-fulltext",
+      "verification_state": "MACHINE_CHECKED",
+      "attributes": {
+        "source_uri": "https://arxiv.org/pdf/2605.15593v1",
+        "page": 5,
+        "section": "Open-set verifier"
+      }
+    },
+    {
+      "id": "ev:2605:experiment:dynamic-open-set",
+      "evidence_type": "EXPERIMENT",
+      "work_id": "work:arxiv:2605.15593",
+      "work_version_id": "work-version:arxiv:2605.15593v1:structured",
+      "source_level": "FULLTEXT_STRUCTURED",
+      "normalized_form": "The open-set experiment trains on legitimate transmitters only, introduces unseen transmitters only during testing, and varies the number of unseen MAC addresses from one to five under dynamic real-world CSI conditions.",
+      "extraction_run_id": "extract:2605.15593v1:web-fulltext:v1",
+      "extractor_identity": "research-engine:web-pdf-fulltext",
+      "verification_state": "MACHINE_CHECKED",
+      "attributes": {
+        "source_uri": "https://arxiv.org/pdf/2605.15593v1",
+        "page": 7,
+        "section": "Open-set authentication evaluation"
+      }
+    },
+    {
+      "id": "ev:2605:result:dynamic-open-set",
+      "evidence_type": "RESULT",
+      "work_id": "work:arxiv:2605.15593",
+      "work_version_id": "work-version:arxiv:2605.15593v1:structured",
+      "source_level": "FULLTEXT_STRUCTURED",
+      "normalized_form": "Lite3D-CNN-Contra with GEM-CUSUM reports average F1 0.98 and average AUC 0.9800 across one to five unseen transmitters, with individual F1 values from 0.96 to 1.00.",
+      "extraction_run_id": "extract:2605.15593v1:web-fulltext:v1",
+      "extractor_identity": "research-engine:web-pdf-fulltext",
+      "verification_state": "MACHINE_CHECKED",
+      "attributes": {
+        "source_uri": "https://arxiv.org/pdf/2605.15593v1",
+        "page": 7,
+        "metrics": {
+          "average_f1": 0.98,
+          "average_auc": 0.98
+        }
+      }
+    },
+    {
+      "id": "ev:2605:claim:dynamic-rejection",
+      "evidence_type": "CLAIM",
+      "work_id": "work:arxiv:2605.15593",
+      "work_version_id": "work-version:arxiv:2605.15593v1:structured",
+      "source_level": "FULLTEXT_STRUCTURED",
+      "normalized_form": "Open-set RF authentication can reject unseen transmitters under realistic dynamic indoor conditions involving human motion, multipath, spatial diversity, cross-day variation, orientation changes, and distance variation.",
+      "extraction_run_id": "extract:2605.15593v1:web-fulltext:v1",
+      "extractor_identity": "research-engine:web-pdf-fulltext",
+      "verification_state": "MACHINE_CHECKED",
+      "attributes": {
+        "source_uri": "https://arxiv.org/pdf/2605.15593v1",
+        "pages": [
+          1,
+          2,
+          7
+        ]
+      }
+    },
+    {
+      "id": "ev:2606:method:shot-no-ood",
+      "evidence_type": "METHOD",
+      "work_id": "work:arxiv:2606.12718",
+      "work_version_id": "work-version:arxiv:2606.12718v1:structured",
+      "source_level": "FULLTEXT_STRUCTURED",
+      "normalized_form": "SHOT tunes post-hoc feature-shaping OOD detectors for open-set RF fingerprinting without access to representative OOD tuning data.",
+      "extraction_run_id": "extract:2606.12718v1:web-fulltext:v1",
+      "extractor_identity": "research-engine:web-pdf-fulltext",
+      "verification_state": "MACHINE_CHECKED",
+      "attributes": {
+        "source_uri": "https://arxiv.org/pdf/2606.12718v1",
+        "pages": [
+          1,
+          6
+        ]
+      }
+    },
+    {
+      "id": "ev:2606:result:shot-no-ood",
+      "evidence_type": "RESULT",
+      "work_id": "work:arxiv:2606.12718",
+      "work_version_id": "work-version:arxiv:2606.12718v1:structured",
+      "source_level": "FULLTEXT_STRUCTURED",
+      "normalized_form": "On the POWDER RF fingerprinting evaluation, SHOT with no OOD tuning data performs comparably to baselines tuned with up to 30 percent of test OOD data; in one scenario PLF improves AUROC from 0.450 to 0.932 and VRA from 0.866 to 0.950.",
+      "extraction_run_id": "extract:2606.12718v1:web-fulltext:v1",
+      "extractor_identity": "research-engine:web-pdf-fulltext",
+      "verification_state": "MACHINE_CHECKED",
+      "attributes": {
+        "source_uri": "https://arxiv.org/pdf/2606.12718v1",
+        "page": 8,
+        "dataset": "POWDER"
+      }
+    },
+    {
+      "id": "ev:2606:claim:no-ood-tuning",
+      "evidence_type": "CLAIM",
+      "work_id": "work:arxiv:2606.12718",
+      "work_version_id": "work-version:arxiv:2606.12718v1:structured",
+      "source_level": "FULLTEXT_STRUCTURED",
+      "normalized_form": "Effective open-set RF OOD detection can be tuned using in-distribution data without supplied representative OOD tuning samples.",
+      "extraction_run_id": "extract:2606.12718v1:web-fulltext:v1",
+      "extractor_identity": "research-engine:web-pdf-fulltext",
+      "verification_state": "MACHINE_CHECKED",
+      "attributes": {
+        "source_uri": "https://arxiv.org/pdf/2606.12718v1",
+        "pages": [
+          1,
+          8
+        ]
+      }
+    },
+    {
+      "id": "ev:2606:limitation:scope",
+      "evidence_type": "LIMITATION",
+      "work_id": "work:arxiv:2606.12718",
+      "work_version_id": "work-version:arxiv:2606.12718v1:structured",
+      "source_level": "FULLTEXT_STRUCTURED",
+      "normalized_form": "The authors identify broader OOD detector families, larger and more diverse RF datasets, and more challenging open-world deployment conditions as future work.",
+      "extraction_run_id": "extract:2606.12718v1:web-fulltext:v1",
+      "extractor_identity": "research-engine:web-pdf-fulltext",
+      "verification_state": "MACHINE_CHECKED",
+      "attributes": {
+        "source_uri": "https://arxiv.org/pdf/2606.12718v1",
+        "page": 9,
+        "section": "Conclusion"
+      }
+    }
+  ],
+  "evidence_relations": [
+    {
+      "id": "rel:2605:experiment-uses-method",
+      "source_id": "ev:2605:experiment:dynamic-open-set",
+      "target_id": "ev:2605:method:contracsi-open-set",
+      "relation_type": "USES",
+      "verification_state": "SOURCE_SUPPORTED",
+      "rationale": "The dynamic open-set evaluation uses the ContraCSI embedding plus GEM-CUSUM verifier."
+    },
+    {
+      "id": "rel:2605:result-derived-experiment",
+      "source_id": "ev:2605:result:dynamic-open-set",
+      "target_id": "ev:2605:experiment:dynamic-open-set",
+      "relation_type": "DERIVED_FROM",
+      "verification_state": "SOURCE_SUPPORTED",
+      "rationale": "The reported F1/AUC values are outcomes of the dynamic open-set experiment."
+    },
+    {
+      "id": "rel:2605:result-supports-claim",
+      "source_id": "ev:2605:result:dynamic-open-set",
+      "target_id": "ev:2605:claim:dynamic-rejection",
+      "relation_type": "SUPPORTS",
+      "verification_state": "SOURCE_SUPPORTED",
+      "rationale": "The measured open-set performance supports the bounded claim that unseen transmitters can be rejected in the evaluated dynamic environment."
+    },
+    {
+      "id": "rel:2606:result-supports-no-ood-claim",
+      "source_id": "ev:2606:result:shot-no-ood",
+      "target_id": "ev:2606:claim:no-ood-tuning",
+      "relation_type": "SUPPORTS",
+      "verification_state": "SOURCE_SUPPORTED",
+      "rationale": "The POWDER comparison supports the claim that useful tuning is possible without supplied OOD data."
+    },
+    {
+      "id": "rel:2606:scope-qualifies-shot",
+      "source_id": "ev:2606:limitation:scope",
+      "target_id": "ev:2606:method:shot-no-ood",
+      "relation_type": "QUALIFIES",
+      "verification_state": "SOURCE_SUPPORTED",
+      "rationale": "The authors' stated future-work scope bounds how broadly the current SHOT/RFF evidence should be generalized."
+    }
+  ]
+}
