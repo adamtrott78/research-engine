@@ -94,6 +94,23 @@ class JobExecutor(Protocol):
     def execute(self, job: ResearchJob) -> dict[str, Any]: ...
 
 
+class JobExecutionError(RuntimeError):
+    """Executor failure carrying retry semantics for the durable queue."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        code: str,
+        retryable: bool,
+        detail: dict[str, Any] | None = None,
+    ):
+        super().__init__(message)
+        self.code = code
+        self.retryable = retryable
+        self.detail = detail or {}
+
+
 def _job_id(run_id: str, idempotency_key: str) -> str:
     digest = hashlib.sha256(f"{run_id}\0{idempotency_key}".encode()).hexdigest()[:24]
     return f"job:{digest}"
@@ -838,6 +855,18 @@ class AgentWorker:
             return job
         try:
             result = executor.execute(job)
+        except JobExecutionError as exc:
+            self.queue.fail(
+                job,
+                self.worker_id,
+                {
+                    "type": type(exc).__name__,
+                    "code": exc.code,
+                    "message": str(exc),
+                    "detail": exc.detail,
+                },
+                retryable=exc.retryable,
+            )
         except Exception as exc:
             self.queue.fail(
                 job,

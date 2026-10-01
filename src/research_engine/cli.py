@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .artifact_store import ContentAddressedArtifactStore
 from .validation import FidelitySummary
+from .orchestration import ExecutorTier
 
 
 def main() -> None:
@@ -18,6 +19,22 @@ def main() -> None:
 
     f = sub.add_parser("check-fidelity")
     f.add_argument("fixture")
+
+    w = sub.add_parser("semantic-worker")
+    w.add_argument(
+        "--tiers",
+        default="CHEAP,STANDARD,STRONG",
+        help="comma-separated model tiers",
+    )
+    w.add_argument("--worker-id")
+    w.add_argument("--poll-seconds", type=float, default=2.0)
+    w.add_argument("--lease-seconds", type=int, default=300)
+    w.add_argument(
+        "--max-idle-polls",
+        type=int,
+        default=None,
+        help="exit after this many empty polls; omit for daemon mode",
+    )
 
     arxiv = sub.add_parser("arxiv-acquire")
     arxiv.add_argument("arxiv_id")
@@ -32,6 +49,22 @@ def main() -> None:
         s = FidelitySummary(**data["summary"])
         s.assert_promotion_safe()
         print(json.dumps({"result":"PASS","semantic_preservation_rate":s.semantic_preservation_rate}))
+    elif args.cmd == "semantic-worker":
+        from .worker_runtime import run_semantic_worker_loop
+
+        tiers = tuple(
+            ExecutorTier(part.strip().upper())
+            for part in args.tiers.split(",")
+            if part.strip()
+        )
+        completed = run_semantic_worker_loop(
+            tiers=tiers,
+            worker_id=args.worker_id,
+            poll_seconds=args.poll_seconds,
+            lease_seconds=args.lease_seconds,
+            max_idle_polls=args.max_idle_polls,
+        )
+        print(json.dumps({"result": "STOPPED", "jobs_processed": completed}))
     elif args.cmd == "arxiv-acquire":
         from .arxiv import ArxivProvider
         result = ArxivProvider(ContentAddressedArtifactStore(args.root)).acquire_pdf(args.arxiv_id)
