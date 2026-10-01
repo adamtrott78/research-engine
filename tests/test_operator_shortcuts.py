@@ -12,6 +12,7 @@ def test_operator_shortcuts_are_bash_syntax_valid():
         root / "deploy" / "install-operator-shortcuts.sh",
         root / "deploy" / "deploy-hud-paused.sh",
         root / "deploy" / "run-verify-calibration.sh",
+        root / "deploy" / "run-verify-ab-batch.sh",
     ]
     for path in paths:
         assert path.exists(), path
@@ -56,5 +57,19 @@ def test_verify_calibration_runner_never_starts_daemon():
     assert "pre low/high VERIFY replay batch" in text
     assert "post low/high VERIFY replay batch" in text
     assert "DAEMON_MUST_REMAIN_STOPPED_FOR_VERIFY_CALIBRATION" in text
+    assert "systemctl --user start" not in text
+    assert " START" not in text
+
+
+def test_verify_ab_batch_is_bounded_non_materializing_operator_flow():
+    root = Path(__file__).parents[1]
+    text = (root / "deploy" / "run-verify-ab-batch.sh").read_text()
+    assert "allowance-observe-paste" in text
+    assert "RESEARCH_ENGINE_VERIFY_PAGE_RADIUS=\"$radius\"" in text
+    assert "calibrate-verify" in text
+    assert "--source-job-id" in text
+    assert "REPEATS_TOO_LARGE_MAX_12" in text
+    assert "TOTAL_SEMANTIC_CALLS=$((2 * repeats))" in text
+    assert "DAEMON_MUST_REMAIN_STOPPED_FOR_VERIFY_AB_BATCH" in text
     assert "systemctl --user start" not in text
     assert " START" not in text
