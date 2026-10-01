@@ -262,7 +262,23 @@ def test_authoritative_semantic_cycle_materializes_scientific_state_and_replays(
         max_cycles=50,
     )
 
-    assert controller_result.status == "WAITING_HUMAN"
+    if controller_result.status != "WAITING_HUMAN":
+        with store.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT job_type,status,last_error
+                    FROM research_jobs
+                    WHERE run_id=%s
+                    ORDER BY created_at,id
+                    """,
+                    (run_id,),
+                )
+                diagnostic_jobs = cur.fetchall()
+        pytest.fail(
+            f"expected WAITING_HUMAN, got {controller_result.status}; "
+            f"jobs={diagnostic_jobs!r}"
+        )
     assert controller_result.human_review["status"] == "PENDING"
     assert controller_result.jobs_processed > 0
     state = queue.run_state(run_id)
