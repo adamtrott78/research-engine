@@ -51,6 +51,8 @@ def test_verify_calibration_runner_never_starts_daemon():
     assert "--selector lowest" in text
     assert "--selector highest" in text
     assert "audit-extract-provenance" in text
+    assert "allowance-observe-paste" in text
+    assert "Highlight/copy the entire 5-hour + weekly usage-limit section" in text
     assert "pre low/high VERIFY replay batch" in text
     assert "post low/high VERIFY replay batch" in text
     assert "DAEMON_MUST_REMAIN_STOPPED_FOR_VERIFY_CALIBRATION" in text

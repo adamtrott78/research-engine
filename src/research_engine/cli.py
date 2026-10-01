@@ -154,6 +154,12 @@ def main() -> None:
     allowance.add_argument("--note")
     allowance.add_argument("--approximate", action="store_true")
 
+    allowance_paste = sub.add_parser("allowance-observe-paste")
+    allowance_paste.add_argument(
+        "--note",
+        help="note applied to both parsed allowance observations",
+    )
+
     calibrate_verify = sub.add_parser("calibrate-verify")
     calibrate_verify.add_argument("run_id")
     calibrate_verify.add_argument("--source-job-id")
@@ -408,6 +414,54 @@ def main() -> None:
             observed_at=observed_at,
         )
         print(json.dumps(observation, default=str))
+    elif args.cmd == "allowance-observe-paste":
+        import sys
+
+        from .ops import (
+            parse_allowance_ui_paste,
+            parse_relative_duration,
+            relative_duration_precision_seconds,
+            service_from_env,
+        )
+
+        print(
+            "Paste the complete 5-hour + weekly usage-limit block:",
+            file=sys.stderr,
+            flush=True,
+        )
+        lines: list[str] = []
+        parsed = None
+        for line in sys.stdin:
+            lines.append(line)
+            try:
+                parsed = parse_allowance_ui_paste("".join(lines))
+            except ValueError:
+                continue
+            else:
+                break
+        if parsed is None:
+            parsed = parse_allowance_ui_paste("".join(lines))
+
+        observed_at = datetime.now(timezone.utc)
+        service = service_from_env()
+        observations = []
+        for window in ("5h", "weekly"):
+            row = parsed[window]
+            reset_text = str(row["resets_in"])
+            observation = service.observe_allowance(
+                window=window,
+                percent_used=100.0 - float(row["left_percent"]),
+                reset_at=observed_at + parse_relative_duration(reset_text),
+                note=args.note,
+                approximate=True,
+                percent_quantum=1.0,
+                reset_precision_seconds=relative_duration_precision_seconds(
+                    reset_text
+                ),
+                observed_at=observed_at,
+            )
+            observations.append(observation)
+        print(json.dumps(observations, default=str))
     elif args.cmd == "calibrate-verify":
         from .calibration import service_from_env as calibration_from_env
 

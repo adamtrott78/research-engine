@@ -26,26 +26,10 @@ require_stopped() {
     fi
 }
 
-observe() {
-    local window="$1"
-    local label="$2"
-    local note="$3"
-    local left reset_in
-    read -r -p "$label LEFT percent [blank=skip]: " left
-    left="${left%\%}"
-    [ -n "$left" ] || return 0
-    read -r -p "$label resets in [e.g. 2h 30m or 5d 7h; blank=unknown]: " reset_in
-
-    local args=(
-        allowance-observe
-        --window "$window"
-        --left-percent "$left"
-        --note "$note"
-    )
-    if [ -n "$reset_in" ]; then
-        args+=(--resets-in "$reset_in")
-    fi
-    "$venv/bin/research-engine" "${args[@]}"
+observe_paste() {
+    local note="$1"
+    echo "Highlight/copy the entire 5-hour + weekly usage-limit section and paste it once."
+    "$venv/bin/research-engine" allowance-observe-paste --note "$note"
 }
 
 echo "=== VERIFY CONTEXT LOW/HIGH CALIBRATION ==="
@@ -116,9 +100,8 @@ require_stopped
 
 echo
 echo "--- PRE-CALIBRATION PLAN READING ---"
-echo "Enter one fresh usage-UI reading pair immediately before the two Terra replays."
-observe "5h" "5-hour" "pre low/high VERIFY replay batch"
-observe "weekly" "WEEKLY" "pre low/high VERIFY replay batch"
+echo "Paste one fresh usage-UI block immediately before the two Terra replays."
+observe_paste "pre low/high VERIFY replay batch"
 
 require_stopped
 
@@ -181,9 +164,8 @@ require_stopped
 
 echo
 echo "--- POST-CALIBRATION PLAN READING ---"
-echo "Refresh the usage UI once after both calls, then enter the displayed values."
-observe "5h" "5-hour" "post low/high VERIFY replay batch"
-observe "weekly" "WEEKLY" "post low/high VERIFY replay batch"
+echo "Refresh the usage UI once after both calls, then paste the whole usage-limit block."
+observe_paste "post low/high VERIFY replay batch"
 
 echo
 echo "--- UPDATED HUD ---"
