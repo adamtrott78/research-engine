@@ -44,6 +44,37 @@ JOB_TIERS: dict[JobType, ExecutorTier] = {
 }
 
 
+DEFAULT_FANOUT_LIMITS: dict[str, int] = {
+    "max_gap_candidates": 2,
+    "max_novelty_queries_per_gap": 2,
+}
+
+
+def fanout_limits_from_policy(policy: dict[str, Any] | None) -> dict[str, int]:
+    configured = dict((policy or {}).get("fanout") or {})
+    return {
+        key: int(configured.get(key, default))
+        for key, default in DEFAULT_FANOUT_LIMITS.items()
+    }
+
+
+def bounded_gap_candidates(
+    result: dict[str, Any] | None,
+    policy: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    limits = fanout_limits_from_policy(policy)
+    bounded: list[dict[str, Any]] = []
+    for raw_gap in list((result or {}).get("gaps") or [])[
+        : limits["max_gap_candidates"]
+    ]:
+        gap = dict(raw_gap)
+        gap["search_queries"] = list(gap.get("search_queries") or [])[
+            : limits["max_novelty_queries_per_gap"]
+        ]
+        bounded.append(gap)
+    return bounded
+
+
 @dataclass(frozen=True)
 class ResearchJob:
     id: str
@@ -513,6 +544,39 @@ class OrchestratorStore:
             conn.commit()
         return recovered
 
+    def cancel_queued_except(
+        self,
+        *,
+        run_id: str,
+        job_type: JobType,
+        keep_idempotency_keys: Iterable[str],
+    ) -> int:
+        keep = list(keep_idempotency_keys)
+        with self.store.connect() as conn:
+            with conn.cursor() as cur:
+                if keep:
+                    cur.execute(
+                        """
+                        UPDATE research_jobs
+                        SET status='CANCELLED', updated_at=now()
+                        WHERE run_id=%s AND job_type=%s AND status='QUEUED'
+                          AND NOT (idempotency_key = ANY(%s))
+                        """,
+                        (run_id, str(job_type), keep),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        UPDATE research_jobs
+                        SET status='CANCELLED', updated_at=now()
+                        WHERE run_id=%s AND job_type=%s AND status='QUEUED'
+                        """,
+                        (run_id, str(job_type)),
+                    )
+                count = cur.rowcount
+            conn.commit()
+        return count
+
     def jobs(self, run_id: str, job_type: JobType | None = None) -> list[ResearchJob]:
         with self.store.connect() as conn:
             with conn.cursor() as cur:
@@ -682,6 +746,7 @@ class ResearchPlanner:
         state = self.queue.run_state(run_id)
         if state["status"] != "RUNNING":
             return
+        policy = state.get("policy") or {}
         jobs = self.queue.jobs(run_id)
 
         discovery = self._completed(jobs, JobType.DISCOVERY)
@@ -783,33 +848,53 @@ class ResearchPlanner:
         jobs = self.queue.jobs(run_id)
         gap_jobs = self._completed(jobs, JobType.GAP_GENERATE)
         if gap_jobs:
-            for gap in gap_jobs[0].result.get("gaps", []):
+            gaps = bounded_gap_candidates(gap_jobs[0].result, policy)
+            allowed_search_keys: set[str] = set()
+            for gap in gaps:
                 gap_id = str(gap["id"])
                 for index, query in enumerate(gap.get("search_queries", [])):
+                    key = f"novelty-search:{gap_id}:{index}"
+                    allowed_search_keys.add(key)
                     self.queue.enqueue(
                         run_id=run_id,
                         job_type=JobType.NOVELTY_SEARCH,
-                        idempotency_key=f"novelty-search:{gap_id}:{index}",
+                        idempotency_key=key,
                         payload={"gap": gap, "query": query},
                         depends_on=[gap_jobs[0].id],
                         priority=30,
                     )
+            self.queue.cancel_queued_except(
+                run_id=run_id,
+                job_type=JobType.NOVELTY_SEARCH,
+                keep_idempotency_keys=allowed_search_keys,
+            )
 
         jobs = self.queue.jobs(run_id)
         gap_jobs = self._completed(jobs, JobType.GAP_GENERATE)
         if gap_jobs:
-            for gap in gap_jobs[0].result.get("gaps", []):
+            gaps = bounded_gap_candidates(gap_jobs[0].result, policy)
+            allowed_arbitration_keys: set[str] = set()
+            for gap in gaps:
                 gap_id = str(gap["id"])
+                search_keys = {
+                    f"novelty-search:{gap_id}:{index}"
+                    for index, _ in enumerate(gap.get("search_queries", []))
+                }
                 searches = [
-                    j for j in jobs
+                    j
+                    for j in jobs
                     if j.job_type == JobType.NOVELTY_SEARCH
-                    and str(j.payload["gap"]["id"]) == gap_id
+                    and j.idempotency_key in search_keys
                 ]
-                if searches and all(j.status == "COMPLETED" for j in searches):
+                if search_keys and len(searches) == len(search_keys) and all(
+                    j.status == "COMPLETED" for j in searches
+                ):
+                    arbitration_key = f"novelty-arbitrate:{gap_id}"
+                    allowed_arbitration_keys.add(arbitration_key)
                     self.queue.enqueue(
                         run_id=run_id,
                         job_type=JobType.NOVELTY_ARBITRATE,
-                        idempotency_key=f"novelty-arbitrate:{gap_id}",
+                        idempotency_key=arbitration_key,
                         payload={
                             "gap": gap,
                             "search_results": [
@@ -820,12 +905,25 @@ class ResearchPlanner:
                         depends_on=[j.id for j in searches],
                         priority=20,
                     )
+            self.queue.cancel_queued_except(
+                run_id=run_id,
+                job_type=JobType.NOVELTY_ARBITRATE,
+                keep_idempotency_keys=allowed_arbitration_keys,
+            )
 
         jobs = self.queue.jobs(run_id)
         gap_jobs = self._completed(jobs, JobType.GAP_GENERATE)
         if gap_jobs:
-            gaps = gap_jobs[0].result.get("gaps", [])
-            arbitrations = self._completed(jobs, JobType.NOVELTY_ARBITRATE)
+            gaps = bounded_gap_candidates(gap_jobs[0].result, policy)
+            arbitration_keys = {
+                f"novelty-arbitrate:{gap['id']}"
+                for gap in gaps
+            }
+            arbitrations = [
+                j
+                for j in self._completed(jobs, JobType.NOVELTY_ARBITRATE)
+                if j.idempotency_key in arbitration_keys
+            ]
             if gaps and len(arbitrations) == len(gaps):
                 self.queue.ensure_human_review(
                     run_id,
