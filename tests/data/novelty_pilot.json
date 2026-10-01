@@ -1,0 +1,88 @@
+{
+  "fixture_version": 1,
+  "candidates": [
+    {
+      "id": "gap:rf-osr:dynamic-environment-generalization:v1",
+      "statement": "Open-set RF fingerprinting lacks validation under dynamic real-world channel/environment variation such as human motion, multipath, device orientation, and distance changes.",
+      "gap_type": "MISSING_EXTERNAL_DYNAMIC_VALIDATION",
+      "motivating_evidence_ids": [
+        "ev:2108:claim:conclusion"
+      ],
+      "rationale": "The original RF augmentation paper uses a bounded testbed and motivates a question about generalization beyond that environment."
+    },
+    {
+      "id": "gap:rf-osr:efficient-blind-generative-outliers:v1",
+      "statement": "Can blind generative outlier augmentation for open-set RF fingerprinting avoid both manually tuned generation hyperparameters and large computational cost while retaining comparable open-set accuracy?",
+      "gap_type": "COMPUTE_TUNING_TRADEOFF",
+      "motivating_evidence_ids": [
+        "ev:2108:result:ellipsoid",
+        "ev:2108:limitation:ellipsoid",
+        "ev:2108:result:optimization",
+        "ev:2108:limitation:optimization"
+      ],
+      "rationale": "The exact-source evidence shows a tradeoff between delta tuning and roughly 30x outlier-generation cost."
+    }
+  ],
+  "challenges": [
+    {
+      "id": "challenge:dynamic-generalization:v1",
+      "gap_candidate_id": "gap:rf-osr:dynamic-environment-generalization:v1",
+      "proposed_result": "REJECTED_PRIOR_WORK_FOUND",
+      "search_provenance": {
+        "provider": "Sider Scholar",
+        "provider_run_ids": [
+          "74f7eaf0-9a3a-482f-9cb3-e7a13df34309",
+          "fdb63f7b-5a27-4c4b-90dc-6af9ba01c2d9"
+        ],
+        "queries": [
+          "dynamic open set RF fingerprinting channel receiver domain shift",
+          "\"Dynamic and Open-Set RF Fingerprinting\""
+        ]
+      },
+      "counterevidence": [
+        {
+          "work_id": "arxiv:2605.15593v1",
+          "title": "Dynamic and Open-Set RF Fingerprinting and Localization in Crowded Indoor Environments through Contrastive Channel State Information Learning",
+          "source_level": "ABSTRACT_ONLY",
+          "source_uri": "https://arxiv.org/pdf/2605.15593v1",
+          "observed_coverage": "Abstract explicitly evaluates open-set RF authentication under human motion, multipath, device orientation, and distance variation."
+        }
+      ],
+      "reasoning": "The broad gap is directly covered by later prior work and must be rejected rather than rescued through semantic narrowing."
+    },
+    {
+      "id": "challenge:efficient-blind-generative:v1",
+      "gap_candidate_id": "gap:rf-osr:efficient-blind-generative-outliers:v1",
+      "proposed_result": "NARROWED",
+      "search_provenance": {
+        "provider": "Sider Scholar",
+        "provider_run_ids": [
+          "a5d15558-9b27-4e32-b67e-16f95036d2c6",
+          "f7413ff0-20d9-4b94-9414-7794fb3ecebe",
+          "b0db4520-be19-45e1-8c72-f0b882e2446b",
+          "a0f6a070-4fa3-4e37-aa02-ff4f6d3c3c11",
+          "487ff5ef-996d-471b-8cc6-2f3614e6d21d",
+          "ad7b49a4-0ea2-4f8f-9cf4-4f221a3dc7f0"
+        ],
+        "queries": [
+          "blind outlier generation RF fingerprinting open set",
+          "synthetic outlier open set RF fingerprinting",
+          "efficient open set RF fingerprinting OOD detector",
+          "open set RF fingerprinting generative augmentation",
+          "blind RF fingerprinting outlier generation hyperparameter tuning computational cost",
+          "\"Out-of-Distribution (OOD) Detectors for Open-Set RF Fingerprinting\""
+        ]
+      },
+      "counterevidence": [
+        {
+          "work_id": "arxiv:2606.12718v1",
+          "title": "Out-of-Distribution (OOD) Detectors for Open-Set RF Fingerprinting",
+          "source_level": "ABSTRACT_ONLY",
+          "source_uri": "https://arxiv.org/pdf/2606.12718v1",
+          "observed_coverage": "Abstract reports open-set RFF OOD detectors that can be tuned without supplied OOD tuning data, attacking the same operational constraint through a non-generative method."
+        }
+      ],
+      "reasoning": "The broader no-known-outlier problem is partially addressed by later OOD work, so the surviving hypothesis must be narrowed to efficient blind generative augmentation specifically."
+    }
+  ]
+}
