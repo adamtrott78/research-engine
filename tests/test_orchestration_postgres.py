@@ -28,8 +28,9 @@ class ScriptedExecutor:
         if jt == "GAP_GENERATE":
             return {
                 "gaps": [
-                    {"id": "gap:a", "search_queries": ["query a1", "query a2"]},
-                    {"id": "gap:b", "search_queries": ["query b1", "query b2"]},
+                    {"id": "gap:a", "search_queries": ["query a1", "query a2", "query a3"]},
+                    {"id": "gap:b", "search_queries": ["query b1", "query b2", "query b3"]},
+                    {"id": "gap:c", "search_queries": ["query c1", "query c2", "query c3"]},
                 ]
             }
         if jt == "NOVELTY_SEARCH":
@@ -213,3 +214,65 @@ def test_autonomous_cycle_fanout_retry_crash_recovery_and_human_gate():
     planner.reconcile(run_id)
     after = len(queue.jobs(run_id))
     assert before == after
+
+
+@pytest.mark.integration
+def test_cancel_queued_except_salvages_legacy_novelty_fanout():
+    dsn = os.getenv("RESEARCH_ENGINE_DATABASE_URL")
+    if not dsn:
+        pytest.skip("RESEARCH_ENGINE_DATABASE_URL not set")
+    pytest.importorskip("psycopg")
+
+    from research_engine.orchestration import JobType, OrchestratorStore
+    from research_engine.postgres import PostgresStore
+
+    store = PostgresStore(dsn)
+    store.initialize(Path(__file__).parents[1] / "sql" / "schema.sql")
+    queue = OrchestratorStore(store)
+
+    with store.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                TRUNCATE human_review_requests, research_job_attempts, research_jobs,
+                         research_workers, research_runs CASCADE
+                """
+            )
+        conn.commit()
+
+    run_id = "research-run:legacy-fanout"
+    queue.create_run(run_id=run_id, topic="legacy fanout salvage")
+    queue.enqueue(
+        run_id=run_id,
+        job_type=JobType.NOVELTY_SEARCH,
+        idempotency_key="novelty-search:g1:0",
+        payload={"gap": {"id": "g1"}, "query": "q0"},
+    )
+    queue.enqueue(
+        run_id=run_id,
+        job_type=JobType.NOVELTY_SEARCH,
+        idempotency_key="novelty-search:g1:1",
+        payload={"gap": {"id": "g1"}, "query": "q1"},
+    )
+    queue.enqueue(
+        run_id=run_id,
+        job_type=JobType.NOVELTY_SEARCH,
+        idempotency_key="novelty-search:g1:2",
+        payload={"gap": {"id": "g1"}, "query": "q2"},
+    )
+
+    cancelled = queue.cancel_queued_except(
+        run_id=run_id,
+        job_type=JobType.NOVELTY_SEARCH,
+        keep_idempotency_keys={
+            "novelty-search:g1:0",
+            "novelty-search:g1:1",
+        },
+    )
+    assert cancelled == 1
+
+    jobs = queue.jobs(run_id, JobType.NOVELTY_SEARCH)
+    states = {job.idempotency_key: job.status for job in jobs}
+    assert states["novelty-search:g1:0"] == "QUEUED"
+    assert states["novelty-search:g1:1"] == "QUEUED"
+    assert states["novelty-search:g1:2"] == "CANCELLED"
