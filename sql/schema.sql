@@ -418,7 +418,1410 @@ CREATE INDEX IF NOT EXISTS research_allowance_observations_window_idx
 UPDATE research_workers
 SET logical_agent_id = COALESCE(
         logical_agent_id,
-        metadata->>'logical_agent_id'
+        metadata->>'logical_agent_id',
+        CASE
+          WHEN id ~ ':deterministic:[0-9]+    host_name = COALESCE(host_name, metadata->>'host_name'),
+    process_id = COALESCE(
+        process_id,
+        CASE
+          WHEN (metadata->>'process_id') ~ '^[0-9]+
+    job_id TEXT PRIMARY KEY REFERENCES research_jobs(id) ON DELETE CASCADE,
+    job_type TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('PENDING','COMPLETED')),
+    semantic_result JSONB NOT NULL,
+    materialized_result JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS semantic_materializations_status_idx
+    ON semantic_materializations(status, updated_at);
+
+CREATE TABLE IF NOT EXISTS human_review_requests (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
+    job_id TEXT NOT NULL UNIQUE REFERENCES research_jobs(id) ON DELETE CASCADE,
+    status TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    decision JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    decided_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS human_review_requests_status_idx
+    ON human_review_requests(status, created_at);
+
+CREATE TABLE IF NOT EXISTS embeddings (
+    id BIGSERIAL PRIMARY KEY,
+    record_type TEXT NOT NULL,
+    record_id TEXT NOT NULL,
+    model TEXT NOT NULL,
+    model_version TEXT,
+    dimensions INTEGER NOT NULL CHECK (dimensions > 0),
+    source_content_hash TEXT NOT NULL,
+    embedding VECTOR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE(record_type, record_id, model, model_version, source_content_hash)
+);
+CREATE INDEX IF NOT EXISTS embeddings_record_idx ON embeddings(record_type, record_id);
+-- Intentionally no HNSW/IVFFlat index in v1. Exact NN is the baseline.
+
+COMMIT;
+
+          THEN (metadata->>'process_id')::integer
+          ELSE NULL
+        END
+    ),
+    code_sha = COALESCE(code_sha, metadata->>'code_sha'),
+    backend = COALESCE(backend, metadata->>'backend'),
+    model = COALESCE(model, metadata->>'model'),
+    reasoning_effort = COALESCE(
+        reasoning_effort,
+        metadata->>'reasoning_effort'
+    );
+
+WITH completed_attempt AS (
+    SELECT DISTINCT ON (a.job_id)
+           a.job_id,
+           a.attempt_no,
+           a.worker_id,
+           a.started_at,
+           a.finished_at
+    FROM research_job_attempts a
+    WHERE a.status='COMPLETED'
+    ORDER BY a.job_id, a.attempt_no DESC
+)
+UPDATE research_usage_events u
+SET job_type = COALESCE(u.job_type, j.job_type),
+    worker_id = COALESCE(u.worker_id, a.worker_id),
+    logical_agent_id = COALESCE(
+        u.logical_agent_id,
+        w.logical_agent_id,
+        w.metadata->>'logical_agent_id'
+    ),
+    attempt_no = COALESCE(u.attempt_no, a.attempt_no),
+    reasoning_effort = COALESCE(
+        u.reasoning_effort,
+        j.result #>> '{_execution,reasoning_effort}'
+    ),
+    cached_input_tokens = CASE
+        WHEN u.cached_input_tokens = 0
+        THEN COALESCE(
+            (j.result #>> '{_execution,usage,cached_input_tokens}')::bigint,
+            0
+        )
+        ELSE u.cached_input_tokens
+    END,
+    reasoning_output_tokens = CASE
+        WHEN u.reasoning_output_tokens = 0
+        THEN COALESCE(
+            (j.result #>> '{_execution,usage,reasoning_output_tokens}')::bigint,
+            0
+        )
+        ELSE u.reasoning_output_tokens
+    END,
+    wall_time_ms = COALESCE(
+        u.wall_time_ms,
+        CASE WHEN a.finished_at IS NOT NULL
+             THEN GREATEST(
+                 0,
+                 ROUND(EXTRACT(EPOCH FROM (a.finished_at-a.started_at))*1000)
+             )::bigint
+             ELSE NULL
+        END
+    ),
+    queue_wait_ms = COALESCE(
+        u.queue_wait_ms,
+        GREATEST(
+            0,
+            ROUND(EXTRACT(EPOCH FROM (a.started_at-j.available_at))*1000)
+        )::bigint
+    ),
+    web_search_count = CASE
+        WHEN u.web_search_count = 0
+        THEN COALESCE(
+            jsonb_array_length(
+                COALESCE(
+                    j.result #> '{_execution,web_search,events}',
+                    '[]'::jsonb
+                )
+            ),
+            0
+        )
+        ELSE u.web_search_count
+    END
+FROM research_jobs j
+LEFT JOIN completed_attempt a ON a.job_id=j.id
+LEFT JOIN research_workers w ON w.id=a.worker_id
+WHERE u.job_id=j.id;
+
+CREATE TABLE IF NOT EXISTS semantic_materializations (
+    job_id TEXT PRIMARY KEY REFERENCES research_jobs(id) ON DELETE CASCADE,
+    job_type TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('PENDING','COMPLETED')),
+    semantic_result JSONB NOT NULL,
+    materialized_result JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS semantic_materializations_status_idx
+    ON semantic_materializations(status, updated_at);
+
+CREATE TABLE IF NOT EXISTS human_review_requests (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
+    job_id TEXT NOT NULL UNIQUE REFERENCES research_jobs(id) ON DELETE CASCADE,
+    status TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    decision JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    decided_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS human_review_requests_status_idx
+    ON human_review_requests(status, created_at);
+
+CREATE TABLE IF NOT EXISTS embeddings (
+    id BIGSERIAL PRIMARY KEY,
+    record_type TEXT NOT NULL,
+    record_id TEXT NOT NULL,
+    model TEXT NOT NULL,
+    model_version TEXT,
+    dimensions INTEGER NOT NULL CHECK (dimensions > 0),
+    source_content_hash TEXT NOT NULL,
+    embedding VECTOR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE(record_type, record_id, model, model_version, source_content_hash)
+);
+CREATE INDEX IF NOT EXISTS embeddings_record_idx ON embeddings(record_type, record_id);
+-- Intentionally no HNSW/IVFFlat index in v1. Exact NN is the baseline.
+
+COMMIT;
+
+          THEN 'deterministic:' || substring(id from ':deterministic:([0-9]+)    host_name = COALESCE(host_name, metadata->>'host_name'),
+    process_id = COALESCE(
+        process_id,
+        CASE
+          WHEN (metadata->>'process_id') ~ '^[0-9]+
+    job_id TEXT PRIMARY KEY REFERENCES research_jobs(id) ON DELETE CASCADE,
+    job_type TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('PENDING','COMPLETED')),
+    semantic_result JSONB NOT NULL,
+    materialized_result JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS semantic_materializations_status_idx
+    ON semantic_materializations(status, updated_at);
+
+CREATE TABLE IF NOT EXISTS human_review_requests (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
+    job_id TEXT NOT NULL UNIQUE REFERENCES research_jobs(id) ON DELETE CASCADE,
+    status TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    decision JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    decided_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS human_review_requests_status_idx
+    ON human_review_requests(status, created_at);
+
+CREATE TABLE IF NOT EXISTS embeddings (
+    id BIGSERIAL PRIMARY KEY,
+    record_type TEXT NOT NULL,
+    record_id TEXT NOT NULL,
+    model TEXT NOT NULL,
+    model_version TEXT,
+    dimensions INTEGER NOT NULL CHECK (dimensions > 0),
+    source_content_hash TEXT NOT NULL,
+    embedding VECTOR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE(record_type, record_id, model, model_version, source_content_hash)
+);
+CREATE INDEX IF NOT EXISTS embeddings_record_idx ON embeddings(record_type, record_id);
+-- Intentionally no HNSW/IVFFlat index in v1. Exact NN is the baseline.
+
+COMMIT;
+
+          THEN (metadata->>'process_id')::integer
+          ELSE NULL
+        END
+    ),
+    code_sha = COALESCE(code_sha, metadata->>'code_sha'),
+    backend = COALESCE(backend, metadata->>'backend'),
+    model = COALESCE(model, metadata->>'model'),
+    reasoning_effort = COALESCE(
+        reasoning_effort,
+        metadata->>'reasoning_effort'
+    );
+
+WITH completed_attempt AS (
+    SELECT DISTINCT ON (a.job_id)
+           a.job_id,
+           a.attempt_no,
+           a.worker_id,
+           a.started_at,
+           a.finished_at
+    FROM research_job_attempts a
+    WHERE a.status='COMPLETED'
+    ORDER BY a.job_id, a.attempt_no DESC
+)
+UPDATE research_usage_events u
+SET job_type = COALESCE(u.job_type, j.job_type),
+    worker_id = COALESCE(u.worker_id, a.worker_id),
+    logical_agent_id = COALESCE(
+        u.logical_agent_id,
+        w.logical_agent_id,
+        w.metadata->>'logical_agent_id'
+    ),
+    attempt_no = COALESCE(u.attempt_no, a.attempt_no),
+    reasoning_effort = COALESCE(
+        u.reasoning_effort,
+        j.result #>> '{_execution,reasoning_effort}'
+    ),
+    cached_input_tokens = CASE
+        WHEN u.cached_input_tokens = 0
+        THEN COALESCE(
+            (j.result #>> '{_execution,usage,cached_input_tokens}')::bigint,
+            0
+        )
+        ELSE u.cached_input_tokens
+    END,
+    reasoning_output_tokens = CASE
+        WHEN u.reasoning_output_tokens = 0
+        THEN COALESCE(
+            (j.result #>> '{_execution,usage,reasoning_output_tokens}')::bigint,
+            0
+        )
+        ELSE u.reasoning_output_tokens
+    END,
+    wall_time_ms = COALESCE(
+        u.wall_time_ms,
+        CASE WHEN a.finished_at IS NOT NULL
+             THEN GREATEST(
+                 0,
+                 ROUND(EXTRACT(EPOCH FROM (a.finished_at-a.started_at))*1000)
+             )::bigint
+             ELSE NULL
+        END
+    ),
+    queue_wait_ms = COALESCE(
+        u.queue_wait_ms,
+        GREATEST(
+            0,
+            ROUND(EXTRACT(EPOCH FROM (a.started_at-j.available_at))*1000)
+        )::bigint
+    ),
+    web_search_count = CASE
+        WHEN u.web_search_count = 0
+        THEN COALESCE(
+            jsonb_array_length(
+                COALESCE(
+                    j.result #> '{_execution,web_search,events}',
+                    '[]'::jsonb
+                )
+            ),
+            0
+        )
+        ELSE u.web_search_count
+    END
+FROM research_jobs j
+LEFT JOIN completed_attempt a ON a.job_id=j.id
+LEFT JOIN research_workers w ON w.id=a.worker_id
+WHERE u.job_id=j.id;
+
+CREATE TABLE IF NOT EXISTS semantic_materializations (
+    job_id TEXT PRIMARY KEY REFERENCES research_jobs(id) ON DELETE CASCADE,
+    job_type TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('PENDING','COMPLETED')),
+    semantic_result JSONB NOT NULL,
+    materialized_result JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS semantic_materializations_status_idx
+    ON semantic_materializations(status, updated_at);
+
+CREATE TABLE IF NOT EXISTS human_review_requests (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
+    job_id TEXT NOT NULL UNIQUE REFERENCES research_jobs(id) ON DELETE CASCADE,
+    status TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    decision JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    decided_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS human_review_requests_status_idx
+    ON human_review_requests(status, created_at);
+
+CREATE TABLE IF NOT EXISTS embeddings (
+    id BIGSERIAL PRIMARY KEY,
+    record_type TEXT NOT NULL,
+    record_id TEXT NOT NULL,
+    model TEXT NOT NULL,
+    model_version TEXT,
+    dimensions INTEGER NOT NULL CHECK (dimensions > 0),
+    source_content_hash TEXT NOT NULL,
+    embedding VECTOR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE(record_type, record_id, model, model_version, source_content_hash)
+);
+CREATE INDEX IF NOT EXISTS embeddings_record_idx ON embeddings(record_type, record_id);
+-- Intentionally no HNSW/IVFFlat index in v1. Exact NN is the baseline.
+
+COMMIT;
+)
+          WHEN id ~ ':cheap:[0-9]+    host_name = COALESCE(host_name, metadata->>'host_name'),
+    process_id = COALESCE(
+        process_id,
+        CASE
+          WHEN (metadata->>'process_id') ~ '^[0-9]+
+    job_id TEXT PRIMARY KEY REFERENCES research_jobs(id) ON DELETE CASCADE,
+    job_type TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('PENDING','COMPLETED')),
+    semantic_result JSONB NOT NULL,
+    materialized_result JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS semantic_materializations_status_idx
+    ON semantic_materializations(status, updated_at);
+
+CREATE TABLE IF NOT EXISTS human_review_requests (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
+    job_id TEXT NOT NULL UNIQUE REFERENCES research_jobs(id) ON DELETE CASCADE,
+    status TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    decision JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    decided_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS human_review_requests_status_idx
+    ON human_review_requests(status, created_at);
+
+CREATE TABLE IF NOT EXISTS embeddings (
+    id BIGSERIAL PRIMARY KEY,
+    record_type TEXT NOT NULL,
+    record_id TEXT NOT NULL,
+    model TEXT NOT NULL,
+    model_version TEXT,
+    dimensions INTEGER NOT NULL CHECK (dimensions > 0),
+    source_content_hash TEXT NOT NULL,
+    embedding VECTOR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE(record_type, record_id, model, model_version, source_content_hash)
+);
+CREATE INDEX IF NOT EXISTS embeddings_record_idx ON embeddings(record_type, record_id);
+-- Intentionally no HNSW/IVFFlat index in v1. Exact NN is the baseline.
+
+COMMIT;
+
+          THEN (metadata->>'process_id')::integer
+          ELSE NULL
+        END
+    ),
+    code_sha = COALESCE(code_sha, metadata->>'code_sha'),
+    backend = COALESCE(backend, metadata->>'backend'),
+    model = COALESCE(model, metadata->>'model'),
+    reasoning_effort = COALESCE(
+        reasoning_effort,
+        metadata->>'reasoning_effort'
+    );
+
+WITH completed_attempt AS (
+    SELECT DISTINCT ON (a.job_id)
+           a.job_id,
+           a.attempt_no,
+           a.worker_id,
+           a.started_at,
+           a.finished_at
+    FROM research_job_attempts a
+    WHERE a.status='COMPLETED'
+    ORDER BY a.job_id, a.attempt_no DESC
+)
+UPDATE research_usage_events u
+SET job_type = COALESCE(u.job_type, j.job_type),
+    worker_id = COALESCE(u.worker_id, a.worker_id),
+    logical_agent_id = COALESCE(
+        u.logical_agent_id,
+        w.logical_agent_id,
+        w.metadata->>'logical_agent_id'
+    ),
+    attempt_no = COALESCE(u.attempt_no, a.attempt_no),
+    reasoning_effort = COALESCE(
+        u.reasoning_effort,
+        j.result #>> '{_execution,reasoning_effort}'
+    ),
+    cached_input_tokens = CASE
+        WHEN u.cached_input_tokens = 0
+        THEN COALESCE(
+            (j.result #>> '{_execution,usage,cached_input_tokens}')::bigint,
+            0
+        )
+        ELSE u.cached_input_tokens
+    END,
+    reasoning_output_tokens = CASE
+        WHEN u.reasoning_output_tokens = 0
+        THEN COALESCE(
+            (j.result #>> '{_execution,usage,reasoning_output_tokens}')::bigint,
+            0
+        )
+        ELSE u.reasoning_output_tokens
+    END,
+    wall_time_ms = COALESCE(
+        u.wall_time_ms,
+        CASE WHEN a.finished_at IS NOT NULL
+             THEN GREATEST(
+                 0,
+                 ROUND(EXTRACT(EPOCH FROM (a.finished_at-a.started_at))*1000)
+             )::bigint
+             ELSE NULL
+        END
+    ),
+    queue_wait_ms = COALESCE(
+        u.queue_wait_ms,
+        GREATEST(
+            0,
+            ROUND(EXTRACT(EPOCH FROM (a.started_at-j.available_at))*1000)
+        )::bigint
+    ),
+    web_search_count = CASE
+        WHEN u.web_search_count = 0
+        THEN COALESCE(
+            jsonb_array_length(
+                COALESCE(
+                    j.result #> '{_execution,web_search,events}',
+                    '[]'::jsonb
+                )
+            ),
+            0
+        )
+        ELSE u.web_search_count
+    END
+FROM research_jobs j
+LEFT JOIN completed_attempt a ON a.job_id=j.id
+LEFT JOIN research_workers w ON w.id=a.worker_id
+WHERE u.job_id=j.id;
+
+CREATE TABLE IF NOT EXISTS semantic_materializations (
+    job_id TEXT PRIMARY KEY REFERENCES research_jobs(id) ON DELETE CASCADE,
+    job_type TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('PENDING','COMPLETED')),
+    semantic_result JSONB NOT NULL,
+    materialized_result JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS semantic_materializations_status_idx
+    ON semantic_materializations(status, updated_at);
+
+CREATE TABLE IF NOT EXISTS human_review_requests (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
+    job_id TEXT NOT NULL UNIQUE REFERENCES research_jobs(id) ON DELETE CASCADE,
+    status TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    decision JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    decided_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS human_review_requests_status_idx
+    ON human_review_requests(status, created_at);
+
+CREATE TABLE IF NOT EXISTS embeddings (
+    id BIGSERIAL PRIMARY KEY,
+    record_type TEXT NOT NULL,
+    record_id TEXT NOT NULL,
+    model TEXT NOT NULL,
+    model_version TEXT,
+    dimensions INTEGER NOT NULL CHECK (dimensions > 0),
+    source_content_hash TEXT NOT NULL,
+    embedding VECTOR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE(record_type, record_id, model, model_version, source_content_hash)
+);
+CREATE INDEX IF NOT EXISTS embeddings_record_idx ON embeddings(record_type, record_id);
+-- Intentionally no HNSW/IVFFlat index in v1. Exact NN is the baseline.
+
+COMMIT;
+
+          THEN 'semantic:cheap:' || substring(id from ':cheap:([0-9]+)    host_name = COALESCE(host_name, metadata->>'host_name'),
+    process_id = COALESCE(
+        process_id,
+        CASE
+          WHEN (metadata->>'process_id') ~ '^[0-9]+
+    job_id TEXT PRIMARY KEY REFERENCES research_jobs(id) ON DELETE CASCADE,
+    job_type TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('PENDING','COMPLETED')),
+    semantic_result JSONB NOT NULL,
+    materialized_result JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS semantic_materializations_status_idx
+    ON semantic_materializations(status, updated_at);
+
+CREATE TABLE IF NOT EXISTS human_review_requests (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
+    job_id TEXT NOT NULL UNIQUE REFERENCES research_jobs(id) ON DELETE CASCADE,
+    status TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    decision JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    decided_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS human_review_requests_status_idx
+    ON human_review_requests(status, created_at);
+
+CREATE TABLE IF NOT EXISTS embeddings (
+    id BIGSERIAL PRIMARY KEY,
+    record_type TEXT NOT NULL,
+    record_id TEXT NOT NULL,
+    model TEXT NOT NULL,
+    model_version TEXT,
+    dimensions INTEGER NOT NULL CHECK (dimensions > 0),
+    source_content_hash TEXT NOT NULL,
+    embedding VECTOR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE(record_type, record_id, model, model_version, source_content_hash)
+);
+CREATE INDEX IF NOT EXISTS embeddings_record_idx ON embeddings(record_type, record_id);
+-- Intentionally no HNSW/IVFFlat index in v1. Exact NN is the baseline.
+
+COMMIT;
+
+          THEN (metadata->>'process_id')::integer
+          ELSE NULL
+        END
+    ),
+    code_sha = COALESCE(code_sha, metadata->>'code_sha'),
+    backend = COALESCE(backend, metadata->>'backend'),
+    model = COALESCE(model, metadata->>'model'),
+    reasoning_effort = COALESCE(
+        reasoning_effort,
+        metadata->>'reasoning_effort'
+    );
+
+WITH completed_attempt AS (
+    SELECT DISTINCT ON (a.job_id)
+           a.job_id,
+           a.attempt_no,
+           a.worker_id,
+           a.started_at,
+           a.finished_at
+    FROM research_job_attempts a
+    WHERE a.status='COMPLETED'
+    ORDER BY a.job_id, a.attempt_no DESC
+)
+UPDATE research_usage_events u
+SET job_type = COALESCE(u.job_type, j.job_type),
+    worker_id = COALESCE(u.worker_id, a.worker_id),
+    logical_agent_id = COALESCE(
+        u.logical_agent_id,
+        w.logical_agent_id,
+        w.metadata->>'logical_agent_id'
+    ),
+    attempt_no = COALESCE(u.attempt_no, a.attempt_no),
+    reasoning_effort = COALESCE(
+        u.reasoning_effort,
+        j.result #>> '{_execution,reasoning_effort}'
+    ),
+    cached_input_tokens = CASE
+        WHEN u.cached_input_tokens = 0
+        THEN COALESCE(
+            (j.result #>> '{_execution,usage,cached_input_tokens}')::bigint,
+            0
+        )
+        ELSE u.cached_input_tokens
+    END,
+    reasoning_output_tokens = CASE
+        WHEN u.reasoning_output_tokens = 0
+        THEN COALESCE(
+            (j.result #>> '{_execution,usage,reasoning_output_tokens}')::bigint,
+            0
+        )
+        ELSE u.reasoning_output_tokens
+    END,
+    wall_time_ms = COALESCE(
+        u.wall_time_ms,
+        CASE WHEN a.finished_at IS NOT NULL
+             THEN GREATEST(
+                 0,
+                 ROUND(EXTRACT(EPOCH FROM (a.finished_at-a.started_at))*1000)
+             )::bigint
+             ELSE NULL
+        END
+    ),
+    queue_wait_ms = COALESCE(
+        u.queue_wait_ms,
+        GREATEST(
+            0,
+            ROUND(EXTRACT(EPOCH FROM (a.started_at-j.available_at))*1000)
+        )::bigint
+    ),
+    web_search_count = CASE
+        WHEN u.web_search_count = 0
+        THEN COALESCE(
+            jsonb_array_length(
+                COALESCE(
+                    j.result #> '{_execution,web_search,events}',
+                    '[]'::jsonb
+                )
+            ),
+            0
+        )
+        ELSE u.web_search_count
+    END
+FROM research_jobs j
+LEFT JOIN completed_attempt a ON a.job_id=j.id
+LEFT JOIN research_workers w ON w.id=a.worker_id
+WHERE u.job_id=j.id;
+
+CREATE TABLE IF NOT EXISTS semantic_materializations (
+    job_id TEXT PRIMARY KEY REFERENCES research_jobs(id) ON DELETE CASCADE,
+    job_type TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('PENDING','COMPLETED')),
+    semantic_result JSONB NOT NULL,
+    materialized_result JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS semantic_materializations_status_idx
+    ON semantic_materializations(status, updated_at);
+
+CREATE TABLE IF NOT EXISTS human_review_requests (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
+    job_id TEXT NOT NULL UNIQUE REFERENCES research_jobs(id) ON DELETE CASCADE,
+    status TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    decision JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    decided_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS human_review_requests_status_idx
+    ON human_review_requests(status, created_at);
+
+CREATE TABLE IF NOT EXISTS embeddings (
+    id BIGSERIAL PRIMARY KEY,
+    record_type TEXT NOT NULL,
+    record_id TEXT NOT NULL,
+    model TEXT NOT NULL,
+    model_version TEXT,
+    dimensions INTEGER NOT NULL CHECK (dimensions > 0),
+    source_content_hash TEXT NOT NULL,
+    embedding VECTOR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE(record_type, record_id, model, model_version, source_content_hash)
+);
+CREATE INDEX IF NOT EXISTS embeddings_record_idx ON embeddings(record_type, record_id);
+-- Intentionally no HNSW/IVFFlat index in v1. Exact NN is the baseline.
+
+COMMIT;
+)
+          WHEN id ~ ':standard:[0-9]+    host_name = COALESCE(host_name, metadata->>'host_name'),
+    process_id = COALESCE(
+        process_id,
+        CASE
+          WHEN (metadata->>'process_id') ~ '^[0-9]+
+    job_id TEXT PRIMARY KEY REFERENCES research_jobs(id) ON DELETE CASCADE,
+    job_type TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('PENDING','COMPLETED')),
+    semantic_result JSONB NOT NULL,
+    materialized_result JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS semantic_materializations_status_idx
+    ON semantic_materializations(status, updated_at);
+
+CREATE TABLE IF NOT EXISTS human_review_requests (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
+    job_id TEXT NOT NULL UNIQUE REFERENCES research_jobs(id) ON DELETE CASCADE,
+    status TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    decision JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    decided_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS human_review_requests_status_idx
+    ON human_review_requests(status, created_at);
+
+CREATE TABLE IF NOT EXISTS embeddings (
+    id BIGSERIAL PRIMARY KEY,
+    record_type TEXT NOT NULL,
+    record_id TEXT NOT NULL,
+    model TEXT NOT NULL,
+    model_version TEXT,
+    dimensions INTEGER NOT NULL CHECK (dimensions > 0),
+    source_content_hash TEXT NOT NULL,
+    embedding VECTOR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE(record_type, record_id, model, model_version, source_content_hash)
+);
+CREATE INDEX IF NOT EXISTS embeddings_record_idx ON embeddings(record_type, record_id);
+-- Intentionally no HNSW/IVFFlat index in v1. Exact NN is the baseline.
+
+COMMIT;
+
+          THEN (metadata->>'process_id')::integer
+          ELSE NULL
+        END
+    ),
+    code_sha = COALESCE(code_sha, metadata->>'code_sha'),
+    backend = COALESCE(backend, metadata->>'backend'),
+    model = COALESCE(model, metadata->>'model'),
+    reasoning_effort = COALESCE(
+        reasoning_effort,
+        metadata->>'reasoning_effort'
+    );
+
+WITH completed_attempt AS (
+    SELECT DISTINCT ON (a.job_id)
+           a.job_id,
+           a.attempt_no,
+           a.worker_id,
+           a.started_at,
+           a.finished_at
+    FROM research_job_attempts a
+    WHERE a.status='COMPLETED'
+    ORDER BY a.job_id, a.attempt_no DESC
+)
+UPDATE research_usage_events u
+SET job_type = COALESCE(u.job_type, j.job_type),
+    worker_id = COALESCE(u.worker_id, a.worker_id),
+    logical_agent_id = COALESCE(
+        u.logical_agent_id,
+        w.logical_agent_id,
+        w.metadata->>'logical_agent_id'
+    ),
+    attempt_no = COALESCE(u.attempt_no, a.attempt_no),
+    reasoning_effort = COALESCE(
+        u.reasoning_effort,
+        j.result #>> '{_execution,reasoning_effort}'
+    ),
+    cached_input_tokens = CASE
+        WHEN u.cached_input_tokens = 0
+        THEN COALESCE(
+            (j.result #>> '{_execution,usage,cached_input_tokens}')::bigint,
+            0
+        )
+        ELSE u.cached_input_tokens
+    END,
+    reasoning_output_tokens = CASE
+        WHEN u.reasoning_output_tokens = 0
+        THEN COALESCE(
+            (j.result #>> '{_execution,usage,reasoning_output_tokens}')::bigint,
+            0
+        )
+        ELSE u.reasoning_output_tokens
+    END,
+    wall_time_ms = COALESCE(
+        u.wall_time_ms,
+        CASE WHEN a.finished_at IS NOT NULL
+             THEN GREATEST(
+                 0,
+                 ROUND(EXTRACT(EPOCH FROM (a.finished_at-a.started_at))*1000)
+             )::bigint
+             ELSE NULL
+        END
+    ),
+    queue_wait_ms = COALESCE(
+        u.queue_wait_ms,
+        GREATEST(
+            0,
+            ROUND(EXTRACT(EPOCH FROM (a.started_at-j.available_at))*1000)
+        )::bigint
+    ),
+    web_search_count = CASE
+        WHEN u.web_search_count = 0
+        THEN COALESCE(
+            jsonb_array_length(
+                COALESCE(
+                    j.result #> '{_execution,web_search,events}',
+                    '[]'::jsonb
+                )
+            ),
+            0
+        )
+        ELSE u.web_search_count
+    END
+FROM research_jobs j
+LEFT JOIN completed_attempt a ON a.job_id=j.id
+LEFT JOIN research_workers w ON w.id=a.worker_id
+WHERE u.job_id=j.id;
+
+CREATE TABLE IF NOT EXISTS semantic_materializations (
+    job_id TEXT PRIMARY KEY REFERENCES research_jobs(id) ON DELETE CASCADE,
+    job_type TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('PENDING','COMPLETED')),
+    semantic_result JSONB NOT NULL,
+    materialized_result JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS semantic_materializations_status_idx
+    ON semantic_materializations(status, updated_at);
+
+CREATE TABLE IF NOT EXISTS human_review_requests (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
+    job_id TEXT NOT NULL UNIQUE REFERENCES research_jobs(id) ON DELETE CASCADE,
+    status TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    decision JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    decided_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS human_review_requests_status_idx
+    ON human_review_requests(status, created_at);
+
+CREATE TABLE IF NOT EXISTS embeddings (
+    id BIGSERIAL PRIMARY KEY,
+    record_type TEXT NOT NULL,
+    record_id TEXT NOT NULL,
+    model TEXT NOT NULL,
+    model_version TEXT,
+    dimensions INTEGER NOT NULL CHECK (dimensions > 0),
+    source_content_hash TEXT NOT NULL,
+    embedding VECTOR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE(record_type, record_id, model, model_version, source_content_hash)
+);
+CREATE INDEX IF NOT EXISTS embeddings_record_idx ON embeddings(record_type, record_id);
+-- Intentionally no HNSW/IVFFlat index in v1. Exact NN is the baseline.
+
+COMMIT;
+
+          THEN 'semantic:standard:' || substring(id from ':standard:([0-9]+)    host_name = COALESCE(host_name, metadata->>'host_name'),
+    process_id = COALESCE(
+        process_id,
+        CASE
+          WHEN (metadata->>'process_id') ~ '^[0-9]+
+    job_id TEXT PRIMARY KEY REFERENCES research_jobs(id) ON DELETE CASCADE,
+    job_type TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('PENDING','COMPLETED')),
+    semantic_result JSONB NOT NULL,
+    materialized_result JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS semantic_materializations_status_idx
+    ON semantic_materializations(status, updated_at);
+
+CREATE TABLE IF NOT EXISTS human_review_requests (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
+    job_id TEXT NOT NULL UNIQUE REFERENCES research_jobs(id) ON DELETE CASCADE,
+    status TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    decision JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    decided_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS human_review_requests_status_idx
+    ON human_review_requests(status, created_at);
+
+CREATE TABLE IF NOT EXISTS embeddings (
+    id BIGSERIAL PRIMARY KEY,
+    record_type TEXT NOT NULL,
+    record_id TEXT NOT NULL,
+    model TEXT NOT NULL,
+    model_version TEXT,
+    dimensions INTEGER NOT NULL CHECK (dimensions > 0),
+    source_content_hash TEXT NOT NULL,
+    embedding VECTOR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE(record_type, record_id, model, model_version, source_content_hash)
+);
+CREATE INDEX IF NOT EXISTS embeddings_record_idx ON embeddings(record_type, record_id);
+-- Intentionally no HNSW/IVFFlat index in v1. Exact NN is the baseline.
+
+COMMIT;
+
+          THEN (metadata->>'process_id')::integer
+          ELSE NULL
+        END
+    ),
+    code_sha = COALESCE(code_sha, metadata->>'code_sha'),
+    backend = COALESCE(backend, metadata->>'backend'),
+    model = COALESCE(model, metadata->>'model'),
+    reasoning_effort = COALESCE(
+        reasoning_effort,
+        metadata->>'reasoning_effort'
+    );
+
+WITH completed_attempt AS (
+    SELECT DISTINCT ON (a.job_id)
+           a.job_id,
+           a.attempt_no,
+           a.worker_id,
+           a.started_at,
+           a.finished_at
+    FROM research_job_attempts a
+    WHERE a.status='COMPLETED'
+    ORDER BY a.job_id, a.attempt_no DESC
+)
+UPDATE research_usage_events u
+SET job_type = COALESCE(u.job_type, j.job_type),
+    worker_id = COALESCE(u.worker_id, a.worker_id),
+    logical_agent_id = COALESCE(
+        u.logical_agent_id,
+        w.logical_agent_id,
+        w.metadata->>'logical_agent_id'
+    ),
+    attempt_no = COALESCE(u.attempt_no, a.attempt_no),
+    reasoning_effort = COALESCE(
+        u.reasoning_effort,
+        j.result #>> '{_execution,reasoning_effort}'
+    ),
+    cached_input_tokens = CASE
+        WHEN u.cached_input_tokens = 0
+        THEN COALESCE(
+            (j.result #>> '{_execution,usage,cached_input_tokens}')::bigint,
+            0
+        )
+        ELSE u.cached_input_tokens
+    END,
+    reasoning_output_tokens = CASE
+        WHEN u.reasoning_output_tokens = 0
+        THEN COALESCE(
+            (j.result #>> '{_execution,usage,reasoning_output_tokens}')::bigint,
+            0
+        )
+        ELSE u.reasoning_output_tokens
+    END,
+    wall_time_ms = COALESCE(
+        u.wall_time_ms,
+        CASE WHEN a.finished_at IS NOT NULL
+             THEN GREATEST(
+                 0,
+                 ROUND(EXTRACT(EPOCH FROM (a.finished_at-a.started_at))*1000)
+             )::bigint
+             ELSE NULL
+        END
+    ),
+    queue_wait_ms = COALESCE(
+        u.queue_wait_ms,
+        GREATEST(
+            0,
+            ROUND(EXTRACT(EPOCH FROM (a.started_at-j.available_at))*1000)
+        )::bigint
+    ),
+    web_search_count = CASE
+        WHEN u.web_search_count = 0
+        THEN COALESCE(
+            jsonb_array_length(
+                COALESCE(
+                    j.result #> '{_execution,web_search,events}',
+                    '[]'::jsonb
+                )
+            ),
+            0
+        )
+        ELSE u.web_search_count
+    END
+FROM research_jobs j
+LEFT JOIN completed_attempt a ON a.job_id=j.id
+LEFT JOIN research_workers w ON w.id=a.worker_id
+WHERE u.job_id=j.id;
+
+CREATE TABLE IF NOT EXISTS semantic_materializations (
+    job_id TEXT PRIMARY KEY REFERENCES research_jobs(id) ON DELETE CASCADE,
+    job_type TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('PENDING','COMPLETED')),
+    semantic_result JSONB NOT NULL,
+    materialized_result JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS semantic_materializations_status_idx
+    ON semantic_materializations(status, updated_at);
+
+CREATE TABLE IF NOT EXISTS human_review_requests (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
+    job_id TEXT NOT NULL UNIQUE REFERENCES research_jobs(id) ON DELETE CASCADE,
+    status TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    decision JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    decided_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS human_review_requests_status_idx
+    ON human_review_requests(status, created_at);
+
+CREATE TABLE IF NOT EXISTS embeddings (
+    id BIGSERIAL PRIMARY KEY,
+    record_type TEXT NOT NULL,
+    record_id TEXT NOT NULL,
+    model TEXT NOT NULL,
+    model_version TEXT,
+    dimensions INTEGER NOT NULL CHECK (dimensions > 0),
+    source_content_hash TEXT NOT NULL,
+    embedding VECTOR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE(record_type, record_id, model, model_version, source_content_hash)
+);
+CREATE INDEX IF NOT EXISTS embeddings_record_idx ON embeddings(record_type, record_id);
+-- Intentionally no HNSW/IVFFlat index in v1. Exact NN is the baseline.
+
+COMMIT;
+)
+          WHEN id ~ ':strong:[0-9]+    host_name = COALESCE(host_name, metadata->>'host_name'),
+    process_id = COALESCE(
+        process_id,
+        CASE
+          WHEN (metadata->>'process_id') ~ '^[0-9]+
+    job_id TEXT PRIMARY KEY REFERENCES research_jobs(id) ON DELETE CASCADE,
+    job_type TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('PENDING','COMPLETED')),
+    semantic_result JSONB NOT NULL,
+    materialized_result JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS semantic_materializations_status_idx
+    ON semantic_materializations(status, updated_at);
+
+CREATE TABLE IF NOT EXISTS human_review_requests (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
+    job_id TEXT NOT NULL UNIQUE REFERENCES research_jobs(id) ON DELETE CASCADE,
+    status TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    decision JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    decided_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS human_review_requests_status_idx
+    ON human_review_requests(status, created_at);
+
+CREATE TABLE IF NOT EXISTS embeddings (
+    id BIGSERIAL PRIMARY KEY,
+    record_type TEXT NOT NULL,
+    record_id TEXT NOT NULL,
+    model TEXT NOT NULL,
+    model_version TEXT,
+    dimensions INTEGER NOT NULL CHECK (dimensions > 0),
+    source_content_hash TEXT NOT NULL,
+    embedding VECTOR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE(record_type, record_id, model, model_version, source_content_hash)
+);
+CREATE INDEX IF NOT EXISTS embeddings_record_idx ON embeddings(record_type, record_id);
+-- Intentionally no HNSW/IVFFlat index in v1. Exact NN is the baseline.
+
+COMMIT;
+
+          THEN (metadata->>'process_id')::integer
+          ELSE NULL
+        END
+    ),
+    code_sha = COALESCE(code_sha, metadata->>'code_sha'),
+    backend = COALESCE(backend, metadata->>'backend'),
+    model = COALESCE(model, metadata->>'model'),
+    reasoning_effort = COALESCE(
+        reasoning_effort,
+        metadata->>'reasoning_effort'
+    );
+
+WITH completed_attempt AS (
+    SELECT DISTINCT ON (a.job_id)
+           a.job_id,
+           a.attempt_no,
+           a.worker_id,
+           a.started_at,
+           a.finished_at
+    FROM research_job_attempts a
+    WHERE a.status='COMPLETED'
+    ORDER BY a.job_id, a.attempt_no DESC
+)
+UPDATE research_usage_events u
+SET job_type = COALESCE(u.job_type, j.job_type),
+    worker_id = COALESCE(u.worker_id, a.worker_id),
+    logical_agent_id = COALESCE(
+        u.logical_agent_id,
+        w.logical_agent_id,
+        w.metadata->>'logical_agent_id'
+    ),
+    attempt_no = COALESCE(u.attempt_no, a.attempt_no),
+    reasoning_effort = COALESCE(
+        u.reasoning_effort,
+        j.result #>> '{_execution,reasoning_effort}'
+    ),
+    cached_input_tokens = CASE
+        WHEN u.cached_input_tokens = 0
+        THEN COALESCE(
+            (j.result #>> '{_execution,usage,cached_input_tokens}')::bigint,
+            0
+        )
+        ELSE u.cached_input_tokens
+    END,
+    reasoning_output_tokens = CASE
+        WHEN u.reasoning_output_tokens = 0
+        THEN COALESCE(
+            (j.result #>> '{_execution,usage,reasoning_output_tokens}')::bigint,
+            0
+        )
+        ELSE u.reasoning_output_tokens
+    END,
+    wall_time_ms = COALESCE(
+        u.wall_time_ms,
+        CASE WHEN a.finished_at IS NOT NULL
+             THEN GREATEST(
+                 0,
+                 ROUND(EXTRACT(EPOCH FROM (a.finished_at-a.started_at))*1000)
+             )::bigint
+             ELSE NULL
+        END
+    ),
+    queue_wait_ms = COALESCE(
+        u.queue_wait_ms,
+        GREATEST(
+            0,
+            ROUND(EXTRACT(EPOCH FROM (a.started_at-j.available_at))*1000)
+        )::bigint
+    ),
+    web_search_count = CASE
+        WHEN u.web_search_count = 0
+        THEN COALESCE(
+            jsonb_array_length(
+                COALESCE(
+                    j.result #> '{_execution,web_search,events}',
+                    '[]'::jsonb
+                )
+            ),
+            0
+        )
+        ELSE u.web_search_count
+    END
+FROM research_jobs j
+LEFT JOIN completed_attempt a ON a.job_id=j.id
+LEFT JOIN research_workers w ON w.id=a.worker_id
+WHERE u.job_id=j.id;
+
+CREATE TABLE IF NOT EXISTS semantic_materializations (
+    job_id TEXT PRIMARY KEY REFERENCES research_jobs(id) ON DELETE CASCADE,
+    job_type TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('PENDING','COMPLETED')),
+    semantic_result JSONB NOT NULL,
+    materialized_result JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS semantic_materializations_status_idx
+    ON semantic_materializations(status, updated_at);
+
+CREATE TABLE IF NOT EXISTS human_review_requests (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
+    job_id TEXT NOT NULL UNIQUE REFERENCES research_jobs(id) ON DELETE CASCADE,
+    status TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    decision JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    decided_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS human_review_requests_status_idx
+    ON human_review_requests(status, created_at);
+
+CREATE TABLE IF NOT EXISTS embeddings (
+    id BIGSERIAL PRIMARY KEY,
+    record_type TEXT NOT NULL,
+    record_id TEXT NOT NULL,
+    model TEXT NOT NULL,
+    model_version TEXT,
+    dimensions INTEGER NOT NULL CHECK (dimensions > 0),
+    source_content_hash TEXT NOT NULL,
+    embedding VECTOR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE(record_type, record_id, model, model_version, source_content_hash)
+);
+CREATE INDEX IF NOT EXISTS embeddings_record_idx ON embeddings(record_type, record_id);
+-- Intentionally no HNSW/IVFFlat index in v1. Exact NN is the baseline.
+
+COMMIT;
+
+          THEN 'semantic:strong:' || substring(id from ':strong:([0-9]+)    host_name = COALESCE(host_name, metadata->>'host_name'),
+    process_id = COALESCE(
+        process_id,
+        CASE
+          WHEN (metadata->>'process_id') ~ '^[0-9]+
+    job_id TEXT PRIMARY KEY REFERENCES research_jobs(id) ON DELETE CASCADE,
+    job_type TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('PENDING','COMPLETED')),
+    semantic_result JSONB NOT NULL,
+    materialized_result JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS semantic_materializations_status_idx
+    ON semantic_materializations(status, updated_at);
+
+CREATE TABLE IF NOT EXISTS human_review_requests (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
+    job_id TEXT NOT NULL UNIQUE REFERENCES research_jobs(id) ON DELETE CASCADE,
+    status TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    decision JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    decided_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS human_review_requests_status_idx
+    ON human_review_requests(status, created_at);
+
+CREATE TABLE IF NOT EXISTS embeddings (
+    id BIGSERIAL PRIMARY KEY,
+    record_type TEXT NOT NULL,
+    record_id TEXT NOT NULL,
+    model TEXT NOT NULL,
+    model_version TEXT,
+    dimensions INTEGER NOT NULL CHECK (dimensions > 0),
+    source_content_hash TEXT NOT NULL,
+    embedding VECTOR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE(record_type, record_id, model, model_version, source_content_hash)
+);
+CREATE INDEX IF NOT EXISTS embeddings_record_idx ON embeddings(record_type, record_id);
+-- Intentionally no HNSW/IVFFlat index in v1. Exact NN is the baseline.
+
+COMMIT;
+
+          THEN (metadata->>'process_id')::integer
+          ELSE NULL
+        END
+    ),
+    code_sha = COALESCE(code_sha, metadata->>'code_sha'),
+    backend = COALESCE(backend, metadata->>'backend'),
+    model = COALESCE(model, metadata->>'model'),
+    reasoning_effort = COALESCE(
+        reasoning_effort,
+        metadata->>'reasoning_effort'
+    );
+
+WITH completed_attempt AS (
+    SELECT DISTINCT ON (a.job_id)
+           a.job_id,
+           a.attempt_no,
+           a.worker_id,
+           a.started_at,
+           a.finished_at
+    FROM research_job_attempts a
+    WHERE a.status='COMPLETED'
+    ORDER BY a.job_id, a.attempt_no DESC
+)
+UPDATE research_usage_events u
+SET job_type = COALESCE(u.job_type, j.job_type),
+    worker_id = COALESCE(u.worker_id, a.worker_id),
+    logical_agent_id = COALESCE(
+        u.logical_agent_id,
+        w.logical_agent_id,
+        w.metadata->>'logical_agent_id'
+    ),
+    attempt_no = COALESCE(u.attempt_no, a.attempt_no),
+    reasoning_effort = COALESCE(
+        u.reasoning_effort,
+        j.result #>> '{_execution,reasoning_effort}'
+    ),
+    cached_input_tokens = CASE
+        WHEN u.cached_input_tokens = 0
+        THEN COALESCE(
+            (j.result #>> '{_execution,usage,cached_input_tokens}')::bigint,
+            0
+        )
+        ELSE u.cached_input_tokens
+    END,
+    reasoning_output_tokens = CASE
+        WHEN u.reasoning_output_tokens = 0
+        THEN COALESCE(
+            (j.result #>> '{_execution,usage,reasoning_output_tokens}')::bigint,
+            0
+        )
+        ELSE u.reasoning_output_tokens
+    END,
+    wall_time_ms = COALESCE(
+        u.wall_time_ms,
+        CASE WHEN a.finished_at IS NOT NULL
+             THEN GREATEST(
+                 0,
+                 ROUND(EXTRACT(EPOCH FROM (a.finished_at-a.started_at))*1000)
+             )::bigint
+             ELSE NULL
+        END
+    ),
+    queue_wait_ms = COALESCE(
+        u.queue_wait_ms,
+        GREATEST(
+            0,
+            ROUND(EXTRACT(EPOCH FROM (a.started_at-j.available_at))*1000)
+        )::bigint
+    ),
+    web_search_count = CASE
+        WHEN u.web_search_count = 0
+        THEN COALESCE(
+            jsonb_array_length(
+                COALESCE(
+                    j.result #> '{_execution,web_search,events}',
+                    '[]'::jsonb
+                )
+            ),
+            0
+        )
+        ELSE u.web_search_count
+    END
+FROM research_jobs j
+LEFT JOIN completed_attempt a ON a.job_id=j.id
+LEFT JOIN research_workers w ON w.id=a.worker_id
+WHERE u.job_id=j.id;
+
+CREATE TABLE IF NOT EXISTS semantic_materializations (
+    job_id TEXT PRIMARY KEY REFERENCES research_jobs(id) ON DELETE CASCADE,
+    job_type TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('PENDING','COMPLETED')),
+    semantic_result JSONB NOT NULL,
+    materialized_result JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS semantic_materializations_status_idx
+    ON semantic_materializations(status, updated_at);
+
+CREATE TABLE IF NOT EXISTS human_review_requests (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,
+    job_id TEXT NOT NULL UNIQUE REFERENCES research_jobs(id) ON DELETE CASCADE,
+    status TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    decision JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    decided_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS human_review_requests_status_idx
+    ON human_review_requests(status, created_at);
+
+CREATE TABLE IF NOT EXISTS embeddings (
+    id BIGSERIAL PRIMARY KEY,
+    record_type TEXT NOT NULL,
+    record_id TEXT NOT NULL,
+    model TEXT NOT NULL,
+    model_version TEXT,
+    dimensions INTEGER NOT NULL CHECK (dimensions > 0),
+    source_content_hash TEXT NOT NULL,
+    embedding VECTOR NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE(record_type, record_id, model, model_version, source_content_hash)
+);
+CREATE INDEX IF NOT EXISTS embeddings_record_idx ON embeddings(record_type, record_id);
+-- Intentionally no HNSW/IVFFlat index in v1. Exact NN is the baseline.
+
+COMMIT;
+)
+          ELSE NULL
+        END
     ),
     host_name = COALESCE(host_name, metadata->>'host_name'),
     process_id = COALESCE(
