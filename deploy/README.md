@@ -109,6 +109,43 @@ API-development/testing. Its daemon service is behind the
 Do not use that profile for production operation under the ChatGPT-plan
 constraint.
 
+## Operator shortcuts
+
+Install the repository-owned operator commands:
+
+```bash
+bash deploy/install-operator-shortcuts.sh
+```
+
+This installs four intentionally short commands into `~/.local/bin`:
+
+- `START` — start the systemd research daemon and return only after it is stably `active/running`.
+- `STOP` — stop research immediately and return only after systemd reports `inactive/dead` with PID 0.
+- `HUD` — open the live terminal operations HUD. It works while research is running or stopped.
+- `STATUS` — show daemon state plus a one-shot plain-text HUD snapshot.
+
+`STOP` is idempotent and is the preferred emergency/operator pause control. Stopping the daemon preserves durable PostgreSQL research state.
+
+### Updating an existing editable deployment
+
+Production normally uses an editable venv install pointed at the repository checkout. After a clean fast-forward, first verify that relationship instead of reinstalling the package:
+
+```bash
+"$HOME/adamArchives/Adam/.research-engine/venv/bin/python" - <<'PY'
+import pathlib
+import research_engine
+print(pathlib.Path(research_engine.__file__).resolve())
+PY
+```
+
+If the module resolves under `~/adamArchives/Adam/research-engine`, no pip reinstall is required; the fast-forwarded source is already active. If it does not, use a normal build-isolated editable install:
+
+```bash
+"$HOME/adamArchives/Adam/.research-engine/venv/bin/pip" install --no-deps -e "$HOME/adamArchives/Adam/research-engine"
+```
+
+Do not pass `--no-build-isolation` unless Hatchling is already installed in that venv.
+
 ## Operations HUD and allowance observations
 
 The monitoring surfaces are read-only with respect to scientific state.
