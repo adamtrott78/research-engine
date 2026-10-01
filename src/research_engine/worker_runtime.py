@@ -103,7 +103,13 @@ def semantic_worker_from_env(
         SemanticResultMaterializer,
     )
 
-    hydrator = ResearchContextHydrator(store=store, artifact_root=artifact_root)
+    hydrator = ResearchContextHydrator(
+        store=store,
+        artifact_root=artifact_root,
+        verify_page_radius=int(
+            os.getenv("RESEARCH_ENGINE_VERIFY_PAGE_RADIUS", "0")
+        ),
+    )
     materializer = SemanticResultMaterializer(store=store)
     executors = {
         tier: AuthoritativeSemanticExecutor(
