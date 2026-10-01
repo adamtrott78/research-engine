@@ -181,6 +181,44 @@ observations exist in the same allowance window.
 PostgreSQL is authoritative for worker/job/usage/allowance telemetry. HUD
 rendering failure must not change research state.
 
+## Chat-visible ops mirror
+
+The Chat-visible mirror is a bounded derivative of the same read-only PostgreSQL
+snapshot. It deliberately whitelists operational fields and excludes run topic,
+policy payloads, prompts, source text, credentials, environment values,
+worker/host/PID identifiers, current job IDs, provider error detail, and raw
+calibration summaries.
+
+Render it locally without GitHub access:
+
+```bash
+research-engine ops-mirror \
+  --run-id rf-open-world-corpus-expansion-v1 \
+  --format markdown
+```
+
+Use `--format json` for the sanitized machine-readable form intended for a
+future direct-tool/MCP surface.
+
+GitHub publication is kept outside the research daemon:
+
+```bash
+bash deploy/publish-ops-mirror.sh current
+bash deploy/publish-ops-mirror.sh rollup
+```
+
+`current` creates or edits one open issue titled
+`[ops] research-engine live state`. `rollup` appends a durable issue comment,
+providing low-frequency history without using Git commits as a telemetry sink.
+The publisher requires an already-authenticated GitHub CLI (`gh auth status`)
+and fails closed when credentials are unavailable. It does not start/stop the
+daemon and does not mutate scientific PostgreSQL tables.
+
+No publication timer is installed by this repository step. Validate GitHub CLI
+availability/authentication on the Lambda first, then choose an update cadence.
+Override `RESEARCH_ENGINE_GITHUB_REPO`,
+`RESEARCH_ENGINE_OPS_ISSUE_TITLE`, or `RESEARCH_HUD_RUN_ID` when needed.
+
 ## VERIFY context economy
 
 EXTRACT receives the bounded full-text PDF context needed to produce page-grounded
