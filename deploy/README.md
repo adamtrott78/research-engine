@@ -181,6 +181,20 @@ observations exist in the same allowance window.
 PostgreSQL is authoritative for worker/job/usage/allowance telemetry. HUD
 rendering failure must not change research state.
 
+## VERIFY context economy
+
+EXTRACT receives the bounded full-text PDF context needed to produce page-grounded
+evidence. VERIFY does not resend the full paper. It receives the authoritative
+evidence objects plus only their cited source pages.
+
+`RESEARCH_ENGINE_VERIFY_PAGE_RADIUS=0` is the production default. Set it to
+`1` only if calibration shows that adjacent-page context is needed for
+verification quality. Missing evidence locators or unavailable cited pages fail
+closed rather than silently broadening context.
+
+This separation is intentional: VERIFY is a provenance check, not a second
+full-paper extraction pass.
+
 ## Allowance behavior
 
 ChatGPT-authenticated Codex consumes the plan's Codex/Work allowance. Production
