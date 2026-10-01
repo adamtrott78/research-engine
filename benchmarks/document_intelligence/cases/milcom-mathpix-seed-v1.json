@@ -1,0 +1,190 @@
+{
+  "schema_version": 1,
+  "corpus_id": "milcom-mathpix-seed-v1",
+  "description": "Seven manually selected PADataset MILCOM-paper-making exemplars with authoritative PDFs and Mathpix Markdown oracle outputs.",
+  "authority": "ORIGINAL_PDF",
+  "oracle": "MATHPIX_MANUAL_REFERENCE",
+  "total_cases": 7,
+  "total_pages": 73,
+  "cases": [
+    {
+      "case_id": "2013_scheirer_toward_open_set_recognition",
+      "source_pdf_sha256": "b121b72c904d6f70d08e2cfba2ffcca77f9fb05654311781691d07f119c0eed9",
+      "source_pdf_byte_size": 1777783,
+      "page_count": 16,
+      "difficulty_tags": [
+        "long-form",
+        "multi-column",
+        "equation-heavy",
+        "figures",
+        "tables",
+        "algorithms",
+        "references"
+      ],
+      "source_location": "papers/2013_scheirer_toward_open_set_recognition/2013_scheirer_toward_open_set_recognition.pdf",
+      "mathpix_oracle_location": "papers/2013_scheirer_toward_open_set_recognition/2013_scheirer_toward_open_set_recognition.mmd",
+      "mathpix_oracle_sha256": "dd883c136e9a3c60c51418e2d918fd10527a65b75bf2d50dbe8480453fb5c842",
+      "mathpix_image_mode": "REMOTE_IMAGES",
+      "expected_features": {
+        "figures": 8,
+        "tables": 2,
+        "display_equations": 15,
+        "algorithm_mentions": 7
+      },
+      "notes": "Older long-form open-set recognition paper; stresses reading order and mixed structured content."
+    },
+    {
+      "case_id": "2016_bendale_open_set_deep_networks",
+      "source_pdf_sha256": "3b413eaf325a64573c30946afe70d76ee2216ec09a0465bdadee7a91076bf477",
+      "source_pdf_byte_size": 1492906,
+      "page_count": 10,
+      "difficulty_tags": [
+        "multi-column",
+        "figures",
+        "algorithms",
+        "ml-notation",
+        "references"
+      ],
+      "source_location": "papers/2016_bendale_open_set_deep_networks/2016_bendale_open_set_deep_networks.pdf",
+      "mathpix_oracle_location": "papers/2016_bendale_open_set_deep_networks/2016_bendale_open_set_deep_networks.mmd",
+      "mathpix_oracle_sha256": "592af5a79043d9238c43fa06e1e37cc32393589608323898c3a914ad8f2fb661",
+      "mathpix_image_mode": "REMOTE_IMAGES",
+      "expected_features": {
+        "figures": 5,
+        "tables": 0,
+        "display_equations": 1,
+        "algorithm_mentions": 2
+      },
+      "notes": "Compact ML paper with figures and algorithmic notation."
+    },
+    {
+      "case_id": "2020_liu_energy_ood_detection",
+      "source_pdf_sha256": "202c4d502f682bd31c5979be6fe930e505553a47a0acf39a15d24bff3e9bc4f7",
+      "source_pdf_byte_size": 673885,
+      "page_count": 16,
+      "difficulty_tags": [
+        "long-form",
+        "multi-column",
+        "equation-heavy",
+        "table-heavy",
+        "figures",
+        "ml-notation",
+        "references"
+      ],
+      "source_location": "papers/2020_liu_energy_ood_detection/2020_liu_energy_ood_detection.pdf",
+      "mathpix_oracle_location": "papers/2020_liu_energy_ood_detection/2020_liu_energy_ood_detection.mmd",
+      "mathpix_oracle_sha256": "ee0a9ab1f0bd4956a9f3666ba0cdd5e2943ad75f0b375566fa9b1253eb56d3bf",
+      "mathpix_image_mode": "REMOTE_IMAGES",
+      "expected_features": {
+        "figures": 4,
+        "tables": 6,
+        "tabular_blocks": 7,
+        "display_equations": 11
+      },
+      "notes": "Long equation/table-heavy OOD paper; strong structured-content stress case."
+    },
+    {
+      "case_id": "2021_fadul_adversarial_spread_spectrum_milcom",
+      "source_pdf_sha256": "03608f12eb0be4e146434c6201f2e8cabfc6f7521e15f3e00b5cc731ba4a913e",
+      "source_pdf_byte_size": 446390,
+      "page_count": 6,
+      "difficulty_tags": [
+        "ieee",
+        "milcom",
+        "multi-column",
+        "rf",
+        "equation-heavy",
+        "figures",
+        "table"
+      ],
+      "source_location": "papers/2021_fadul_adversarial_spread_spectrum_milcom/2021_fadul_adversarial_spread_spectrum_milcom.pdf",
+      "mathpix_oracle_location": "papers/2021_fadul_adversarial_spread_spectrum_milcom/2021_fadul_adversarial_spread_spectrum_milcom.mmd",
+      "mathpix_oracle_sha256": "c169885d93e230093cf44fec9ed8da9d741610542fa3a09ca1c236e8b714ef0e",
+      "mathpix_image_mode": "REMOTE_IMAGES",
+      "expected_features": {
+        "figures": 5,
+        "tables": 1,
+        "display_equations": 14
+      },
+      "notes": "Short IEEE/MILCOM RF paper with dense equations and figures."
+    },
+    {
+      "case_id": "2023_stealth_spectrum_sensing_data_falsification_milcom",
+      "source_pdf_sha256": "f969c3369cd58d27caf80b3983c15b6da0ad91cecb1337e2464996cea9e07930",
+      "source_pdf_byte_size": 1019336,
+      "page_count": 6,
+      "difficulty_tags": [
+        "ieee",
+        "milcom",
+        "multi-column",
+        "rf",
+        "tables",
+        "figures",
+        "algorithms"
+      ],
+      "source_location": "papers/2023_stealth_spectrum_sensing_data_falsification_milcom/2023_stealth_spectrum_sensing_data_falsification_milcom.pdf",
+      "mathpix_oracle_location": "papers/2023_stealth_spectrum_sensing_data_falsification_milcom/2023_stealth_spectrum_sensing_data_falsification_milcom.mmd",
+      "mathpix_oracle_sha256": "59144e27586dc436e3e8d67c3a8a4eb00c5793c38a814278f72c15b1c5d27c0f",
+      "mathpix_image_mode": "REMOTE_IMAGES",
+      "expected_features": {
+        "figures": 3,
+        "tables": 2,
+        "algorithm_mentions": 12
+      },
+      "notes": "Short MILCOM spectrum-security paper; table/algorithm-heavy relative to length."
+    },
+    {
+      "case_id": "2025_broggi_varmax_uncertainty_novelty",
+      "source_pdf_sha256": "643556375d5641f191f029c9b2b0854517bc018f4d9cf3203c34048910d24e5f",
+      "source_pdf_byte_size": 820104,
+      "page_count": 10,
+      "difficulty_tags": [
+        "multi-column",
+        "ml-notation",
+        "equations",
+        "figures",
+        "tables",
+        "algorithms",
+        "remote-mathpix-images"
+      ],
+      "source_location": "papers/2025_broggi_varmax_uncertainty_novelty/2025_broggi_varmax_uncertainty_novelty.pdf",
+      "mathpix_oracle_location": "papers/2025_broggi_varmax_uncertainty_novelty/2025_broggi_varmax_uncertainty_novelty.mmd",
+      "mathpix_oracle_sha256": "47f22ebe70af1679c6f138a7faa695b4d897c1b21a6203673562577fe49ca104",
+      "mathpix_image_mode": "REMOTE_IMAGES",
+      "expected_features": {
+        "figures": 5,
+        "tables": 1,
+        "tabular_blocks": 3,
+        "display_equations": 5,
+        "algorithm_mentions": 2
+      },
+      "notes": "Modern VarMax paper with Mathpix CDN figures, equations, algorithm block, and experimental tables."
+    },
+    {
+      "case_id": "2026_tiwari_dqn_ids",
+      "source_pdf_sha256": "57e97c8ef1d4f65b29704ff51c3f52d1512c1209a4591e00c838277cba3b11c2",
+      "source_pdf_byte_size": 561120,
+      "page_count": 9,
+      "difficulty_tags": [
+        "multi-column",
+        "ml-security",
+        "table-heavy",
+        "figures",
+        "equations",
+        "algorithm"
+      ],
+      "source_location": "papers/2026_tiwari_dqn_ids/2026_tiwari_dqn_ids.pdf",
+      "mathpix_oracle_location": "papers/2026_tiwari_dqn_ids/2026_tiwari_dqn_ids.mmd",
+      "mathpix_oracle_sha256": "97d29fa0ffe6ba7b9bb492425b90a192f4164a64a5d22a40a4de51a8dc60b854",
+      "mathpix_image_mode": "REMOTE_IMAGES",
+      "expected_features": {
+        "figures": 4,
+        "tables": 12,
+        "tabular_blocks": 13,
+        "display_equations": 4,
+        "algorithm_mentions": 1
+      },
+      "notes": "Recent IDS/DQN paper and strongest table-heavy stress case in the initial seed."
+    }
+  ]
+}
