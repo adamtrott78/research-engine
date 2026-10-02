@@ -113,10 +113,18 @@ fi
 echo
 echo "=== INSTALL PINNED LIGHTWEIGHT RUNTIMES ==="
 "$docling_venv/bin/python" -m pip install \
-    'docling-slim[cli,format-pdf]==2.131.0'
+    'docling-slim[cli,convert-core,format-pdf]==2.131.0'
 
 "$mineru_venv/bin/python" -m pip install \
     'mineru>=4.0,<5'
+
+echo
+echo "=== DOCLING NATIVE IMPORT PREFLIGHT ==="
+"$docling_venv/bin/python" - <<'PY'
+from rtree import index
+from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
+print("DOCLING_NATIVE_IMPORT_PREFLIGHT=PASS")
+PY
 
 export RESEARCH_ENGINE_DOCLING_BIN="$docling_venv/bin/docling"
 export RESEARCH_ENGINE_MINERU_BIN="$mineru_venv/bin/mineru-kit"
