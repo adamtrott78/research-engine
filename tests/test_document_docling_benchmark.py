@@ -44,7 +44,7 @@ def test_docling_normalization_benchmark_runs_over_raw_output(tmp_path: Path):
     oracle.write_text(
         "# Paper\n\n"
         "\\[x^2\\]\n\n"
-        "\\begin{table}A\\end{table}\n\n"
+        "\\begin{table}\\begin{tabular}{c}A\\end{tabular}\\end{table}\n\n"
         "\\begin{figure}F\\end{figure}\n",
         encoding="utf-8",
     )
