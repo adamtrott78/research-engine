@@ -53,18 +53,26 @@ Code license: MIT.
 ```bash
 python3 -m venv ~/.document-runtimes/docling
 ~/.document-runtimes/docling/bin/python -m pip install -U pip
-~/.document-runtimes/docling/bin/python -m pip install 'docling==2.131.0'
+
+# Cheap native-PDF phase: CLI + PDF parser, no local-model/Torch bundle.
+~/.document-runtimes/docling/bin/python -m pip install \
+  'docling-slim[cli,format-pdf]==2.131.0'
 
 export RESEARCH_ENGINE_DOCLING_BIN=~/.document-runtimes/docling/bin/docling
 ```
 
 Benchmark modes:
 
-- `native`: PDF-native parser, no model inference;
-- `standard`: standard document pipeline;
-- `vlm`: VLM document pipeline.
+- `native`: PDF-native parser, no model inference; the lightweight install
+  above is sufficient;
+- `standard`: standard document pipeline; promote the same environment with
+  `pip install 'docling==2.131.0'`;
+- `vlm`: VLM document pipeline; promote with
+  `pip install 'docling[vlm]==2.131.0'`.
 
-The adapter requests both Markdown and structured Docling JSON.
+The adapter probes the `docling-slim` distribution version, so both the slim
+and full environments satisfy the same 2.131.0 contract. It requests both
+Markdown and structured Docling JSON.
 
 ### MinerU 4.x
 
@@ -126,6 +134,11 @@ Marker code: Apache-2.0.
 
 Marker model weights: modified AI Pubs Open Rail-M with separate commercial
 conditions. Do not treat the code license as the weight license.
+
+Even `fast_no_ocr` lives inside an environment whose Marker 2.0 package
+directly depends on Torch, Transformers, and Surya. Treat that as a heavy
+installation footprint even though the selected conversion mode avoids VLM
+inference.
 
 ```bash
 python3 -m venv ~/.document-runtimes/marker
