@@ -4,6 +4,8 @@ from pathlib import Path
 
 import pytest
 from pypdf import PdfWriter
+
+import research_engine.document_benchmark as document_benchmark
 from pydantic import ValidationError
 
 from research_engine.document_benchmark import (
@@ -12,6 +14,7 @@ from research_engine.document_benchmark import (
     run_native_benchmark,
     sha256_file,
 )
+from research_engine.document_external_adapters import ExternalRunReceipt
 from research_engine.document_package import (
     DocumentBenchmarkCase,
     OracleImageMode,
@@ -174,3 +177,105 @@ def test_native_benchmark_fails_closed_on_source_hash_mismatch(tmp_path: Path):
             bundle_root=bundle,
             output_root=tmp_path / "results",
         )
+
+
+
+def test_external_benchmark_records_raw_output_without_fake_provenance(
+    tmp_path: Path,
+    monkeypatch,
+):
+    bundle = tmp_path / "bundle"
+    paper_dir = bundle / "papers" / "case"
+    paper_dir.mkdir(parents=True)
+    pdf = paper_dir / "case.pdf"
+    oracle = paper_dir / "case.md"
+    _write_blank_pdf(pdf)
+    oracle.write_text(
+        "# Oracle\n\nExample benchmark text in stable order.\n",
+        encoding="utf-8",
+    )
+
+    source_sha = sha256_file(pdf)
+    oracle_sha = hashlib.sha256(oracle.read_bytes()).hexdigest()
+    manifest = {
+        "cases": [
+            {
+                "case_id": "case",
+                "source_pdf_sha256": source_sha,
+                "source_pdf_byte_size": pdf.stat().st_size,
+                "page_count": 1,
+                "difficulty_tags": ["simple"],
+                "source_location": "papers/case/case.pdf",
+                "mathpix_oracle_location": "papers/case/case.md",
+                "mathpix_oracle_sha256": oracle_sha,
+                "mathpix_image_mode": "NO_IMAGES",
+            }
+        ]
+    }
+    case_manifest = tmp_path / "cases.json"
+    case_manifest.write_text(json.dumps(manifest), encoding="utf-8")
+
+    monkeypatch.setattr(
+        document_benchmark,
+        "candidate_spec",
+        lambda *_args, **_kwargs: {
+            "current_version": "2.131.0",
+            "modes": {
+                "standard": {
+                    "class": "SPECIALIZED_LOCAL_MODEL",
+                    "model_inference": True,
+                }
+            },
+        },
+    )
+
+    def fake_run_candidate(
+        adapter_id,
+        mode,
+        *,
+        source_pdf,
+        output_dir,
+        **_kwargs,
+    ):
+        output = Path(output_dir)
+        output.mkdir(parents=True, exist_ok=True)
+        md = output / "document.md"
+        md.write_text(
+            "# Candidate\n\nExample benchmark text in stable order.\n",
+            encoding="utf-8",
+        )
+        return ExternalRunReceipt(
+            adapter_id=adapter_id,
+            mode=mode,
+            command=("fake", str(source_pdf)),
+            output_dir=str(output),
+            markdown_path=str(md),
+            elapsed_seconds=0.25,
+            stdout_tail="",
+            stderr_tail="",
+            actual_version="2.131.0",
+        )
+
+    monkeypatch.setattr(
+        document_benchmark,
+        "run_candidate",
+        fake_run_candidate,
+    )
+
+    output = tmp_path / "results"
+    summary = document_benchmark.run_external_benchmark(
+        case_manifest_path=case_manifest,
+        bundle_root=bundle,
+        output_root=output,
+        adapter_id="docling",
+        mode="standard",
+    )
+
+    assert summary["normalization_status"] == "RAW_EXTERNAL_OUTPUT"
+    result = summary["results"][0]
+    assert result["package_id"] is None
+    assert result["normalization_status"] == "RAW_EXTERNAL_OUTPUT"
+    assert result["quality"]["provenance_accuracy"] is None
+    assert result["specialized_model_pages"] == 1
+    assert result["raw_output_paths"] == ["document.md"]
+    assert result["status"] == "PASS_RAW"
