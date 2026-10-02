@@ -32,7 +32,9 @@
       "heavyweight_models": true,
       "paid_api": false,
       "license_review_required": true,
-      "lambda_validation_required": true
+      "lambda_validation_required": true,
+      "runtime_contract": "docling@2.131.0",
+      "code_license": "MIT"
     },
     {
       "adapter_id": "mineru",
@@ -49,7 +51,9 @@
       "heavyweight_models": true,
       "paid_api": false,
       "license_review_required": true,
-      "lambda_validation_required": true
+      "lambda_validation_required": true,
+      "runtime_contract": "mineru>=4.0,<5",
+      "code_license": "MinerU Open Source License (Apache-2.0 base plus additional terms)"
     },
     {
       "adapter_id": "paddle-pp-structure-v3",
@@ -67,10 +71,12 @@
       "heavyweight_models": true,
       "paid_api": false,
       "license_review_required": true,
-      "lambda_validation_required": true
+      "lambda_validation_required": true,
+      "runtime_contract": "paddleocr[doc-parser]>=3.7,<3.8",
+      "code_license": "Apache-2.0"
     },
     {
-      "adapter_id": "marker-surya",
+      "adapter_id": "marker",
       "class": "SPECIALIZED_LOCAL_MODEL",
       "role": [
         "native-text fast path",
@@ -85,7 +91,10 @@
       "heavyweight_models": true,
       "paid_api": false,
       "license_review_required": true,
-      "lambda_validation_required": true
+      "lambda_validation_required": true,
+      "runtime_contract": "marker-pdf==2.0.0",
+      "code_license": "Apache-2.0",
+      "weight_license": "modified AI Pubs Open Rail-M; separate commercial conditions"
     },
     {
       "adapter_id": "mathpix-manual-oracle",
@@ -103,5 +112,6 @@
       "lambda_validation_required": false,
       "notes": "User manually generates outputs under desktop annual allowance. Never call paid Mathpix API from production."
     }
-  ]
+  ],
+  "runtime_contract_registry": "benchmarks/document_intelligence/candidate-runtime-contracts.v1.json"
 }

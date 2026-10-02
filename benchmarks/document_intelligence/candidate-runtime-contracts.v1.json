@@ -1,0 +1,401 @@
+{
+  "schema_version": 1,
+  "generated_for": "research-engine-local-document-pipeline-v1",
+  "policy": {
+    "core_install_remains_lightweight": true,
+    "auto_install_candidates": false,
+    "remote_api_fallback_allowed": false,
+    "production_mathpix_api_allowed": false,
+    "source_pdf_authoritative": true
+  },
+  "candidates": [
+    {
+      "adapter_id": "docling",
+      "current_version": "2.131.0",
+      "version_constraint": "docling==2.131.0",
+      "python": ">=3.10,<4.0",
+      "install": "python -m pip install 'docling-slim[cli,format-pdf]==2.131.0'",
+      "executable": "docling",
+      "executable_env": "RESEARCH_ENGINE_DOCLING_BIN",
+      "version_probe": [
+        "--version"
+      ],
+      "license": {
+        "code": "MIT",
+        "weights": "review transitive model licenses before production promotion",
+        "source": "https://github.com/docling-project/docling/blob/main/packages/docling/pyproject.toml"
+      },
+      "modes": {
+        "native": {
+          "class": "DETERMINISTIC_LOCAL",
+          "command": [
+            "{bin}",
+            "{source}",
+            "--from",
+            "pdf",
+            "--to",
+            "md",
+            "--to",
+            "json",
+            "--output",
+            "{output_dir}",
+            "--pipeline",
+            "native"
+          ],
+          "model_inference": false,
+          "expected_outputs": [
+            "{source_stem}.md",
+            "{source_stem}.json"
+          ],
+          "benchmark_phase": "NATIVE_FAST_PATH",
+          "gpu_preferred": false
+        },
+        "standard": {
+          "class": "SPECIALIZED_LOCAL_MODEL",
+          "command": [
+            "{bin}",
+            "{source}",
+            "--from",
+            "pdf",
+            "--to",
+            "md",
+            "--to",
+            "json",
+            "--output",
+            "{output_dir}",
+            "--pipeline",
+            "standard"
+          ],
+          "model_inference": true,
+          "expected_outputs": [
+            "{source_stem}.md",
+            "{source_stem}.json"
+          ],
+          "benchmark_phase": "SPECIALIZED_INFERENCE",
+          "gpu_preferred": false
+        },
+        "vlm": {
+          "class": "GENERAL_LOCAL_MODEL",
+          "command": [
+            "{bin}",
+            "{source}",
+            "--from",
+            "pdf",
+            "--to",
+            "md",
+            "--to",
+            "json",
+            "--output",
+            "{output_dir}",
+            "--pipeline",
+            "vlm"
+          ],
+          "model_inference": true,
+          "expected_outputs": [
+            "{source_stem}.md",
+            "{source_stem}.json"
+          ],
+          "benchmark_phase": "VLM_ESCALATION",
+          "gpu_preferred": true
+        }
+      },
+      "capabilities": [
+        "markdown",
+        "structured_json",
+        "layout",
+        "tables",
+        "ocr",
+        "page_provenance",
+        "batching"
+      ],
+      "runtime_notes": "Native mode can use lightweight docling-slim CLI+PDF extras without local-model/Torch dependencies. Standard uses the full local-model bundle; VLM adds inline VLM dependencies. Keep model cache outside Git.",
+      "distribution": "docling-slim",
+      "version_pattern": "2\\.131\\.0",
+      "install_profiles": {
+        "native": "python -m pip install 'docling-slim[cli,format-pdf]==2.131.0'",
+        "standard": "python -m pip install 'docling==2.131.0'",
+        "vlm": "python -m pip install 'docling[vlm]==2.131.0'"
+      }
+    },
+    {
+      "adapter_id": "mineru",
+      "current_version": "4.0.x",
+      "version_constraint": "mineru>=4.0,<5",
+      "python": ">=3.10,<3.15",
+      "install": "python -m pip install 'mineru>=4.0,<5'",
+      "executable": "mineru-kit",
+      "executable_env": "RESEARCH_ENGINE_MINERU_BIN",
+      "version_probe": [
+        "--version"
+      ],
+      "license": {
+        "code": "MinerU Open Source License (Apache-2.0 base plus additional terms)",
+        "commercial_thresholds": "separate commercial license required above 100M MAU or USD 20M monthly revenue; online third-party services require attribution",
+        "source": "https://github.com/opendatalab/MinerU/blob/master/LICENSE.md"
+      },
+      "modes": {
+        "flash_native": {
+          "class": "DETERMINISTIC_LOCAL",
+          "command": [
+            "{bin}",
+            "parse",
+            "{source}",
+            "-o",
+            "{output_file}",
+            "--tier",
+            "flash",
+            "--ocr-mode",
+            "txt"
+          ],
+          "model_inference": false,
+          "expected_outputs": [
+            "document.md"
+          ],
+          "benchmark_phase": "NATIVE_FAST_PATH",
+          "gpu_preferred": false
+        },
+        "basic": {
+          "class": "SPECIALIZED_LOCAL_MODEL",
+          "command": [
+            "{bin}",
+            "parse",
+            "{source}",
+            "-o",
+            "{output_file}",
+            "--tier",
+            "basic"
+          ],
+          "model_inference": true,
+          "expected_outputs": [
+            "document.md"
+          ],
+          "benchmark_phase": "SPECIALIZED_INFERENCE",
+          "gpu_preferred": false
+        },
+        "standard": {
+          "class": "SPECIALIZED_LOCAL_MODEL",
+          "command": [
+            "{bin}",
+            "parse",
+            "{source}",
+            "-o",
+            "{output_file}",
+            "--tier",
+            "standard"
+          ],
+          "model_inference": true,
+          "expected_outputs": [
+            "document.md"
+          ],
+          "benchmark_phase": "SPECIALIZED_INFERENCE",
+          "gpu_preferred": true
+        },
+        "advanced": {
+          "class": "GENERAL_LOCAL_MODEL",
+          "command": [
+            "{bin}",
+            "parse",
+            "{source}",
+            "-o",
+            "{output_file}",
+            "--tier",
+            "advanced"
+          ],
+          "model_inference": true,
+          "expected_outputs": [
+            "document.md"
+          ],
+          "benchmark_phase": "VLM_ESCALATION",
+          "gpu_preferred": true
+        }
+      },
+      "capabilities": [
+        "markdown",
+        "structured_content",
+        "page_blocks",
+        "stable_locators",
+        "ocr",
+        "tables",
+        "formulas",
+        "local_service"
+      ],
+      "runtime_notes": "Base package provides flash parsing plus ONNX/llama.cpp capabilities without the Torch/full extras. Use flash_native before downloading quality-tier models; reserve torch/full profiles for later hardware-backed tests. Never select --remote.",
+      "distribution": "mineru",
+      "version_pattern": "4\\..+",
+      "install_profiles": {
+        "base": "python -m pip install 'mineru>=4.0,<5'",
+        "torch": "python -m pip install 'mineru[torch]>=4.0,<5'",
+        "full": "python -m pip install 'mineru[full]>=4.0,<5'"
+      }
+    },
+    {
+      "adapter_id": "paddle-pp-structure-v3",
+      "current_version": "3.7.x",
+      "version_constraint": "paddleocr[doc-parser]>=3.7,<3.8",
+      "python": ">=3.8",
+      "install": "install a hardware-appropriate PaddlePaddle build, then python -m pip install 'paddleocr[doc-parser]>=3.7,<3.8'",
+      "executable": "python",
+      "executable_env": "RESEARCH_ENGINE_PADDLE_PYTHON",
+      "version_probe_python": "import importlib.metadata; print(importlib.metadata.version('paddleocr'))",
+      "license": {
+        "code": "Apache-2.0",
+        "weights": "review each selected Paddle/PaddleX model card before production promotion",
+        "source": "https://github.com/PaddlePaddle/PaddleOCR/blob/main/pyproject.toml"
+      },
+      "modes": {
+        "pp_structure_v3": {
+          "class": "SPECIALIZED_LOCAL_MODEL",
+          "command": [
+            "{bin}",
+            "{shim}",
+            "{source}",
+            "{output_dir}"
+          ],
+          "model_inference": true,
+          "expected_outputs": [
+            "document.md",
+            "pages.json",
+            "images/"
+          ],
+          "benchmark_phase": "SPECIALIZED_INFERENCE",
+          "gpu_preferred": true
+        }
+      },
+      "capabilities": [
+        "markdown",
+        "per_page_results",
+        "layout",
+        "ocr",
+        "tables",
+        "formulas",
+        "charts",
+        "reading_order"
+      ],
+      "runtime_notes": "Use the repository shim so page Markdown and image assets are concatenated consistently. English-only recognition configuration should be evaluated on this corpus.",
+      "distribution": "paddleocr",
+      "version_pattern": "3\\.7\\..+"
+    },
+    {
+      "adapter_id": "marker",
+      "current_version": "2.0.0",
+      "version_constraint": "marker-pdf==2.0.0",
+      "python": ">=3.10",
+      "install": "python -m pip install 'marker-pdf==2.0.0'",
+      "executable": "marker_single",
+      "executable_env": "RESEARCH_ENGINE_MARKER_BIN",
+      "version_probe": [
+        "--help"
+      ],
+      "license": {
+        "code": "Apache-2.0",
+        "weights": "modified AI Pubs Open Rail-M; free for research/personal use and startups under USD 5M funding/revenue, broader commercial use requires separate terms",
+        "source": "https://github.com/datalab-to/marker/blob/master/README.md"
+      },
+      "modes": {
+        "fast_no_ocr": {
+          "class": "SPECIALIZED_LOCAL_MODEL",
+          "command": [
+            "{bin}",
+            "{source}",
+            "--output_dir",
+            "{output_dir}",
+            "--output_format",
+            "markdown",
+            "--mode",
+            "fast",
+            "--disable_ocr"
+          ],
+          "model_inference": false,
+          "expected_outputs": [
+            "*.md"
+          ],
+          "benchmark_phase": "NATIVE_FAST_PATH",
+          "gpu_preferred": false
+        },
+        "fast": {
+          "class": "SPECIALIZED_LOCAL_MODEL",
+          "command": [
+            "{bin}",
+            "{source}",
+            "--output_dir",
+            "{output_dir}",
+            "--output_format",
+            "markdown",
+            "--mode",
+            "fast"
+          ],
+          "model_inference": true,
+          "expected_outputs": [
+            "*.md"
+          ],
+          "benchmark_phase": "SPECIALIZED_INFERENCE",
+          "gpu_preferred": true
+        },
+        "balanced": {
+          "class": "GENERAL_LOCAL_MODEL",
+          "command": [
+            "{bin}",
+            "{source}",
+            "--output_dir",
+            "{output_dir}",
+            "--output_format",
+            "markdown",
+            "--mode",
+            "balanced"
+          ],
+          "model_inference": true,
+          "expected_outputs": [
+            "*.md"
+          ],
+          "benchmark_phase": "VLM_ESCALATION",
+          "gpu_preferred": true
+        }
+      },
+      "capabilities": [
+        "markdown",
+        "json",
+        "layout",
+        "tables",
+        "equations",
+        "images",
+        "selective_ocr",
+        "shared_inference_server",
+        "multiprocessing"
+      ],
+      "runtime_notes": "Marker 2.0 directly depends on Torch, Transformers, Surya, and multiple LLM client libraries even when fast_no_ocr is selected. Inspect isolated-environment disk footprint before Lambda installation. Never enable --use_llm.",
+      "distribution": "marker-pdf",
+      "version_pattern": "2\\.0\\.0"
+    }
+  ],
+  "benchmark_phases": [
+    {
+      "id": "NATIVE_FAST_PATH",
+      "purpose": "Establish cheapest structured/native alternatives before model-heavy inference.",
+      "modes": [
+        "docling/native",
+        "mineru/flash_native",
+        "marker/fast_no_ocr"
+      ]
+    },
+    {
+      "id": "SPECIALIZED_INFERENCE",
+      "purpose": "Measure bounded OCR/layout/table/formula inference before broad VLM use.",
+      "modes": [
+        "docling/standard",
+        "mineru/basic",
+        "mineru/standard",
+        "paddle-pp-structure-v3/pp_structure_v3",
+        "marker/fast"
+      ]
+    },
+    {
+      "id": "VLM_ESCALATION",
+      "purpose": "Measure highest-quality local document VLM paths only after cheaper tiers are quantified.",
+      "modes": [
+        "docling/vlm",
+        "mineru/advanced",
+        "marker/balanced"
+      ]
+    }
+  ]
+}

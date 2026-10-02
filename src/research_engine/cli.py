@@ -206,6 +206,32 @@ def main() -> None:
         help="comma-separated native pypdf extraction modes",
     )
 
+    adapter_status = sub.add_parser("document-adapter-status")
+    adapter_status.add_argument("--registry")
+
+    adapter_run = sub.add_parser("document-adapter-run")
+    adapter_run.add_argument(
+        "adapter",
+        choices=["docling", "mineru", "paddle-pp-structure-v3", "marker"],
+    )
+    adapter_run.add_argument("mode")
+    adapter_run.add_argument("source_pdf")
+    adapter_run.add_argument("--output-dir", required=True)
+    adapter_run.add_argument("--registry")
+    adapter_run.add_argument("--timeout-seconds", type=int, default=1800)
+
+    external_benchmark = sub.add_parser("document-benchmark-external")
+    external_benchmark.add_argument("case_manifest")
+    external_benchmark.add_argument(
+        "adapter",
+        choices=["docling", "mineru", "paddle-pp-structure-v3", "marker"],
+    )
+    external_benchmark.add_argument("mode")
+    external_benchmark.add_argument("--bundle-root", required=True)
+    external_benchmark.add_argument("--output-root", required=True)
+    external_benchmark.add_argument("--registry")
+    external_benchmark.add_argument("--timeout-seconds", type=int, default=1800)
+
     args = p.parse_args()
     if args.cmd == "artifact-put":
         receipt = ContentAddressedArtifactStore(args.root).put_file(args.path)
@@ -542,5 +568,41 @@ def main() -> None:
             bundle_root=args.bundle_root,
             output_root=args.output_root,
             modes=modes,
+        )
+        print(json.dumps(result, default=str))
+    elif args.cmd == "document-adapter-status":
+        from .document_external_adapters import candidate_status
+
+        print(
+            json.dumps(
+                candidate_status(registry_path=args.registry),
+                default=str,
+            )
+        )
+    elif args.cmd == "document-adapter-run":
+        from dataclasses import asdict
+
+        from .document_external_adapters import run_candidate
+
+        receipt = run_candidate(
+            args.adapter,
+            args.mode,
+            source_pdf=args.source_pdf,
+            output_dir=args.output_dir,
+            registry_path=args.registry,
+            timeout_seconds=args.timeout_seconds,
+        )
+        print(json.dumps(asdict(receipt), default=str))
+    elif args.cmd == "document-benchmark-external":
+        from .document_benchmark import run_external_benchmark
+
+        result = run_external_benchmark(
+            case_manifest_path=args.case_manifest,
+            bundle_root=args.bundle_root,
+            output_root=args.output_root,
+            adapter_id=args.adapter,
+            mode=args.mode,
+            registry_path=args.registry,
+            timeout_seconds=args.timeout_seconds,
         )
         print(json.dumps(result, default=str))

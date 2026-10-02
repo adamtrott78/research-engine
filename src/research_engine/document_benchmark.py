@@ -13,6 +13,7 @@ from typing import Any, Iterable
 
 from pypdf import PdfReader
 
+from .document_external_adapters import candidate_spec, run_candidate
 from .document_package import (
     BlockKind,
     DerivationStep,
@@ -450,4 +451,167 @@ def run_native_benchmark(
         "results": results,
     }
     _write_json(output / "benchmark-summary.json", summary)
+    return summary
+
+
+
+def run_external_benchmark(
+    *,
+    case_manifest_path: str | Path,
+    bundle_root: str | Path,
+    output_root: str | Path,
+    adapter_id: str,
+    mode: str,
+    registry_path: str | Path | None = None,
+    timeout_seconds: int = 1800,
+) -> dict[str, Any]:
+    """Run one isolated external adapter across benchmark cases.
+
+    This stage intentionally records RAW_EXTERNAL_OUTPUT until a parser-specific
+    structured-output normalizer can prove paper-package.v1 provenance.
+    """
+
+    bundle = Path(bundle_root)
+    output = Path(output_root)
+    output.mkdir(parents=True, exist_ok=True)
+    cases = load_benchmark_cases(case_manifest_path)
+    spec = candidate_spec(adapter_id, registry_path=registry_path)
+    mode_spec = dict(spec.get("modes", {}).get(mode) or {})
+    if not mode_spec:
+        raise KeyError(f"adapter {adapter_id!r} has no mode {mode!r}")
+
+    results: list[dict[str, Any]] = []
+    total_started = time.perf_counter()
+    for case in cases:
+        source = _resolve(bundle, case.source_location)
+        oracle = (
+            _resolve(bundle, case.mathpix_oracle_location)
+            if case.mathpix_oracle_location
+            else None
+        )
+        if not source.is_file():
+            raise FileNotFoundError(source)
+        if source.stat().st_size != case.source_pdf_byte_size:
+            raise ValueError(f"{case.case_id}: source PDF byte size mismatch")
+        if sha256_file(source) != case.source_pdf_sha256:
+            raise ValueError(f"{case.case_id}: source PDF SHA-256 mismatch")
+        reader = PdfReader(str(source))
+        if len(reader.pages) != case.page_count:
+            raise ValueError(f"{case.case_id}: source PDF page count mismatch")
+
+        oracle_text: str | None = None
+        if oracle is not None:
+            if not oracle.is_file():
+                raise FileNotFoundError(oracle)
+            if sha256_file(oracle) != case.mathpix_oracle_sha256:
+                raise ValueError(f"{case.case_id}: Mathpix oracle SHA-256 mismatch")
+            oracle_text = oracle.read_text(encoding="utf-8", errors="replace")
+            detected = detect_mathpix_image_mode(oracle_text)
+            if (
+                case.mathpix_image_mode is not None
+                and detected != case.mathpix_image_mode
+            ):
+                raise ValueError(
+                    f"{case.case_id}: Mathpix image mode mismatch: "
+                    f"expected {case.mathpix_image_mode.value}, observed {detected.value}"
+                )
+
+        case_output = output / case.case_id / f"{adapter_id}-{mode}"
+        receipt = run_candidate(
+            adapter_id,
+            mode,
+            source_pdf=source,
+            output_dir=case_output,
+            registry_path=registry_path,
+            timeout_seconds=timeout_seconds,
+        )
+        markdown_path = Path(receipt.markdown_path)
+        candidate_markdown = markdown_path.read_text(
+            encoding="utf-8",
+            errors="replace",
+        )
+        comparison: dict[str, Any] = {}
+        if oracle_text is not None:
+            comparison = oracle_comparison(
+                native_markdown=candidate_markdown,
+                oracle_markdown=oracle_text,
+            )
+
+        candidate_class = str(mode_spec.get("class") or "")
+        native_pages = (
+            case.page_count
+            if mode_spec.get("model_inference") is False
+            else 0
+        )
+        specialized_pages = (
+            case.page_count
+            if candidate_class == "SPECIALIZED_LOCAL_MODEL"
+            and mode_spec.get("model_inference") is not False
+            else 0
+        )
+        general_pages = (
+            case.page_count
+            if candidate_class == "GENERAL_LOCAL_MODEL"
+            and mode_spec.get("model_inference") is not False
+            else 0
+        )
+        relative_markdown = str(markdown_path.relative_to(case_output))
+        result = DocumentBenchmarkResult(
+            case_id=case.case_id,
+            adapter_id=adapter_id,
+            adapter_version=receipt.actual_version or str(spec["current_version"]),
+            package_id=None,
+            normalization_status="RAW_EXTERNAL_OUTPUT",
+            raw_output_paths=(relative_markdown,),
+            status="PASS_RAW",
+            quality=QualityMetrics(
+                text_fidelity=comparison.get("text_fidelity"),
+                reading_order=comparison.get("reading_order"),
+                provenance_accuracy=None,
+            ),
+            resources=ResourceMetrics(
+                wall_time_seconds=receipt.elapsed_seconds,
+                pages_per_second=(
+                    case.page_count / receipt.elapsed_seconds
+                    if receipt.elapsed_seconds
+                    else 0.0
+                ),
+                peak_rss_bytes=None,
+                peak_vram_bytes=None,
+                model_load_seconds=None,
+            ),
+            output_markdown_chars=len(candidate_markdown),
+            output_markdown_tokens_estimate=len(_text_tokens(candidate_markdown)),
+            native_pages=native_pages,
+            specialized_model_pages=specialized_pages,
+            general_vlm_pages=general_pages,
+            warnings=(
+                "raw candidate benchmark output; paper-package.v1 provenance "
+                "normalization not yet claimed",
+            ),
+        )
+        result_row = result.model_dump(mode="json")
+        result_row["mode"] = mode
+        result_row["command"] = list(receipt.command)
+        result_row["stdout_tail"] = receipt.stdout_tail
+        result_row["stderr_tail"] = receipt.stderr_tail
+        result_row["oracle_comparison"] = comparison
+        _write_json(case_output / "benchmark-result.json", result_row)
+        results.append(result_row)
+
+    elapsed_total = time.perf_counter() - total_started
+    summary = {
+        "schema_version": 1,
+        "adapter_id": adapter_id,
+        "mode": mode,
+        "normalization_status": "RAW_EXTERNAL_OUTPUT",
+        "cases": len(cases),
+        "total_pages": sum(case.page_count for case in cases),
+        "wall_time_seconds": elapsed_total,
+        "results": results,
+    }
+    _write_json(
+        output / f"benchmark-summary-{adapter_id}-{mode}.json",
+        summary,
+    )
     return summary
