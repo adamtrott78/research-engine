@@ -123,14 +123,14 @@
         "page_provenance",
         "batching"
       ],
-      "runtime_notes": "Native mode uses the model-free SDK shim. standard_no_ocr uses a separate docling-slim[format-pdf,models-local,cli] runtime and SDK shim with OCR/formula/code/picture-description/VLM features disabled, TableFormer FAST enabled, explicit local artifacts_path, and remote services disabled. Standard OCR and VLM modes remain deferred.",
+      "runtime_notes": "Native mode uses the model-free SDK shim. standard_no_ocr uses a separate docling-slim[format-pdf,models-local] runtime and SDK shim with OCR/formula/code/picture-description/VLM features disabled, TableFormer FAST enabled, explicit local artifacts_path, and remote services disabled. Its prefetch path bypasses docling-tools/model_downloader CLI imports and downloads only layout model repos plus TableFormer directly. Standard OCR and VLM modes remain deferred.",
       "distribution": "docling-slim",
       "version_pattern": "2\\.131\\.0",
       "install_profiles": {
         "native": "python -m pip install 'docling-slim[cli,convert-core,format-pdf]==2.131.0'",
         "standard": "python -m pip install 'docling==2.131.0'",
         "vlm": "python -m pip install 'docling[vlm]==2.131.0'",
-        "standard_no_ocr": "python -m pip install 'docling-slim[format-pdf,models-local,cli]==2.131.0'"
+        "standard_no_ocr": "python -m pip install 'docling-slim[format-pdf,models-local]==2.131.0'"
       }
     },
     {
