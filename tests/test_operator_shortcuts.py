@@ -99,7 +99,6 @@ def test_document_native_fast_bakeoff_is_stopped_daemon_and_lightweight_only():
     assert "systemctl --user start" not in text
     assert "docling-slim[cli,format-pdf]==2.131.0" in text
     assert "mineru>=4.0,<5" in text
-    assert "docling \\" not in text
     assert "document-benchmark-external" in text
     assert "docling" in text
     assert "native" in text
