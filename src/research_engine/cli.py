@@ -220,6 +220,18 @@ def main() -> None:
     adapter_run.add_argument("--registry")
     adapter_run.add_argument("--timeout-seconds", type=int, default=1800)
 
+    external_benchmark = sub.add_parser("document-benchmark-external")
+    external_benchmark.add_argument("case_manifest")
+    external_benchmark.add_argument(
+        "adapter",
+        choices=["docling", "mineru", "paddle-pp-structure-v3", "marker"],
+    )
+    external_benchmark.add_argument("mode")
+    external_benchmark.add_argument("--bundle-root", required=True)
+    external_benchmark.add_argument("--output-root", required=True)
+    external_benchmark.add_argument("--registry")
+    external_benchmark.add_argument("--timeout-seconds", type=int, default=1800)
+
     args = p.parse_args()
     if args.cmd == "artifact-put":
         receipt = ContentAddressedArtifactStore(args.root).put_file(args.path)
@@ -581,3 +593,16 @@ def main() -> None:
             timeout_seconds=args.timeout_seconds,
         )
         print(json.dumps(asdict(receipt), default=str))
+    elif args.cmd == "document-benchmark-external":
+        from .document_benchmark import run_external_benchmark
+
+        result = run_external_benchmark(
+            case_manifest_path=args.case_manifest,
+            bundle_root=args.bundle_root,
+            output_root=args.output_root,
+            adapter_id=args.adapter,
+            mode=args.mode,
+            registry_path=args.registry,
+            timeout_seconds=args.timeout_seconds,
+        )
+        print(json.dumps(result, default=str))
