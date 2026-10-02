@@ -15,6 +15,7 @@ def test_operator_shortcuts_are_bash_syntax_valid():
         root / "deploy" / "run-verify-ab-batch.sh",
         root / "deploy" / "publish-ops-mirror.sh",
         root / "deploy" / "run-document-native-fast-bakeoff.sh",
+        root / "deploy" / "run-docling-structured-normalization.sh",
     ]
     for path in paths:
         assert path.exists(), path
@@ -114,3 +115,18 @@ def test_document_native_fast_bakeoff_is_stopped_daemon_and_lightweight_only():
     assert "\\${" not in text
     assert 'exit "${2:-1}"' in text
     assert '[ "${pid:-0}" != "0" ]' in text
+
+
+def test_docling_structured_normalization_replay_is_stopped_daemon_and_nonsemantic():
+    root = Path(__file__).parents[1]
+    text = (root / "deploy" / "run-docling-structured-normalization.sh").read_text()
+    assert "RESEARCH_ENGINE_DAEMON_MUST_REMAIN_STOPPED" in text
+    assert "document-normalize-docling-benchmark" in text
+    assert "docling-native" in text
+    assert "systemctl --user start" not in text
+    assert "OPENAI_API_KEY" not in text
+    assert "codex" not in text.lower()
+    assert "marker" not in text.lower()
+    assert "paddle" not in text.lower()
+    assert "DOCLING_STRUCTURED_NORMALIZATION=PASS" in text
+    assert "\\${" not in text
