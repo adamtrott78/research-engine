@@ -24,6 +24,65 @@ def _device_name():
     return values[raw]
 
 
+def prefetch_structure_models(output_dir: Path) -> None:
+    from docling.datamodel.pipeline_options import LayoutObjectDetectionOptions
+    from docling.models.stages.table_structure.table_structure_model import (
+        TableStructureModel,
+    )
+    from docling.models.utils.hf_model_download import download_hf_model
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    layout_spec = LayoutObjectDetectionOptions().model_spec
+    if layout_spec.repo_id is None or layout_spec.revision is None:
+        raise RuntimeError("Docling layout model spec lacks repo/revision")
+
+    layout_repos = {layout_spec.repo_id: layout_spec.revision}
+    for override in layout_spec.engine_overrides.values():
+        merged = override.merge_with(
+            layout_spec.repo_id,
+            layout_spec.revision,
+        )
+        if merged.repo_id is None or merged.revision is None:
+            raise RuntimeError("Docling layout engine override is incomplete")
+        layout_repos[merged.repo_id] = merged.revision
+
+    for repo_id, revision in sorted(layout_repos.items()):
+        print(
+            json.dumps(
+                {
+                    "prefetch": "layout",
+                    "repo_id": repo_id,
+                    "revision": revision,
+                },
+                sort_keys=True,
+            )
+        )
+        download_hf_model(
+            repo_id=repo_id,
+            revision=revision,
+            local_dir=output_dir / repo_id.replace("/", "--"),
+            force=False,
+            progress=True,
+        )
+
+    print(
+        json.dumps(
+            {
+                "prefetch": "tableformer",
+                "repo_id": "docling-project/docling-models",
+                "revision": "v2.3.0",
+            },
+            sort_keys=True,
+        )
+    )
+    TableStructureModel.download_models(
+        local_dir=output_dir / TableStructureModel._model_repo_folder,
+        force=False,
+        progress=True,
+    )
+
+
 def build_converter():
     from docling.datamodel.accelerator_options import AcceleratorOptions
     from docling.datamodel.base_models import InputFormat
@@ -89,7 +148,17 @@ def main() -> int:
     parser.add_argument("source_pdf", nargs="?")
     parser.add_argument("output_dir", nargs="?")
     parser.add_argument("--self-test", action="store_true")
+    parser.add_argument(
+        "--prefetch-models",
+        type=Path,
+        help="Download only layout + TableFormer artifacts into this directory.",
+    )
     args = parser.parse_args()
+
+    if args.prefetch_models is not None:
+        prefetch_structure_models(args.prefetch_models.resolve())
+        print("DOCLING_STANDARD_NO_OCR_PREFETCH=PASS")
+        return 0
 
     converter = build_converter()
 
