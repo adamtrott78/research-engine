@@ -350,3 +350,22 @@ def test_docling_standard_no_ocr_runtime_shim_is_bounded_local_structure_python(
     assert "rapidocr" not in text.lower()
     assert "DOCLING_STANDARD_NO_OCR_PREFETCH=PASS" in text
     assert "DOCLING_STANDARD_NO_OCR_SDK_SELF_TEST=PASS" in text
+
+
+def test_docling_standard_no_ocr_contract_includes_headless_opencv():
+    registry = json.loads(
+        (
+            ext.repository_root()
+            / "benchmarks"
+            / "document_intelligence"
+            / "candidate-runtime-contracts.v1.json"
+        ).read_text(encoding="utf-8")
+    )
+    docling = next(
+        item for item in registry["candidates"]
+        if item["adapter_id"] == "docling"
+    )
+    profile = docling["install_profiles"]["standard_no_ocr"]
+    assert "docling-slim[convert-core,format-pdf,models-local]==2.131.0" in profile
+    assert "docling-ibm-models[opencv-python-headless]>=4.0.2,<5" in profile
+    assert "opencv-python]" not in profile
