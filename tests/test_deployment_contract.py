@@ -41,3 +41,19 @@ def test_systemd_contract_uses_native_venv_codex_and_persistent_workspace():
     assert "RESEARCH_ENGINE_DATABASE_URL=postgresql://research_engine:research_engine@localhost:5432/research_engine" in service
     assert "RESEARCH_ENGINE_ARTIFACT_ROOT=%h/adamArchives/Adam/.research-engine/artifacts" in service
     assert "/tmp" not in service
+
+
+def test_docling_standard_structure_replay_is_normalization_only_and_stopped_daemon():
+    script = (
+        ROOT / "deploy" / "run-docling-standard-structure-replay.sh"
+    ).read_text()
+
+    assert "RESEARCH_ENGINE_DAEMON_MUST_REMAIN_STOPPED" in script
+    assert '--docling-mode "standard_no_ocr"' in script
+    assert "--native-package-root" in script
+    assert "document-normalize-docling-benchmark" in script
+    assert "document-benchmark-external" not in script
+    assert "run-document-docling-standard-no-ocr-bakeoff" not in script
+    assert "RESEARCH_ENGINE_DOCLING_BIN" not in script
+    assert "pip install docling" not in script
+
