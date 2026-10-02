@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "status": "PROVISIONAL_CHAT_CONTAINER_PREFLIGHT",
+  "source_bundle": "document-intelligence-benchmark-20261001-194613.zip",
+  "total_cases": 7,
+  "total_pages": 73,
+  "environment": {
+    "python": "3.13.5",
+    "pypdf": "5.9.0",
+    "platform": "Linux-6.18.44-x86_64-with-glibc2.41"
+  },
+  "metric_notes": {
+    "text_fidelity": "multiset F1 over lowercase alphanumeric tokens after URL removal",
+    "reading_order": "multiset F1 over adjacent token bigrams",
+    "authority": "Mathpix is reference only; original PDF remains authoritative"
+  },
+  "aggregate": {
+    "layout": {
+      "total_seconds": 4.440827,
+      "pages_per_second": 16.438,
+      "native_tokens_total": 53205,
+      "oracle_tokens_total": 56191,
+      "native_to_oracle_token_ratio": 0.94686,
+      "mean_text_fidelity": 0.884817,
+      "mean_reading_order": 0.766155,
+      "oracle_token_weighted_text_fidelity": 0.883562,
+      "oracle_token_weighted_reading_order": 0.767058
+    },
+    "plain": {
+      "total_seconds": 3.742997,
+      "pages_per_second": 19.503,
+      "native_tokens_total": 56361,
+      "oracle_tokens_total": 56191,
+      "native_to_oracle_token_ratio": 1.003025,
+      "mean_text_fidelity": 0.913039,
+      "mean_reading_order": 0.864032,
+      "oracle_token_weighted_text_fidelity": 0.914179,
+      "oracle_token_weighted_reading_order": 0.865425
+    }
+  },
+  "cases": [
+    {
+      "case_id": "2013_scheirer_toward_open_set_recognition",
+      "plain": {
+        "seconds": 0.681229,
+        "native_tokens": 15737,
+        "text_fidelity": 0.924213,
+        "reading_order": 0.887565
+      },
+      "layout": {
+        "seconds": 0.908095,
+        "native_tokens": 15759,
+        "text_fidelity": 0.925976,
+        "reading_order": 0.817321
+      }
+    },
+    {
+      "case_id": "2016_bendale_open_set_deep_networks",
+      "plain": {
+        "seconds": 1.834827,
+        "native_tokens": 8556,
+        "text_fidelity": 0.88574,
+        "reading_order": 0.826971
+      },
+      "layout": {
+        "seconds": 1.779973,
+        "native_tokens": 8499,
+        "text_fidelity": 0.895208,
+        "reading_order": 0.780338
+      }
+    },
+    {
+      "case_id": "2020_liu_energy_ood_detection",
+      "plain": {
+        "seconds": 0.390902,
+        "native_tokens": 8693,
+        "text_fidelity": 0.897199,
+        "reading_order": 0.819348
+      },
+      "layout": {
+        "seconds": 0.284037,
+        "native_tokens": 6788,
+        "text_fidelity": 0.728223,
+        "reading_order": 0.618457
+      }
+    },
+    {
+      "case_id": "2021_fadul_adversarial_spread_spectrum_milcom",
+      "plain": {
+        "seconds": 0.220055,
+        "native_tokens": 5575,
+        "text_fidelity": 0.900239,
+        "reading_order": 0.850909
+      },
+      "layout": {
+        "seconds": 0.371157,
+        "native_tokens": 5303,
+        "text_fidelity": 0.879964,
+        "reading_order": 0.759975
+      }
+    },
+    {
+      "case_id": "2023_stealth_spectrum_sensing_data_falsification_milcom",
+      "plain": {
+        "seconds": 0.192679,
+        "native_tokens": 5245,
+        "text_fidelity": 0.895492,
+        "reading_order": 0.851692
+      },
+      "layout": {
+        "seconds": 0.183071,
+        "native_tokens": 4845,
+        "text_fidelity": 0.923753,
+        "reading_order": 0.806988
+      }
+    },
+    {
+      "case_id": "2025_broggi_varmax_uncertainty_novelty",
+      "plain": {
+        "seconds": 0.23052,
+        "native_tokens": 6191,
+        "text_fidelity": 0.960077,
+        "reading_order": 0.934196
+      },
+      "layout": {
+        "seconds": 0.548178,
+        "native_tokens": 5759,
+        "text_fidelity": 0.916143,
+        "reading_order": 0.777998
+      }
+    },
+    {
+      "case_id": "2026_tiwari_dqn_ids",
+      "plain": {
+        "seconds": 0.192786,
+        "native_tokens": 6364,
+        "text_fidelity": 0.928309,
+        "reading_order": 0.877542
+      },
+      "layout": {
+        "seconds": 0.366316,
+        "native_tokens": 6252,
+        "text_fidelity": 0.924453,
+        "reading_order": 0.802005
+      }
+    }
+  ]
+}
