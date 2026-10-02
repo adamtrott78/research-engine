@@ -14,6 +14,7 @@ def test_operator_shortcuts_are_bash_syntax_valid():
         root / "deploy" / "run-verify-calibration.sh",
         root / "deploy" / "run-verify-ab-batch.sh",
         root / "deploy" / "publish-ops-mirror.sh",
+        root / "deploy" / "run-document-native-fast-bakeoff.sh",
     ]
     for path in paths:
         assert path.exists(), path
@@ -89,3 +90,21 @@ def test_ops_mirror_publisher_uses_github_issue_not_git_commits_or_daemon_contro
     assert "git push" not in text
     assert "systemctl --user start" not in text
     assert "systemctl --user stop" not in text
+
+
+def test_document_native_fast_bakeoff_is_stopped_daemon_and_lightweight_only():
+    root = Path(__file__).parents[1]
+    text = (root / "deploy" / "run-document-native-fast-bakeoff.sh").read_text()
+    assert "RESEARCH_ENGINE_DAEMON_MUST_REMAIN_STOPPED" in text
+    assert "systemctl --user start" not in text
+    assert "docling-slim[cli,format-pdf]==2.131.0" in text
+    assert "mineru>=4.0,<5" in text
+    assert "document-benchmark-external" in text
+    assert "docling" in text
+    assert "native" in text
+    assert "mineru" in text
+    assert "flash_native" in text
+    assert "marker" not in text.lower()
+    assert "paddle" not in text.lower()
+    assert "--use_llm" not in text
+    assert "DOCUMENT_NATIVE_FAST_BAKEOFF=PASS" in text
