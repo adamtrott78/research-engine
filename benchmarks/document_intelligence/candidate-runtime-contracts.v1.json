@@ -102,7 +102,9 @@
         "page_provenance",
         "batching"
       ],
-      "runtime_notes": "CLI supports standard, VLM, and native PDF pipelines. Keep model cache outside Git."
+      "runtime_notes": "CLI supports standard, VLM, and native PDF pipelines. Keep model cache outside Git.",
+      "distribution": "docling",
+      "version_pattern": "2\\.131\\.0"
     },
     {
       "adapter_id": "mineru",
@@ -198,7 +200,9 @@
         "formulas",
         "local_service"
       ],
-      "runtime_notes": "Flash native path reads PDF text without inference. Standard/advanced can use VLM serving. Remote parsing must never be selected by this adapter."
+      "runtime_notes": "Flash native path reads PDF text without inference. Standard/advanced can use VLM serving. Remote parsing must never be selected by this adapter.",
+      "distribution": "mineru",
+      "version_pattern": "4\\..+"
     },
     {
       "adapter_id": "paddle-pp-structure-v3",
@@ -241,7 +245,9 @@
         "charts",
         "reading_order"
       ],
-      "runtime_notes": "Use the repository shim so page Markdown and image assets are concatenated consistently. English-only recognition configuration should be evaluated on this corpus."
+      "runtime_notes": "Use the repository shim so page Markdown and image assets are concatenated consistently. English-only recognition configuration should be evaluated on this corpus.",
+      "distribution": "paddleocr",
+      "version_pattern": "3\\.7\\..+"
     },
     {
       "adapter_id": "marker",
@@ -324,7 +330,9 @@
         "shared_inference_server",
         "multiprocessing"
       ],
-      "runtime_notes": "Do not enable --use_llm in this benchmark. Marker 2 workers can share a Surya inference server; concurrency is evaluated later on Lambda."
+      "runtime_notes": "Do not enable --use_llm in this benchmark. Marker 2 workers can share a Surya inference server; concurrency is evaluated later on Lambda.",
+      "distribution": "marker-pdf",
+      "version_pattern": "2\\.0\\.0"
     }
   ]
 }
