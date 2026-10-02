@@ -14,7 +14,7 @@
       "current_version": "2.131.0",
       "version_constraint": "docling==2.131.0",
       "python": ">=3.10,<4.0",
-      "install": "python -m pip install 'docling==2.131.0'",
+      "install": "python -m pip install 'docling-slim[cli,format-pdf]==2.131.0'",
       "executable": "docling",
       "executable_env": "RESEARCH_ENGINE_DOCLING_BIN",
       "version_probe": [
@@ -108,9 +108,14 @@
         "page_provenance",
         "batching"
       ],
-      "runtime_notes": "CLI supports standard, VLM, and native PDF pipelines. Keep model cache outside Git.",
-      "distribution": "docling",
-      "version_pattern": "2\\.131\\.0"
+      "runtime_notes": "Native mode can use lightweight docling-slim CLI+PDF extras without local-model/Torch dependencies. Standard uses the full local-model bundle; VLM adds inline VLM dependencies. Keep model cache outside Git.",
+      "distribution": "docling-slim",
+      "version_pattern": "2\\.131\\.0",
+      "install_profiles": {
+        "native": "python -m pip install 'docling-slim[cli,format-pdf]==2.131.0'",
+        "standard": "python -m pip install 'docling==2.131.0'",
+        "vlm": "python -m pip install 'docling[vlm]==2.131.0'"
+      }
     },
     {
       "adapter_id": "mineru",
@@ -214,9 +219,14 @@
         "formulas",
         "local_service"
       ],
-      "runtime_notes": "Flash native path reads PDF text without inference. Standard/advanced can use VLM serving. Remote parsing must never be selected by this adapter.",
+      "runtime_notes": "Base package provides flash parsing plus ONNX/llama.cpp capabilities without the Torch/full extras. Use flash_native before downloading quality-tier models; reserve torch/full profiles for later hardware-backed tests. Never select --remote.",
       "distribution": "mineru",
-      "version_pattern": "4\\..+"
+      "version_pattern": "4\\..+",
+      "install_profiles": {
+        "base": "python -m pip install 'mineru>=4.0,<5'",
+        "torch": "python -m pip install 'mineru[torch]>=4.0,<5'",
+        "full": "python -m pip install 'mineru[full]>=4.0,<5'"
+      }
     },
     {
       "adapter_id": "paddle-pp-structure-v3",
@@ -352,7 +362,7 @@
         "shared_inference_server",
         "multiprocessing"
       ],
-      "runtime_notes": "Do not enable --use_llm in this benchmark. Marker 2 workers can share a Surya inference server; concurrency is evaluated later on Lambda.",
+      "runtime_notes": "Marker 2.0 directly depends on Torch, Transformers, Surya, and multiple LLM client libraries even when fast_no_ocr is selected. Inspect isolated-environment disk footprint before Lambda installation. Never enable --use_llm.",
       "distribution": "marker-pdf",
       "version_pattern": "2\\.0\\.0"
     }
