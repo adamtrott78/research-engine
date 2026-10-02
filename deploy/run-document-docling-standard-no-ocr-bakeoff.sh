@@ -8,7 +8,7 @@ unit="research-engine-daemon.service"
 core_venv="$state/venv"
 runtime="$state/document-runtimes/docling-standard-no-ocr"
 models="$state/document-models/docling-standard-no-ocr-2.131.0"
-profile_id="docling-standard-no-ocr-direct-prefetch-v2"
+profile_id="docling-standard-no-ocr-core-cu126-v3"
 profile_file="$runtime/.research-engine-profile"
 manifest="$root/benchmarks/document_intelligence/cases/milcom-mathpix-seed-v1.json"
 shim="$root/benchmarks/document_intelligence/runtimes/docling_standard_no_ocr.py"
@@ -99,13 +99,22 @@ fi
 if [ ! -x "$runtime/bin/python" ]; then
     python3 -m venv "$runtime"
     "$runtime/bin/python" -m pip install --upgrade pip
-    "$runtime/bin/python" -m pip install "docling-slim[format-pdf,models-local]==2.131.0"
+    "$runtime/bin/python" -m pip install \
+        torch==2.13.0 torchvision==0.28.0 \
+        --index-url https://download.pytorch.org/whl/cu126
+    "$runtime/bin/python" -m pip install \
+        "docling-slim[convert-core,format-pdf,models-local]==2.131.0"
     printf '%s\n' "$profile_id" > "$profile_file"
 fi
 
 echo "DOCLING_VERSION=$("$runtime/bin/python" -c 'import importlib.metadata as m; print(m.version("docling-slim"))')"
 echo "TORCH_VERSION=$("$runtime/bin/python" -c 'import torch; print(torch.__version__)')"
-echo "TORCH_CUDA_AVAILABLE=$("$runtime/bin/python" -c 'import torch; print(torch.cuda.is_available())')"
+echo "TORCHVISION_VERSION=$("$runtime/bin/python" -c 'import torchvision; print(torchvision.__version__)')"
+echo "SCIPY_VERSION=$("$runtime/bin/python" -c 'import scipy; print(scipy.__version__)')"
+torch_cuda_available="$("$runtime/bin/python" -c 'import torch; print(torch.cuda.is_available())')"
+echo "TORCH_CUDA_AVAILABLE=$torch_cuda_available"
+[ "$torch_cuda_available" = "True" ] || fail "TORCH_CUDA_UNAVAILABLE" 42
+echo "TORCH_CUDA_DEVICE=$("$runtime/bin/python" -c 'import torch; print(torch.cuda.get_device_name(0))')"
 echo "RUNTIME_SIZE=$(du -sh "$runtime" | awk '{print $1}')"
 
 require_stopped
