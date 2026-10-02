@@ -327,7 +327,7 @@ def normalize_docling_document(
     source_artifact_id: str,
     source_pdf_sha256: str,
     output_directory: str | Path,
-    compiler_version: str = "2.131.0",
+    docling_version: str = "2.131.0",
 ) -> PaperPackage:
     source = Path(source_pdf_path)
     raw_path = Path(docling_json_path)
@@ -341,7 +341,9 @@ def normalize_docling_document(
     if digest.hexdigest() != source_pdf_sha256:
         raise ValueError("source PDF SHA-256 does not match normalization input")
 
-    document = json.loads(raw_path.read_text(encoding="utf-8"))
+    raw_json_bytes = raw_path.read_bytes()
+    raw_json_sha256 = hashlib.sha256(raw_json_bytes).hexdigest()
+    document = json.loads(raw_json_bytes.decode("utf-8"))
     if document.get("schema_name") not in (None, "DoclingDocument"):
         raise ValueError("structured JSON is not a DoclingDocument")
 
@@ -355,8 +357,12 @@ def normalize_docling_document(
             "DoclingDocument page count does not match authoritative PDF"
         )
 
+    normalized_compiler_version = (
+        f"normalizer:{DOCLING_NORMALIZER_VERSION}/docling:{docling_version}"
+    )
     config = {
         "source": "docling-export-to-dict",
+        "docling_schema_version": document.get("version"),
         "reading_order": "body-children",
         "provenance": "docling-prov-page-bbox",
         "picture_materialization": "deferred",
@@ -364,7 +370,7 @@ def normalize_docling_document(
     config_sha = compiler_config_sha256(config)
     step_base = {
         "processor": "docling",
-        "processor_version": compiler_version,
+        "processor_version": docling_version,
         "mode": ProcessingMode.DETERMINISTIC,
     }
 
@@ -486,7 +492,7 @@ def normalize_docling_document(
         package_id=paper_package_id(
             source_pdf_sha256=source_pdf_sha256,
             compiler_identity=DOCLING_NORMALIZER_ID,
-            compiler_version=compiler_version,
+            compiler_version=normalized_compiler_version,
             compiler_config_sha256=config_sha,
         ),
         source_artifact_id=source_artifact_id,
@@ -494,7 +500,7 @@ def normalize_docling_document(
         source_pdf_byte_size=source.stat().st_size,
         source_page_count=source_page_count,
         compiler_identity=DOCLING_NORMALIZER_ID,
-        compiler_version=compiler_version,
+        compiler_version=normalized_compiler_version,
         compiler_config=config,
         compiler_config_sha256=config_sha,
         blocks=len(blocks),
@@ -521,6 +527,9 @@ def normalize_docling_document(
             "normalizer": DOCLING_NORMALIZER_ID,
             "docling_schema_name": document.get("schema_name"),
             "docling_schema_version": document.get("version"),
+            "docling_version": docling_version,
+            "normalizer_version": DOCLING_NORMALIZER_VERSION,
+            "docling_json_sha256": raw_json_sha256,
             "structure_inventory": inventory,
             "warnings": warnings,
         },
