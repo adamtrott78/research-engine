@@ -408,7 +408,8 @@ def evaluate_paper_package_structure(
     candidate_headings = [
         block.markdown.strip()
         for block in package.blocks
-        if block.kind == BlockKind.HEADING and block.markdown.strip()
+        if block.kind in {BlockKind.TITLE, BlockKind.HEADING}
+        and block.markdown.strip()
     ]
     reference_headings = extract_mathpix_headings(mathpix_markdown)
 
