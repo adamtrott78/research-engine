@@ -31,6 +31,82 @@ require_stopped() {
     fi
 }
 
+selected_gpu=""
+
+select_usable_gpu() {
+    local gpu
+    local -a candidates=()
+
+    command -v nvidia-smi >/dev/null 2>&1 || {
+        echo "GPU_SELECTION_ERROR=nvidia-smi unavailable" >&2
+        return 1
+    }
+
+    echo "=== GPU INVENTORY ==="
+    nvidia-smi         --query-gpu=index,uuid,name,memory.total,memory.used,memory.free,utilization.gpu,compute_mode,persistence_mode         --format=csv,noheader,nounits || true
+
+    echo
+    echo "=== ACTIVE GPU COMPUTE PROCESSES ==="
+    nvidia-smi         --query-compute-apps=gpu_uuid,pid,process_name,used_gpu_memory         --format=csv,noheader,nounits || true
+
+    mapfile -t candidates < <(
+        nvidia-smi             --query-gpu=index,memory.free             --format=csv,noheader,nounits         | awk -F',' '{gsub(/ /,"",$1); gsub(/ /,"",$2); print $1, $2}'         | sort -k2,2nr         | awk '{print $1}'
+    )
+
+    [ "${#candidates[@]}" -gt 0 ] || {
+        echo "GPU_SELECTION_ERROR=no CUDA devices enumerated" >&2
+        return 1
+    }
+
+    echo
+    echo "=== CUDA ALLOCATION PROBES ==="
+    for gpu in "${candidates[@]}"; do
+        echo "GPU_PROBE_INDEX=$gpu"
+        if CUDA_VISIBLE_DEVICES="$gpu" "$runtime/bin/python" - <<'PY'
+import json
+import torch
+
+result = {
+    "cuda_available": torch.cuda.is_available(),
+    "device_count": torch.cuda.device_count(),
+}
+if not result["cuda_available"] or result["device_count"] < 1:
+    print(json.dumps(result, sort_keys=True))
+    raise SystemExit(2)
+
+device = torch.device("cuda:0")
+result["device_name"] = torch.cuda.get_device_name(device)
+before_free, before_total = torch.cuda.mem_get_info(device)
+
+# 256 MiB real allocation + write + synchronize. This catches the exact class
+# of error that torch.cuda.is_available() alone missed on the previous run.
+probe = torch.empty(256 * 1024 * 1024, dtype=torch.uint8, device=device)
+probe.fill_(1)
+torch.cuda.synchronize(device)
+
+after_free, _ = torch.cuda.mem_get_info(device)
+result["free_before_mib"] = round(before_free / 1024 / 1024, 1)
+result["free_after_mib"] = round(after_free / 1024 / 1024, 1)
+result["total_mib"] = round(before_total / 1024 / 1024, 1)
+result["allocation_probe_mib"] = 256
+print(json.dumps(result, sort_keys=True))
+
+del probe
+torch.cuda.empty_cache()
+torch.cuda.synchronize(device)
+PY
+        then
+            selected_gpu="$gpu"
+            echo "SELECTED_PHYSICAL_GPU=$selected_gpu"
+            return 0
+        fi
+        echo "GPU_PROBE_FAILED_INDEX=$gpu"
+    done
+
+    echo "GPU_SELECTION_ERROR=no GPU passed real CUDA allocation probe" >&2
+    return 1
+}
+
 find_padataset() {
     local candidate
     for candidate in \
@@ -82,7 +158,7 @@ echo "=== HARDWARE SNAPSHOT ==="
 echo "CPU_COUNT=$(nproc 2>/dev/null || true)"
 free -h || true
 if command -v nvidia-smi >/dev/null 2>&1; then
-    nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader || true
+    nvidia-smi --query-gpu=index,name,memory.total,driver_version --format=csv,noheader || true
 else
     echo "NVIDIA_SMI=unavailable"
 fi
@@ -111,11 +187,15 @@ echo "DOCLING_VERSION=$("$runtime/bin/python" -c 'import importlib.metadata as m
 echo "TORCH_VERSION=$("$runtime/bin/python" -c 'import torch; print(torch.__version__)')"
 echo "TORCHVISION_VERSION=$("$runtime/bin/python" -c 'import torchvision; print(torchvision.__version__)')"
 echo "SCIPY_VERSION=$("$runtime/bin/python" -c 'import scipy; print(scipy.__version__)')"
-torch_cuda_available="$("$runtime/bin/python" -c 'import torch; print(torch.cuda.is_available())')"
-echo "TORCH_CUDA_AVAILABLE=$torch_cuda_available"
-[ "$torch_cuda_available" = "True" ] || fail "TORCH_CUDA_UNAVAILABLE" 42
-echo "TORCH_CUDA_DEVICE=$("$runtime/bin/python" -c 'import torch; print(torch.cuda.get_device_name(0))')"
 echo "RUNTIME_SIZE=$(du -sh "$runtime" | awk '{print $1}')"
+
+echo
+echo "=== SELECT HEALTHY CUDA DEVICE ==="
+select_usable_gpu || fail "NO_USABLE_CUDA_DEVICE" 42
+export CUDA_VISIBLE_DEVICES="$selected_gpu"
+echo "CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES"
+echo "TORCH_CUDA_AVAILABLE=$("$runtime/bin/python" -c 'import torch; print(torch.cuda.is_available())')"
+echo "TORCH_CUDA_DEVICE=$("$runtime/bin/python" -c 'import torch; print(torch.cuda.get_device_name(0))')"
 
 require_stopped
 
@@ -132,7 +212,7 @@ echo
 echo "=== SDK PREFLIGHT ==="
 export RESEARCH_ENGINE_DOCLING_BIN="$runtime/bin/python"
 export RESEARCH_ENGINE_DOCLING_ARTIFACTS="$models"
-export RESEARCH_ENGINE_DOCLING_DEVICE="${RESEARCH_ENGINE_DOCLING_DEVICE:-auto}"
+export RESEARCH_ENGINE_DOCLING_DEVICE="cuda"
 export RESEARCH_ENGINE_DOCLING_THREADS="${RESEARCH_ENGINE_DOCLING_THREADS:-$(nproc 2>/dev/null || echo 4)}"
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
