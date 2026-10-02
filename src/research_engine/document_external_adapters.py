@@ -200,8 +200,10 @@ def _format_command(
     source: Path,
     output_dir: Path,
 ) -> list[str]:
+    python = _python_for_executable(executable)
     values = {
         "bin": executable,
+        "python": python or executable,
         "source": str(source),
         "source_stem": source.stem,
         "output_dir": str(output_dir),
@@ -212,6 +214,13 @@ def _format_command(
             / "document_intelligence"
             / "runtimes"
             / "paddle_ppstructurev3.py"
+        ),
+        "docling_native_shim": str(
+            repository_root()
+            / "benchmarks"
+            / "document_intelligence"
+            / "runtimes"
+            / "docling_native.py"
         ),
     }
     return [str(part).format(**values) for part in template]

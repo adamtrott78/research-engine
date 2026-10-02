@@ -107,9 +107,9 @@ def test_document_native_fast_bakeoff_is_stopped_daemon_and_lightweight_only():
     assert "marker" not in text.lower()
     assert "paddle" not in text.lower()
     assert "--use_llm" not in text
-    assert "DOCLING_NATIVE_IMPORT_PREFLIGHT=PASS" in text
-    assert "from rtree import index" in text
-    assert "from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend" in text
+    assert "DOCLING NATIVE SDK PREFLIGHT" in text
+    assert "docling_native.py" in text
+    assert "--self-test" in text
     assert "DOCUMENT_NATIVE_FAST_BAKEOFF=PASS" in text
     assert "\\${" not in text
     assert 'exit "${2:-1}"' in text

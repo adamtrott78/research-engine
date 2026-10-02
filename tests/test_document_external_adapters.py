@@ -99,6 +99,18 @@ def test_build_commands_never_select_remote_or_llm_modes(
 
     monkeypatch.setattr(ext, "probe_candidate", fake_probe)
 
+    docling_native = build_candidate_command(
+        "docling",
+        "native",
+        source_pdf=source,
+        output_dir=out,
+    )
+    assert Path(docling_native[0]).name.startswith("python")
+    assert docling_native[1].endswith("document_intelligence/runtimes/docling_native.py")
+    assert docling_native[2] == str(source.resolve())
+    assert docling_native[3] == str(out.resolve())
+    assert "--pipeline" not in docling_native
+
     docling = build_candidate_command(
         "docling",
         "standard",
@@ -267,3 +279,23 @@ def test_paddle_runtime_shim_is_standalone_valid_python():
     text = shim.read_text(encoding="utf-8")
     assert "from paddleocr import PPStructureV3" in text
     assert "research_engine" not in text
+
+
+def test_docling_native_runtime_shim_is_model_free_python():
+    shim = (
+        ext.repository_root()
+        / "benchmarks"
+        / "document_intelligence"
+        / "runtimes"
+        / "docling_native.py"
+    )
+    assert shim.is_file()
+    text = shim.read_text(encoding="utf-8")
+    ast.parse(text)
+    assert "NativePdfPipelineOptions" in text
+    assert "NativePdfFormatOption" in text
+    assert "generate_page_images=False" in text
+    assert "generate_picture_images=False" in text
+    assert "ocr" not in text.lower()
+    assert "vlm" not in text.lower()
+    assert "DOCLING_NATIVE_SDK_SELF_TEST=PASS" in text

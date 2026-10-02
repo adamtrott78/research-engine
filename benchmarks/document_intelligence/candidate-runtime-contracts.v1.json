@@ -29,18 +29,10 @@
         "native": {
           "class": "DETERMINISTIC_LOCAL",
           "command": [
-            "{bin}",
+            "{python}",
+            "{docling_native_shim}",
             "{source}",
-            "--from",
-            "pdf",
-            "--to",
-            "md",
-            "--to",
-            "json",
-            "--output",
-            "{output_dir}",
-            "--pipeline",
-            "native"
+            "{output_dir}"
           ],
           "model_inference": false,
           "expected_outputs": [
@@ -48,7 +40,8 @@
             "{source_stem}.json"
           ],
           "benchmark_phase": "NATIVE_FAST_PATH",
-          "gpu_preferred": false
+          "gpu_preferred": false,
+          "runtime_surface": "python-sdk-shim"
         },
         "standard": {
           "class": "SPECIALIZED_LOCAL_MODEL",
@@ -108,7 +101,7 @@
         "page_provenance",
         "batching"
       ],
-      "runtime_notes": "Native mode uses lightweight docling-slim CLI+convert-core+PDF extras. convert-core supplies NumPy/Pillow/SciPy/rtree required by the PDF backend and conversion path without pulling local-model/Torch inference dependencies. Standard uses the full local-model bundle; VLM adds inline VLM dependencies. Keep model cache outside Git.",
+      "runtime_notes": "Native mode uses lightweight docling-slim CLI+convert-core+PDF extras but executes through the repository's Python SDK shim (DocumentConverter + NativePdfFormatOption), bypassing CLI OCR/VLM plugin initialization. Standard/VLM modes remain CLI-driven and are deferred. Keep model cache outside Git.",
       "distribution": "docling-slim",
       "version_pattern": "2\\.131\\.0",
       "install_profiles": {

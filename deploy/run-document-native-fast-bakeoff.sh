@@ -119,12 +119,10 @@ echo "=== INSTALL PINNED LIGHTWEIGHT RUNTIMES ==="
     'mineru>=4.0,<5'
 
 echo
-echo "=== DOCLING NATIVE IMPORT PREFLIGHT ==="
-"$docling_venv/bin/python" - <<'PY'
-from rtree import index
-from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
-print("DOCLING_NATIVE_IMPORT_PREFLIGHT=PASS")
-PY
+echo "=== DOCLING NATIVE SDK PREFLIGHT ==="
+"$docling_venv/bin/python" \
+    "$root/benchmarks/document_intelligence/runtimes/docling_native.py" \
+    --self-test
 
 export RESEARCH_ENGINE_DOCLING_BIN="$docling_venv/bin/docling"
 export RESEARCH_ENGINE_MINERU_BIN="$mineru_venv/bin/mineru-kit"
