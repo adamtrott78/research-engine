@@ -114,7 +114,7 @@ def run_docling_normalization_benchmark(
             structural_agreement = {
                 "table_count_agreement": _count_agreement(
                     int(structure["tables"]),
-                    int(oracle_inventory["tables"]),
+                    int(oracle_inventory["tabular_blocks"]),
                 ),
                 "formula_count_agreement": _count_agreement(
                     int(structure["formulas"]),
@@ -130,7 +130,8 @@ def run_docling_normalization_benchmark(
                     "pictures": int(structure["pictures"]),
                 },
                 "oracle_counts": {
-                    "tables": int(oracle_inventory["tables"]),
+                    "table_environments": int(oracle_inventory["tables"]),
+                    "tabular_blocks": int(oracle_inventory["tabular_blocks"]),
                     "display_equations": int(
                         oracle_inventory["display_equations"]
                     ),
