@@ -43,7 +43,7 @@ def run_docling_normalization_benchmark(
     bundle_root: str | Path,
     raw_docling_root: str | Path,
     output_root: str | Path,
-    compiler_version: str = "2.131.0",
+    docling_version: str = "2.131.0",
 ) -> dict[str, Any]:
     bundle = Path(bundle_root)
     raw_root = Path(raw_docling_root)
@@ -74,7 +74,7 @@ def run_docling_normalization_benchmark(
             source_artifact_id=f"source-artifact:sha256:{case.source_pdf_sha256}",
             source_pdf_sha256=case.source_pdf_sha256,
             output_directory=package_output,
-            compiler_version=compiler_version,
+            docling_version=docling_version,
         )
 
         diagnostics = json.loads(
