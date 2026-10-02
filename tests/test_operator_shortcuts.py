@@ -156,9 +156,14 @@ def test_docling_standard_no_ocr_bakeoff_is_stopped_local_and_bounded():
     assert "CUDA_VISIBLE_DEVICES" in text
     assert "SELECTED_PHYSICAL_GPU_UUID" in text
     assert "SELECTED_PHYSICAL_GPU_INDEX" in text
+    assert "UNMASKED_CUDA_ALLOCATION" in text
+    assert "PER-GPU INDEX CUDA ALLOCATION PROBES" in text
+    assert 'CUDA_VISIBLE_DEVICES="$gpu_index"' in text
+    assert 'export CUDA_VISIBLE_DEVICES="$selected_gpu_index"' in text
     assert "allocation_probe_mib" in text
     assert "256 * 1024 * 1024" in text
     assert 'RESEARCH_ENGINE_DOCLING_DEVICE="cuda"' in text
+    assert "GPU_SELECTION_ERROR=no GPU passed numeric-index CUDA allocation probe" in text
     assert "nvidia-smi --gpu-reset" not in text
     assert "kill " not in text
     assert "pkill" not in text
