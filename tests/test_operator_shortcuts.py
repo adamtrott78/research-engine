@@ -148,8 +148,20 @@ def test_docling_standard_no_ocr_bakeoff_is_stopped_local_and_bounded():
     assert "torch==2.13.0 torchvision==0.28.0" in text
     assert "download.pytorch.org/whl/cu126" in text
     assert "SCIPY_VERSION=" in text
-    assert "TORCH_CUDA_UNAVAILABLE" in text
+    assert "NO_USABLE_CUDA_DEVICE" in text
     assert "torch.cuda.get_device_name(0)" in text
+    assert "--query-gpu=index,uuid,name,memory.total,memory.used,memory.free,utilization.gpu,compute_mode,persistence_mode" in text
+    assert "--query-compute-apps=gpu_uuid,pid,process_name,used_gpu_memory" in text
+    assert "--query-gpu=index,uuid,memory.free" in text
+    assert "CUDA_VISIBLE_DEVICES" in text
+    assert "SELECTED_PHYSICAL_GPU_UUID" in text
+    assert "SELECTED_PHYSICAL_GPU_INDEX" in text
+    assert "allocation_probe_mib" in text
+    assert "256 * 1024 * 1024" in text
+    assert 'RESEARCH_ENGINE_DOCLING_DEVICE="cuda"' in text
+    assert "nvidia-smi --gpu-reset" not in text
+    assert "kill " not in text
+    assert "pkill" not in text
     assert "RESEARCH_ENGINE_DOCLING_ARTIFACTS" in text
     assert 'RESEARCH_ENGINE_DOCLING_BIN="$runtime/bin/python"' in text
     assert "HF_HUB_OFFLINE=1" in text
