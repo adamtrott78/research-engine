@@ -278,3 +278,36 @@ Before integration it must reproduce on the Lambda and report:
 - final package/provenance validation.
 
 The research daemon remains stopped during early benchmark work.
+
+## Docling standard/no-OCR normalization and content gate
+
+After the stopped-daemon `standard_no_ocr` parser bakeoff has already completed,
+do not rerun Docling merely to evaluate its structured output. Replay the
+preserved DoclingDocument JSON through the existing `paper-package.v1`
+normalizer and compare it with both Mathpix and the already-normalized
+Docling-native packages:
+
+```bash
+deploy/run-docling-standard-structure-replay.sh \
+  /absolute/path/to/document-docling-standard-no-ocr-OUTPUT_ROOT \
+  /absolute/path/to/docling-native-normalized-root
+```
+
+The replay keeps `research-engine-daemon.service` inactive/dead, refreshes only
+the core editable research-engine install, and invokes no parser runtime, model
+prefetch, OCR, formula enrichment, VLM, Marker, PaddleOCR, or MinerU path.
+
+The normalized standard package uses a mode-specific compiler identity so it
+cannot collide with the validated native package identity. Evaluation reports
+count agreement separately from content fidelity. Content-aware reference
+metrics include:
+
+- table text, grid-shape, and coordinate-aligned cell fidelity;
+- equation representation/content agreement;
+- semantic figure-to-caption association and caption text agreement;
+- title/heading content plus heading-to-section-path consistency;
+- block/asset page validity and bbox coverage;
+- direct per-case and aggregate deltas versus normalized Docling native.
+
+Mathpix remains a manual benchmark reference. The original PDF remains
+scientific authority, including when Mathpix and a candidate parser disagree.
