@@ -32,9 +32,10 @@ require_stopped() {
 }
 
 selected_gpu=""
+selected_gpu_index=""
 
 select_usable_gpu() {
-    local gpu
+    local row gpu_index gpu_uuid free_mib
     local -a candidates=()
 
     command -v nvidia-smi >/dev/null 2>&1 || {
@@ -50,7 +51,16 @@ select_usable_gpu() {
     nvidia-smi         --query-compute-apps=gpu_uuid,pid,process_name,used_gpu_memory         --format=csv,noheader,nounits || true
 
     mapfile -t candidates < <(
-        nvidia-smi             --query-gpu=index,memory.free             --format=csv,noheader,nounits         | awk -F',' '{gsub(/ /,"",$1); gsub(/ /,"",$2); print $1, $2}'         | sort -k2,2nr         | awk '{print $1}'
+        nvidia-smi \
+            --query-gpu=index,uuid,memory.free \
+            --format=csv,noheader,nounits \
+        | awk -F',' '{
+            gsub(/^ +| +$/,"",$1);
+            gsub(/^ +| +$/,"",$2);
+            gsub(/^ +| +$/,"",$3);
+            print $3 "|" $1 "|" $2
+        }' \
+        | sort -t'|' -k1,1nr
     )
 
     [ "${#candidates[@]}" -gt 0 ] || {
@@ -60,9 +70,12 @@ select_usable_gpu() {
 
     echo
     echo "=== CUDA ALLOCATION PROBES ==="
-    for gpu in "${candidates[@]}"; do
-        echo "GPU_PROBE_INDEX=$gpu"
-        if CUDA_VISIBLE_DEVICES="$gpu" "$runtime/bin/python" - <<'PY'
+    for row in "${candidates[@]}"; do
+        IFS='|' read -r free_mib gpu_index gpu_uuid <<< "$row"
+        echo "GPU_PROBE_INDEX=$gpu_index"
+        echo "GPU_PROBE_UUID=$gpu_uuid"
+        echo "GPU_PROBE_FREE_MIB=$free_mib"
+        if CUDA_VISIBLE_DEVICES="$gpu_uuid" "$runtime/bin/python" - <<'PY'
 import json
 import torch
 
@@ -96,11 +109,14 @@ torch.cuda.empty_cache()
 torch.cuda.synchronize(device)
 PY
         then
-            selected_gpu="$gpu"
-            echo "SELECTED_PHYSICAL_GPU=$selected_gpu"
+            selected_gpu="$gpu_uuid"
+            selected_gpu_index="$gpu_index"
+            echo "SELECTED_PHYSICAL_GPU_INDEX=$selected_gpu_index"
+            echo "SELECTED_PHYSICAL_GPU_UUID=$selected_gpu"
             return 0
         fi
-        echo "GPU_PROBE_FAILED_INDEX=$gpu"
+        echo "GPU_PROBE_FAILED_INDEX=$gpu_index"
+        echo "GPU_PROBE_FAILED_UUID=$gpu_uuid"
     done
 
     echo "GPU_SELECTION_ERROR=no GPU passed real CUDA allocation probe" >&2
@@ -194,6 +210,7 @@ echo "=== SELECT HEALTHY CUDA DEVICE ==="
 select_usable_gpu || fail "NO_USABLE_CUDA_DEVICE" 42
 export CUDA_VISIBLE_DEVICES="$selected_gpu"
 echo "CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES"
+echo "SELECTED_PHYSICAL_GPU_INDEX=$selected_gpu_index"
 echo "TORCH_CUDA_AVAILABLE=$("$runtime/bin/python" -c 'import torch; print(torch.cuda.is_available())')"
 echo "TORCH_CUDA_DEVICE=$("$runtime/bin/python" -c 'import torch; print(torch.cuda.get_device_name(0))')"
 
