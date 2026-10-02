@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "lambda-native-fast-20261002",
+  "corpus_id": "milcom-mathpix-seed-v1",
+  "source_runtime": {
+    "environment": "Lambda",
+    "research_engine_sha": "9e343436ccda56c08936855b48079302f7470e0a",
+    "output_root": "/home/atrott/adamArchives/Adam/.workspace-control/tmp/document-native-fast-20261002T012639Z",
+    "daemon_final_state": "inactive/dead PID 0"
+  },
+  "authority": "ORIGINAL_PDF",
+  "oracle": "MATHPIX_MANUAL_REFERENCE",
+  "notes": [
+    "Docling-native and MinerU flash_native were run on the same Lambda hardware over the same 7-paper / 73-page corpus.",
+    "The pypdf comparison below references the earlier provisional chat-container baseline and is therefore suitable for quality/token comparison but not a controlled cross-environment throughput comparison.",
+    "MinerU flash_native is rejected only in this exact configuration; this result does not reject the entire MinerU family."
+  ],
+  "docling_native": {
+    "version": "2.131.0",
+    "runtime_surface": "model-free Python SDK shim",
+    "cases": 7,
+    "pages": 73,
+    "wall_time_seconds": 10.76120804157108,
+    "pages_per_second": 6.783625009199467,
+    "markdown_tokens": 55862,
+    "mathpix_oracle_tokens": 56191,
+    "token_ratio_vs_mathpix": 0.994144969835027,
+    "mean_text_fidelity": 0.9250445521457088,
+    "mean_reading_order": 0.8835862214289874,
+    "oracle_token_weighted_text_fidelity": 0.9269177898260804,
+    "oracle_token_weighted_reading_order": 0.8862685897867912,
+    "markdown_chars": 352409,
+    "runtime_venv_size_after": "421M",
+    "specialized_model_pages": 0,
+    "general_vlm_pages": 0,
+    "decision": "PROMOTE_TO_STRUCTURED_NATIVE_EVALUATION"
+  },
+  "mineru_flash_native": {
+    "version": "4.0.10",
+    "cases": 7,
+    "pages": 73,
+    "wall_time_seconds": 28.53933610767126,
+    "pages_per_second": 2.5578730957367255,
+    "markdown_tokens": 500594,
+    "mathpix_oracle_tokens": 56191,
+    "token_ratio_vs_mathpix": 8.908793223114023,
+    "mean_text_fidelity": 0.21956454312200135,
+    "mean_reading_order": 0.20564336927843876,
+    "oracle_token_weighted_text_fidelity": 0.2271998781376407,
+    "oracle_token_weighted_reading_order": 0.21282145502458424,
+    "markdown_chars": 7165653,
+    "runtime_venv_size_after": "1005M",
+    "specialized_model_pages": 0,
+    "general_vlm_pages": 0,
+    "decision": "REJECT_FLASH_NATIVE_CURRENT_CONFIGURATION"
+  },
+  "direct_lambda_comparison": {
+    "docling_speedup_vs_mineru_flash": 2.652056906382851,
+    "docling_token_reduction_vs_mineru_flash_fraction": 0.8884089933199567,
+    "mineru_token_multiplier_vs_docling": 8.961261680569976,
+    "mineru_runtime_venv_multiplier_vs_docling": 2.3871733966745845
+  },
+  "prior_pypdf_plain_provisional_reference": {
+    "environment": "chat-container",
+    "pypdf_version": "5.9.0",
+    "pages_per_second": 19.503,
+    "markdown_tokens": 56361,
+    "token_ratio_vs_mathpix": 1.003025,
+    "mean_text_fidelity": 0.913039,
+    "mean_reading_order": 0.864032,
+    "oracle_token_weighted_text_fidelity": 0.914179,
+    "oracle_token_weighted_reading_order": 0.865425,
+    "docling_weighted_text_fidelity_delta": 0.012738789826080454,
+    "docling_weighted_reading_order_delta": 0.02084358978679124,
+    "throughput_comparison_controlled": false
+  },
+  "next_gates": [
+    "Normalize Docling structured JSON into paper-package.v1 without fabricating provenance.",
+    "Add structured-content fidelity metrics for equations, tables, figures/captions and page/block locators.",
+    "Run pypdf plain on the Lambda for an apples-to-apples throughput/resource baseline.",
+    "Inspect a small sample of MinerU flash_native Markdown to identify the source of severe output duplication/bloat before considering another MinerU tier.",
+    "Only after structured native evaluation decide whether model-backed Docling/Marker/Paddle/MinerU tiers are worth the compute."
+  ]
+}
