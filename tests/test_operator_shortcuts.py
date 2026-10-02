@@ -97,7 +97,7 @@ def test_document_native_fast_bakeoff_is_stopped_daemon_and_lightweight_only():
     text = (root / "deploy" / "run-document-native-fast-bakeoff.sh").read_text()
     assert "RESEARCH_ENGINE_DAEMON_MUST_REMAIN_STOPPED" in text
     assert "systemctl --user start" not in text
-    assert "docling-slim[cli,format-pdf]==2.131.0" in text
+    assert "docling-slim[cli,convert-core,format-pdf]==2.131.0" in text
     assert "mineru>=4.0,<5" in text
     assert "document-benchmark-external" in text
     assert "docling" in text
@@ -107,6 +107,9 @@ def test_document_native_fast_bakeoff_is_stopped_daemon_and_lightweight_only():
     assert "marker" not in text.lower()
     assert "paddle" not in text.lower()
     assert "--use_llm" not in text
+    assert "DOCLING_NATIVE_IMPORT_PREFLIGHT=PASS" in text
+    assert "from rtree import index" in text
+    assert "from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend" in text
     assert "DOCUMENT_NATIVE_FAST_BAKEOFF=PASS" in text
     assert "\\${" not in text
     assert 'exit "${2:-1}"' in text
