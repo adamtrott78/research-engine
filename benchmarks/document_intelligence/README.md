@@ -106,6 +106,44 @@ external assets.
 Never add a Mathpix API key or unattended paid Mathpix API call to the research
 engine.
 
+## Initial MILCOM/Mathpix seed
+
+The first benchmark seed is:
+
+```text
+benchmarks/document_intelligence/cases/milcom-mathpix-seed-v1.json
+```
+
+It contains seven manually selected PADataset papers / 73 PDF pages spanning
+long-form open-set/ML papers and short IEEE/MILCOM RF-security papers. The seed
+includes equation-heavy, table-heavy, figure-heavy, algorithmic, and
+multi-column cases.
+
+Mathpix filename extensions are not used to infer asset behavior. Each case
+records the observed oracle image mode based on the actual markup:
+`REMOTE_IMAGES`, `LOCAL_IMAGES`, `MIXED`, or `NO_IMAGES`.
+
+After unpacking the user-supplied benchmark bundle so the root contains
+`papers/`, run the deterministic baseline with:
+
+```bash
+research-engine document-benchmark-native \
+  benchmarks/document_intelligence/cases/milcom-mathpix-seed-v1.json \
+  --bundle-root /path/to/unpacked-bundle-root \
+  --output-root /tmp/document-benchmark-native
+```
+
+The native adapter uses pypdf's text layer only, emits one page-grounded block
+per source page, and writes `paper-package.v1` manifest/block/diagnostic files.
+It intentionally does **not** claim to reconstruct tables, equations, figures,
+or fine-grained reading order. Its role is to establish the cheapest possible
+baseline that every model-backed adapter must beat.
+
+The Mathpix comparison currently reports a coarse lexical multiset F1 and
+ordered-bigram F1. These are baseline diagnostics, not acceptance metrics by
+themselves; later structured-content and downstream EXTRACT/VERIFY metrics are
+the promotion gates.
+
 ## Candidate adapters
 
 Initial candidates are intentionally component-oriented:
