@@ -342,4 +342,11 @@ def test_docling_standard_no_ocr_runtime_shim_is_bounded_local_structure_python(
     assert "enable_remote_services=False" in text
     assert "TableFormerMode.FAST" in text
     assert "RESEARCH_ENGINE_DOCLING_ARTIFACTS" in text
+    assert "prefetch_structure_models" in text
+    assert "LayoutObjectDetectionOptions" in text
+    assert "TableStructureModel.download_models" in text
+    assert "docling.utils.model_downloader" not in text
+    assert "easyocr" not in text.lower()
+    assert "rapidocr" not in text.lower()
+    assert "DOCLING_STANDARD_NO_OCR_PREFETCH=PASS" in text
     assert "DOCLING_STANDARD_NO_OCR_SDK_SELF_TEST=PASS" in text
