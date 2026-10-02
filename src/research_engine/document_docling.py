@@ -27,6 +27,19 @@ DOCLING_NORMALIZER_ID = "docling-native-structured"
 DOCLING_NORMALIZER_VERSION = "1"
 
 
+def _normalizer_identity(docling_mode: str) -> str:
+    mode = docling_mode.strip()
+    if not mode:
+        raise ValueError("docling_mode must be non-empty")
+    if mode == "native":
+        # Preserve the already-validated native package identity exactly.
+        return DOCLING_NORMALIZER_ID
+    slug = re.sub(r"[^A-Za-z0-9._-]+", "-", mode).strip("-")
+    if not slug:
+        raise ValueError("docling_mode must contain an identifier")
+    return f"docling-{slug.replace('_', '-')}-structured"
+
+
 _LABEL_TO_KIND: dict[str, BlockKind] = {
     "title": BlockKind.TITLE,
     "section_header": BlockKind.HEADING,
@@ -328,6 +341,7 @@ def normalize_docling_document(
     source_pdf_sha256: str,
     output_directory: str | Path,
     docling_version: str = "2.131.0",
+    docling_mode: str = "native",
 ) -> PaperPackage:
     source = Path(source_pdf_path)
     raw_path = Path(docling_json_path)
@@ -357,6 +371,7 @@ def normalize_docling_document(
             "DoclingDocument page count does not match authoritative PDF"
         )
 
+    compiler_identity = _normalizer_identity(docling_mode)
     normalized_compiler_version = (
         f"normalizer:{DOCLING_NORMALIZER_VERSION}/docling:{docling_version}"
     )
@@ -367,6 +382,8 @@ def normalize_docling_document(
         "provenance": "docling-prov-page-bbox",
         "picture_materialization": "deferred",
     }
+    if docling_mode != "native":
+        config["docling_mode"] = docling_mode
     config_sha = compiler_config_sha256(config)
     step_base = {
         "processor": "docling",
@@ -404,6 +421,8 @@ def normalize_docling_document(
             "docling_label": label,
             "provenance_count": len(all_regions),
         }
+        if docling_mode != "native":
+            parameters["docling_mode"] = docling_mode
         if label == "picture":
             parameters["caption_refs"] = [
                 ref["$ref"]
@@ -491,7 +510,7 @@ def normalize_docling_document(
     manifest = PaperPackageManifest(
         package_id=paper_package_id(
             source_pdf_sha256=source_pdf_sha256,
-            compiler_identity=DOCLING_NORMALIZER_ID,
+            compiler_identity=compiler_identity,
             compiler_version=normalized_compiler_version,
             compiler_config_sha256=config_sha,
         ),
@@ -499,7 +518,7 @@ def normalize_docling_document(
         source_pdf_sha256=source_pdf_sha256,
         source_pdf_byte_size=source.stat().st_size,
         source_page_count=source_page_count,
-        compiler_identity=DOCLING_NORMALIZER_ID,
+        compiler_identity=compiler_identity,
         compiler_version=normalized_compiler_version,
         compiler_config=config,
         compiler_config_sha256=config_sha,
@@ -524,7 +543,8 @@ def normalize_docling_document(
     _write_json(
         output / manifest.diagnostics_path,
         {
-            "normalizer": DOCLING_NORMALIZER_ID,
+            "normalizer": compiler_identity,
+            "docling_mode": docling_mode,
             "docling_schema_name": document.get("schema_name"),
             "docling_schema_version": document.get("version"),
             "docling_version": docling_version,
