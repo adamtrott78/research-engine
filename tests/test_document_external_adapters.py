@@ -1,3 +1,4 @@
+import ast
 import json
 import os
 import sys
@@ -248,3 +249,19 @@ def test_candidate_status_is_read_only_and_reports_all_candidates(monkeypatch):
         "marker",
     }
     assert all(row["available"] is False for row in rows)
+
+
+
+def test_paddle_runtime_shim_is_standalone_valid_python():
+    shim = (
+        ext.repository_root()
+        / "benchmarks"
+        / "document_intelligence"
+        / "runtimes"
+        / "paddle_ppstructurev3.py"
+    )
+    assert shim.is_file()
+    ast.parse(shim.read_text(encoding="utf-8"))
+    text = shim.read_text(encoding="utf-8")
+    assert "from paddleocr import PPStructureV3" in text
+    assert "research_engine" not in text
