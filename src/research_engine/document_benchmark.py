@@ -537,6 +537,18 @@ def run_external_benchmark(
                 oracle_markdown=oracle_text,
             )
 
+        structured_inventory: dict[str, Any] | None = None
+        structured_json_path = case_output / f"{source.stem}.json"
+        if adapter_id == "docling" and structured_json_path.is_file():
+            from .document_docling import docling_structure_inventory
+
+            structured_document = json.loads(
+                structured_json_path.read_text(encoding="utf-8")
+            )
+            structured_inventory = docling_structure_inventory(
+                structured_document
+            )
+
         candidate_class = str(mode_spec.get("class") or "")
         native_pages = (
             case.page_count
@@ -596,6 +608,11 @@ def run_external_benchmark(
         result_row["stdout_tail"] = receipt.stdout_tail
         result_row["stderr_tail"] = receipt.stderr_tail
         result_row["oracle_comparison"] = comparison
+        if structured_inventory is not None:
+            result_row["structured_inventory"] = structured_inventory
+            result_row["structured_json_path"] = str(
+                structured_json_path.relative_to(case_output)
+            )
         _write_json(case_output / "benchmark-result.json", result_row)
         results.append(result_row)
 

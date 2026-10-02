@@ -244,6 +244,49 @@ def test_external_benchmark_records_raw_output_without_fake_provenance(
             "# Candidate\n\nExample benchmark text in stable order.\n",
             encoding="utf-8",
         )
+        structured = {
+            "schema_name": "DoclingDocument",
+            "version": "1.10.0",
+            "name": "case",
+            "pages": {
+                "1": {
+                    "page_no": 1,
+                    "size": {"width": 612, "height": 792},
+                }
+            },
+            "body": {
+                "self_ref": "#/body",
+                "children": [{"$ref": "#/texts/0"}],
+            },
+            "groups": [],
+            "texts": [
+                {
+                    "self_ref": "#/texts/0",
+                    "label": "text",
+                    "orig": "Example benchmark text in stable order.",
+                    "text": "Example benchmark text in stable order.",
+                    "prov": [
+                        {
+                            "page_no": 1,
+                            "bbox": {
+                                "l": 10,
+                                "t": 20,
+                                "r": 300,
+                                "b": 40,
+                                "coord_origin": "TOPLEFT",
+                            },
+                            "charspan": [0, 39],
+                        }
+                    ],
+                }
+            ],
+            "tables": [],
+            "pictures": [],
+        }
+        (output / "case.json").write_text(
+            json.dumps(structured),
+            encoding="utf-8",
+        )
         return ExternalRunReceipt(
             adapter_id=adapter_id,
             mode=mode,
@@ -279,3 +322,6 @@ def test_external_benchmark_records_raw_output_without_fake_provenance(
     assert result["specialized_model_pages"] == 1
     assert result["raw_output_paths"] == ["document.md"]
     assert result["status"] == "PASS_RAW"
+    assert result["structured_json_path"] == "case.json"
+    assert result["structured_inventory"]["ordered_body_items"] == 1
+    assert result["structured_inventory"]["provenance_coverage"] == 1.0

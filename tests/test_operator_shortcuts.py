@@ -16,6 +16,7 @@ def test_operator_shortcuts_are_bash_syntax_valid():
         root / "deploy" / "publish-ops-mirror.sh",
         root / "deploy" / "run-document-native-fast-bakeoff.sh",
         root / "deploy" / "run-docling-structured-normalization.sh",
+        root / "deploy" / "run-document-docling-standard-no-ocr-bakeoff.sh",
     ]
     for path in paths:
         assert path.exists(), path
@@ -129,4 +130,27 @@ def test_docling_structured_normalization_replay_is_stopped_daemon_and_nonsemant
     assert "marker" not in text.lower()
     assert "paddle" not in text.lower()
     assert "DOCLING_STRUCTURED_NORMALIZATION=PASS" in text
+    assert "\\${" not in text
+
+
+def test_docling_standard_no_ocr_bakeoff_is_stopped_local_and_bounded():
+    root = Path(__file__).parents[1]
+    text = (
+        root / "deploy" / "run-document-docling-standard-no-ocr-bakeoff.sh"
+    ).read_text()
+    assert "RESEARCH_ENGINE_DAEMON_MUST_REMAIN_STOPPED" in text
+    assert "systemctl --user start" not in text
+    assert "docling-slim[format-pdf,models-local,cli]==2.131.0" in text
+    assert "models download layout tableformer" in text
+    assert "RESEARCH_ENGINE_DOCLING_ARTIFACTS" in text
+    assert "HF_HUB_OFFLINE=1" in text
+    assert "TRANSFORMERS_OFFLINE=1" in text
+    assert "standard_no_ocr" in text
+    assert "DOCLING_STANDARD_NO_OCR_SDK_SELF_TEST=PASS" not in text
+    assert "--self-test" in text
+    assert "marker" not in text.lower()
+    assert "paddle" not in text.lower()
+    assert "mineru" not in text.lower()
+    assert "OPENAI_API_KEY" not in text
+    assert "DOCLING_STANDARD_NO_OCR_STRUCTURE_BAKEOFF=PASS" in text
     assert "\\${" not in text

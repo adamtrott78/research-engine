@@ -62,7 +62,12 @@ def test_candidate_registry_pins_versions_licenses_and_modes():
     assert rows["marker"]["license"]["code"] == "Apache-2.0"
     assert "Open Rail" in rows["marker"]["license"]["weights"]
 
-    assert set(rows["docling"]["modes"]) == {"native", "standard", "vlm"}
+    assert set(rows["docling"]["modes"]) == {
+        "native",
+        "standard_no_ocr",
+        "standard",
+        "vlm",
+    }
     assert set(rows["mineru"]["modes"]) == {
         "flash_native",
         "basic",
@@ -110,6 +115,21 @@ def test_build_commands_never_select_remote_or_llm_modes(
     assert docling_native[2] == str(source.resolve())
     assert docling_native[3] == str(out.resolve())
     assert "--pipeline" not in docling_native
+
+    docling_standard_no_ocr = build_candidate_command(
+        "docling",
+        "standard_no_ocr",
+        source_pdf=source,
+        output_dir=out,
+    )
+    assert Path(docling_standard_no_ocr[0]).name.startswith("python")
+    assert any(
+        part.endswith(
+            "document_intelligence/runtimes/docling_standard_no_ocr.py"
+        )
+        for part in docling_standard_no_ocr
+    )
+    assert "--pipeline" not in docling_standard_no_ocr
 
     docling = build_candidate_command(
         "docling",
@@ -299,3 +319,27 @@ def test_docling_native_runtime_shim_is_model_free_python():
     assert "ocr" not in text.lower()
     assert "vlm" not in text.lower()
     assert "DOCLING_NATIVE_SDK_SELF_TEST=PASS" in text
+
+
+def test_docling_standard_no_ocr_runtime_shim_is_bounded_local_structure_python():
+    shim = (
+        ext.repository_root()
+        / "benchmarks"
+        / "document_intelligence"
+        / "runtimes"
+        / "docling_standard_no_ocr.py"
+    )
+    assert shim.is_file()
+    text = shim.read_text(encoding="utf-8")
+    ast.parse(text)
+    assert "PdfPipelineOptions" in text
+    assert "do_ocr=False" in text
+    assert "do_table_structure=True" in text
+    assert "do_formula_enrichment=False" in text
+    assert "do_code_enrichment=False" in text
+    assert "generate_page_images=False" in text
+    assert "generate_picture_images=False" in text
+    assert "enable_remote_services=False" in text
+    assert "TableFormerMode.FAST" in text
+    assert "RESEARCH_ENGINE_DOCLING_ARTIFACTS" in text
+    assert "DOCLING_STANDARD_NO_OCR_SDK_SELF_TEST=PASS" in text
