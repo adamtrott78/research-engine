@@ -197,7 +197,11 @@ def test_normalizer_preserves_order_provenance_and_structured_assets(tmp_path: P
     assert package.blocks[2].source_region.pdf_bbox == (20.0, 50.0, 200.0, 80.0)
     assert package.blocks[3].asset_ids == ("table-0001",)
     assert package.blocks[4].asset_ids == ("equation-0001",)
-    assert package.blocks[5].markdown == "Figure 1. Architecture."
+    assert package.blocks[5].markdown == ""
+    assert (
+        package.blocks[5].derivation[0].parameters["caption_text"]
+        == "Figure 1. Architecture."
+    )
     assert "| A | B |" in package.blocks[3].markdown
     assert package.equations[0].latex == "x^2 + y^2"
     assert (output / "tables/table-0001.json").is_file()
