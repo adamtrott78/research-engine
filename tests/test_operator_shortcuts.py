@@ -140,11 +140,16 @@ def test_docling_standard_no_ocr_bakeoff_is_stopped_local_and_bounded():
     ).read_text()
     assert "RESEARCH_ENGINE_DAEMON_MUST_REMAIN_STOPPED" in text
     assert "systemctl --user start" not in text
-    assert "docling-slim[format-pdf,models-local]==2.131.0" in text
+    assert "docling-slim[convert-core,format-pdf,models-local]==2.131.0" in text
     assert "--prefetch-models" in text
     assert "docling-tools" not in text
     assert "models download" not in text
-    assert "docling-standard-no-ocr-direct-prefetch-v2" in text
+    assert "docling-standard-no-ocr-core-cu126-v3" in text
+    assert "torch==2.13.0 torchvision==0.28.0" in text
+    assert "download.pytorch.org/whl/cu126" in text
+    assert "SCIPY_VERSION=" in text
+    assert "TORCH_CUDA_UNAVAILABLE" in text
+    assert "torch.cuda.get_device_name(0)" in text
     assert "RESEARCH_ENGINE_DOCLING_ARTIFACTS" in text
     assert 'RESEARCH_ENGINE_DOCLING_BIN="$runtime/bin/python"' in text
     assert "HF_HUB_OFFLINE=1" in text
