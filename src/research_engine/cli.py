@@ -206,6 +206,20 @@ def main() -> None:
         help="comma-separated native pypdf extraction modes",
     )
 
+    doc_adapter_status = sub.add_parser("document-adapter-status")
+
+    doc_adapter_plan = sub.add_parser("document-adapter-plan")
+    doc_adapter_plan.add_argument("adapter_id")
+    doc_adapter_plan.add_argument("source_pdf")
+    doc_adapter_plan.add_argument("--output-dir", required=True)
+
+    doc_adapter_run = sub.add_parser("document-adapter-run")
+    doc_adapter_run.add_argument("adapter_id")
+    doc_adapter_run.add_argument("source_pdf")
+    doc_adapter_run.add_argument("--output-dir", required=True)
+    doc_adapter_run.add_argument("--receipt")
+    doc_adapter_run.add_argument("--timeout-seconds", type=float, default=1800.0)
+
     args = p.parse_args()
     if args.cmd == "artifact-put":
         receipt = ContentAddressedArtifactStore(args.root).put_file(args.path)
@@ -544,3 +558,52 @@ def main() -> None:
             modes=modes,
         )
         print(json.dumps(result, default=str))
+    elif args.cmd == "document-adapter-status":
+        from .document_adapters import adapter_status
+
+        print(json.dumps({"adapters": adapter_status()}, default=str))
+    elif args.cmd == "document-adapter-plan":
+        from .document_adapters import adapters, render_plan
+
+        registry = adapters()
+        if args.adapter_id not in registry:
+            raise SystemExit(
+                f"unknown adapter {args.adapter_id!r}; "
+                f"choose one of {sorted(registry)}"
+            )
+        plan = registry[args.adapter_id].plan(
+            source_pdf=args.source_pdf,
+            output_directory=args.output_dir,
+        )
+        print(json.dumps(render_plan(plan), default=str))
+    elif args.cmd == "document-adapter-run":
+        from .document_adapters import adapters, write_receipt
+
+        registry = adapters()
+        if args.adapter_id not in registry:
+            raise SystemExit(
+                f"unknown adapter {args.adapter_id!r}; "
+                f"choose one of {sorted(registry)}"
+            )
+        receipt = registry[args.adapter_id].run_raw(
+            source_pdf=args.source_pdf,
+            output_directory=args.output_dir,
+            timeout_seconds=args.timeout_seconds,
+        )
+        if args.receipt:
+            write_receipt(args.receipt, receipt)
+        print(
+            json.dumps(
+                {
+                    "adapter_id": receipt.adapter_id,
+                    "elapsed_seconds": receipt.elapsed_seconds,
+                    "returncode": receipt.returncode,
+                    "output_files": list(receipt.output_files),
+                    "structured_provenance_expected": (
+                        receipt.structured_provenance_expected
+                    ),
+                    "receipt": args.receipt,
+                },
+                default=str,
+            )
+        )
