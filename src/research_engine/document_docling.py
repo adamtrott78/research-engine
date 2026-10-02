@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from pathlib import Path
 from typing import Any, Iterable
+
+from pypdf import PdfReader
 
 from .document_package import (
     BlockKind,
@@ -100,7 +103,24 @@ def _iter_body_items(document: dict[str, Any]) -> Iterable[dict[str, Any]]:
             yield from walk_ref(child["$ref"])
 
 
-def _bbox_tuple(raw: dict[str, Any]) -> tuple[float, float, float, float]:
+def _page_height(document: dict[str, Any], page_no: int) -> float | None:
+    for page in (document.get("pages") or {}).values():
+        if not isinstance(page, dict) or page.get("page_no") != page_no:
+            continue
+        size = page.get("size") or {}
+        try:
+            height = float(size["height"])
+        except (KeyError, TypeError, ValueError):
+            return None
+        return height if height > 0 else None
+    return None
+
+
+def _bbox_tuple(
+    raw: dict[str, Any],
+    *,
+    page_height: float | None,
+) -> tuple[float, float, float, float]:
     l = float(raw["l"])
     t = float(raw["t"])
     r = float(raw["r"])
@@ -108,12 +128,17 @@ def _bbox_tuple(raw: dict[str, Any]) -> tuple[float, float, float, float]:
     origin = str(raw.get("coord_origin") or "TOPLEFT").upper()
     if origin == "TOPLEFT":
         return (l, t, r, b)
-    # Preserve Docling's coordinates without inventing a page-height transform.
-    # BOTTOMLEFT is rare in the PDF path and is flagged in diagnostics.
-    return (l, min(t, b), r, max(t, b))
+    if origin == "BOTTOMLEFT":
+        if page_height is None:
+            raise ValueError(
+                "cannot convert BOTTOMLEFT Docling bbox without page height"
+            )
+        return (l, page_height - t, r, page_height - b)
+    raise ValueError(f"unsupported Docling bbox coordinate origin: {origin!r}")
 
 
 def _provenance_regions(
+    document: dict[str, Any],
     item: dict[str, Any],
     *,
     section_path: tuple[str, ...],
@@ -129,7 +154,10 @@ def _provenance_regions(
             continue
         parsed_bbox = None
         if isinstance(bbox, dict) and all(k in bbox for k in ("l", "t", "r", "b")):
-            parsed_bbox = _bbox_tuple(bbox)
+            parsed_bbox = _bbox_tuple(
+                bbox,
+                page_height=_page_height(document, page_no),
+            )
         rows.append(
             PdfRegion(
                 page_number=page_no,
@@ -142,11 +170,16 @@ def _provenance_regions(
 
 
 def _primary_region(
+    document: dict[str, Any],
     item: dict[str, Any],
     *,
     section_path: tuple[str, ...],
 ) -> tuple[PdfRegion, tuple[PdfRegion, ...]]:
-    regions = _provenance_regions(item, section_path=section_path)
+    regions = _provenance_regions(
+        document,
+        item,
+        section_path=section_path,
+    )
     if not regions:
         raise ValueError(
             f"Docling item {item.get('self_ref')!r} has no valid page provenance"
@@ -301,6 +334,13 @@ def normalize_docling_document(
     output = Path(output_directory)
     output.mkdir(parents=True, exist_ok=True)
 
+    digest = hashlib.sha256()
+    with source.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    if digest.hexdigest() != source_pdf_sha256:
+        raise ValueError("source PDF SHA-256 does not match normalization input")
+
     document = json.loads(raw_path.read_text(encoding="utf-8"))
     if document.get("schema_name") not in (None, "DoclingDocument"):
         raise ValueError("structured JSON is not a DoclingDocument")
@@ -309,6 +349,11 @@ def normalize_docling_document(
     source_page_count = len(pages)
     if source_page_count < 1:
         raise ValueError("DoclingDocument contains no pages")
+    pdf_page_count = len(PdfReader(str(source)).pages)
+    if source_page_count != pdf_page_count:
+        raise ValueError(
+            "DoclingDocument page count does not match authoritative PDF"
+        )
 
     config = {
         "source": "docling-export-to-dict",
@@ -339,7 +384,15 @@ def normalize_docling_document(
         if label == "section_header":
             item_section = _section_after_heading(section_path, item)
 
-        primary, all_regions = _primary_region(item, section_path=item_section)
+        primary, all_regions = _primary_region(
+            document,
+            item,
+            section_path=item_section,
+        )
+        if primary.page_number > source_page_count:
+            raise ValueError(
+                f"{self_ref}: provenance page exceeds authoritative PDF page count"
+            )
         parameters: dict[str, Any] = {
             "docling_self_ref": self_ref,
             "docling_label": label,
