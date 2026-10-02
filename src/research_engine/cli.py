@@ -200,6 +200,11 @@ def main() -> None:
     doc_benchmark.add_argument("case_manifest")
     doc_benchmark.add_argument("--bundle-root", required=True)
     doc_benchmark.add_argument("--output-root", required=True)
+    doc_benchmark.add_argument(
+        "--modes",
+        default="plain,layout",
+        help="comma-separated native pypdf extraction modes",
+    )
 
     args = p.parse_args()
     if args.cmd == "artifact-put":
@@ -527,9 +532,15 @@ def main() -> None:
     elif args.cmd == "document-benchmark-native":
         from .document_benchmark import run_native_benchmark
 
+        modes = tuple(
+            part.strip()
+            for part in args.modes.split(",")
+            if part.strip()
+        )
         result = run_native_benchmark(
             case_manifest_path=args.case_manifest,
             bundle_root=args.bundle_root,
             output_root=args.output_root,
+            modes=modes,
         )
         print(json.dumps(result, default=str))
