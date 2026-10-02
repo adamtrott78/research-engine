@@ -164,6 +164,56 @@ Initial candidates are intentionally component-oriented:
 
 No candidate is accepted based on Markdown appearance alone.
 
+### Isolated adapter runtime
+
+Heavy parser stacks are intentionally outside the core research-engine Python
+environment. The core process only discovers and invokes isolated executables.
+
+Check availability without importing any heavyweight parser package:
+
+```bash
+research-engine document-adapter-status
+```
+
+Inspect the exact subprocess command before execution:
+
+```bash
+research-engine document-adapter-plan docling paper.pdf --output-dir /tmp/docling-run
+```
+
+Run one adapter into a **new or empty** output directory and optionally record a
+hashed execution receipt:
+
+```bash
+research-engine document-adapter-run docling paper.pdf \
+  --output-dir /tmp/docling-run \
+  --receipt /tmp/docling-run-receipt.json
+```
+
+Environment overrides bind each candidate to its isolated environment:
+
+| Adapter | Default executable | Override |
+|---|---|---|
+| Docling | `docling` | `RESEARCH_ENGINE_DOCLING_BIN` |
+| MinerU | `mineru-kit` | `RESEARCH_ENGINE_MINERU_BIN` |
+| Marker | `marker_single` | `RESEARCH_ENGINE_MARKER_BIN` |
+| Paddle PP-StructureV3 | none | `RESEARCH_ENGINE_PADDLE_PYTHON` |
+
+The Paddle override must point to the Python executable inside an environment
+containing PaddlePaddle + PaddleOCR. The research-engine repository helper
+performs PP-StructureV3 inference and preserves per-page structured JSON,
+combined Markdown, and emitted images.
+
+Docling requests both Markdown and Docling JSON so page/block provenance can be
+validated before conversion into `paper-package.v1`. Paddle likewise preserves
+per-page structured output. MinerU and Marker are initially treated as raw
+Markdown candidates until their exact locator/provenance outputs are validated.
+
+An adapter is not allowed to fabricate page provenance. Raw parser output is
+benchmarked first; promotion into `paper-package.v1` happens only after the
+candidate-specific structured output has demonstrated trustworthy source
+locators.
+
 ## Metrics
 
 Document-level quality metrics:
