@@ -241,6 +241,15 @@ def main() -> None:
         "--docling-version",
         default="2.131.0",
     )
+    docling_normalize.add_argument(
+        "--docling-mode",
+        default="native",
+        help="Docling mode directory suffix, for example native or standard_no_ocr",
+    )
+    docling_normalize.add_argument(
+        "--native-package-root",
+        help="optional normalized Docling-native root for direct baseline comparison",
+    )
 
     args = p.parse_args()
     if args.cmd == "artifact-put":
@@ -627,5 +636,7 @@ def main() -> None:
             raw_docling_root=args.raw_docling_root,
             output_root=args.output_root,
             docling_version=args.docling_version,
+            docling_mode=args.docling_mode,
+            native_package_root=args.native_package_root,
         )
         print(json.dumps(result, default=str))
