@@ -108,3 +108,6 @@ def test_document_native_fast_bakeoff_is_stopped_daemon_and_lightweight_only():
     assert "paddle" not in text.lower()
     assert "--use_llm" not in text
     assert "DOCUMENT_NATIVE_FAST_BAKEOFF=PASS" in text
+    assert "\\${" not in text
+    assert 'exit "${2:-1}"' in text
+    assert '[ "${pid:-0}" != "0" ]' in text

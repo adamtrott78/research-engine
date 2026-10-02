@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-root="$(cd "$(dirname "\${BASH_SOURCE[0]}")/.." && pwd)"
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 adam="$HOME/adamArchives/Adam"
 state="$adam/.research-engine"
 scratch="$adam/.workspace-control/tmp"
@@ -17,7 +17,7 @@ mineru_venv="$runtimes/mineru-base"
 
 fail() {
     echo "ERROR=$1" >&2
-    exit "\${2:-1}"
+    exit "${2:-1}"
 }
 
 require_stopped() {
@@ -25,7 +25,7 @@ require_stopped() {
     active="$(systemctl --user is-active "$unit" 2>/dev/null || true)"
     sub="$(systemctl --user show "$unit" -p SubState --value 2>/dev/null || true)"
     pid="$(systemctl --user show "$unit" -p MainPID --value 2>/dev/null || true)"
-    if [ "$active" != "inactive" ] || [ "$sub" != "dead" ] || [ "\${pid:-0}" != "0" ]; then
+    if [ "$active" != "inactive" ] || [ "$sub" != "dead" ] || [ "${pid:-0}" != "0" ]; then
         fail "RESEARCH_ENGINE_DAEMON_MUST_REMAIN_STOPPED" 20
     fi
 }
