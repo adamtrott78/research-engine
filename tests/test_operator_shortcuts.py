@@ -17,6 +17,7 @@ def test_operator_shortcuts_are_bash_syntax_valid():
         root / "deploy" / "run-document-native-fast-bakeoff.sh",
         root / "deploy" / "run-docling-structured-normalization.sh",
         root / "deploy" / "run-document-docling-standard-no-ocr-bakeoff.sh",
+        root / "deploy" / "diagnose-cuda-host.sh",
     ]
     for path in paths:
         assert path.exists(), path
@@ -179,4 +180,26 @@ def test_docling_standard_no_ocr_bakeoff_is_stopped_local_and_bounded():
     assert "mineru" not in text.lower()
     assert "OPENAI_API_KEY" not in text
     assert "DOCLING_STANDARD_NO_OCR_STRUCTURE_BAKEOFF=PASS" in text
+    assert "\\${" not in text
+
+
+def test_cuda_host_diagnostic_is_read_only_stopped_and_below_pytorch():
+    root = Path(__file__).parents[1]
+    text = (root / "deploy" / "diagnose-cuda-host.sh").read_text()
+    assert "RESEARCH_ENGINE_DAEMON_MUST_REMAIN_STOPPED" in text
+    assert "systemctl --user start" not in text
+    assert 'ctypes.CDLL("libcuda.so.1")' in text
+    assert "cuInit" in text
+    assert "cuGetErrorName" in text
+    assert "cudaGetDeviceCount" in text
+    assert "/dev/nvidia-uvm" in text
+    assert "/sys/module/nvidia_uvm" in text
+    assert "uvm_disable_hmm" in text
+    assert "request_free_mem_region" in text
+    assert "journalctl -k -b" in text
+    assert "nvidia-smi --gpu-reset" not in text
+    assert "modprobe" not in text
+    assert "kill " not in text
+    assert "pkill" not in text
+    assert "CUDA_HOST_DIAGNOSTIC=PASS" in text
     assert "\\${" not in text
