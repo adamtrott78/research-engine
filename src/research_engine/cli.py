@@ -238,7 +238,7 @@ def main() -> None:
     docling_normalize.add_argument("--raw-docling-root", required=True)
     docling_normalize.add_argument("--output-root", required=True)
     docling_normalize.add_argument(
-        "--compiler-version",
+        "--docling-version",
         default="2.131.0",
     )
 
@@ -626,6 +626,6 @@ def main() -> None:
             bundle_root=args.bundle_root,
             raw_docling_root=args.raw_docling_root,
             output_root=args.output_root,
-            compiler_version=args.compiler_version,
+            docling_version=args.docling_version,
         )
         print(json.dumps(result, default=str))
