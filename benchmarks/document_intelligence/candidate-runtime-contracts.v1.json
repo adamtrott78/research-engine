@@ -46,7 +46,9 @@
           "expected_outputs": [
             "{source_stem}.md",
             "{source_stem}.json"
-          ]
+          ],
+          "benchmark_phase": "NATIVE_FAST_PATH",
+          "gpu_preferred": false
         },
         "standard": {
           "class": "SPECIALIZED_LOCAL_MODEL",
@@ -68,7 +70,9 @@
           "expected_outputs": [
             "{source_stem}.md",
             "{source_stem}.json"
-          ]
+          ],
+          "benchmark_phase": "SPECIALIZED_INFERENCE",
+          "gpu_preferred": false
         },
         "vlm": {
           "class": "GENERAL_LOCAL_MODEL",
@@ -90,7 +94,9 @@
           "expected_outputs": [
             "{source_stem}.md",
             "{source_stem}.json"
-          ]
+          ],
+          "benchmark_phase": "VLM_ESCALATION",
+          "gpu_preferred": true
         }
       },
       "capabilities": [
@@ -139,7 +145,9 @@
           "model_inference": false,
           "expected_outputs": [
             "document.md"
-          ]
+          ],
+          "benchmark_phase": "NATIVE_FAST_PATH",
+          "gpu_preferred": false
         },
         "basic": {
           "class": "SPECIALIZED_LOCAL_MODEL",
@@ -155,7 +163,9 @@
           "model_inference": true,
           "expected_outputs": [
             "document.md"
-          ]
+          ],
+          "benchmark_phase": "SPECIALIZED_INFERENCE",
+          "gpu_preferred": false
         },
         "standard": {
           "class": "SPECIALIZED_LOCAL_MODEL",
@@ -171,7 +181,9 @@
           "model_inference": true,
           "expected_outputs": [
             "document.md"
-          ]
+          ],
+          "benchmark_phase": "SPECIALIZED_INFERENCE",
+          "gpu_preferred": true
         },
         "advanced": {
           "class": "GENERAL_LOCAL_MODEL",
@@ -187,7 +199,9 @@
           "model_inference": true,
           "expected_outputs": [
             "document.md"
-          ]
+          ],
+          "benchmark_phase": "VLM_ESCALATION",
+          "gpu_preferred": true
         }
       },
       "capabilities": [
@@ -232,7 +246,9 @@
             "document.md",
             "pages.json",
             "images/"
-          ]
+          ],
+          "benchmark_phase": "SPECIALIZED_INFERENCE",
+          "gpu_preferred": true
         }
       },
       "capabilities": [
@@ -282,7 +298,9 @@
           "model_inference": false,
           "expected_outputs": [
             "*.md"
-          ]
+          ],
+          "benchmark_phase": "NATIVE_FAST_PATH",
+          "gpu_preferred": false
         },
         "fast": {
           "class": "SPECIALIZED_LOCAL_MODEL",
@@ -299,7 +317,9 @@
           "model_inference": true,
           "expected_outputs": [
             "*.md"
-          ]
+          ],
+          "benchmark_phase": "SPECIALIZED_INFERENCE",
+          "gpu_preferred": true
         },
         "balanced": {
           "class": "GENERAL_LOCAL_MODEL",
@@ -316,7 +336,9 @@
           "model_inference": true,
           "expected_outputs": [
             "*.md"
-          ]
+          ],
+          "benchmark_phase": "VLM_ESCALATION",
+          "gpu_preferred": true
         }
       },
       "capabilities": [
@@ -333,6 +355,37 @@
       "runtime_notes": "Do not enable --use_llm in this benchmark. Marker 2 workers can share a Surya inference server; concurrency is evaluated later on Lambda.",
       "distribution": "marker-pdf",
       "version_pattern": "2\\.0\\.0"
+    }
+  ],
+  "benchmark_phases": [
+    {
+      "id": "NATIVE_FAST_PATH",
+      "purpose": "Establish cheapest structured/native alternatives before model-heavy inference.",
+      "modes": [
+        "docling/native",
+        "mineru/flash_native",
+        "marker/fast_no_ocr"
+      ]
+    },
+    {
+      "id": "SPECIALIZED_INFERENCE",
+      "purpose": "Measure bounded OCR/layout/table/formula inference before broad VLM use.",
+      "modes": [
+        "docling/standard",
+        "mineru/basic",
+        "mineru/standard",
+        "paddle-pp-structure-v3/pp_structure_v3",
+        "marker/fast"
+      ]
+    },
+    {
+      "id": "VLM_ESCALATION",
+      "purpose": "Measure highest-quality local document VLM paths only after cheaper tiers are quantified.",
+      "modes": [
+        "docling/vlm",
+        "mineru/advanced",
+        "marker/balanced"
+      ]
     }
   ]
 }
