@@ -68,7 +68,7 @@ def test_native_adapter_writes_page_grounded_package(tmp_path: Path):
     source_sha = sha256_file(pdf)
 
     output = tmp_path / "package"
-    package = NativePdfAdapter().compile(
+    package = NativePdfAdapter("plain").compile(
         source_pdf_path=str(pdf),
         source_artifact_id=f"source-artifact:sha256:{source_sha}",
         source_pdf_sha256=source_sha,
@@ -132,15 +132,17 @@ def test_native_benchmark_validates_bundle_and_is_non_materializing(tmp_path: Pa
     )
 
     assert summary["cases"] == 1
-    assert summary["total_pages"] == 1
+    assert summary["total_pages_per_adapter"] == 1
+    assert summary["result_rows"] == 2
+    assert summary["adapters"] == ["native-pypdf-plain", "native-pypdf-layout"]
     result = summary["results"][0]
     assert result["status"] == "PASS"
-    assert result["adapter_id"] == "native-pypdf"
+    assert result["adapter_id"] == "native-pypdf-plain"
     assert result["quality"]["provenance_accuracy"] == 1.0
     assert result["mathpix_image_mode"] == "NO_IMAGES"
     assert (output / "benchmark-summary.json").is_file()
     assert (
-        output / "case" / "native-pypdf" / "benchmark-result.json"
+        output / "case" / "native-pypdf-plain" / "benchmark-result.json"
     ).is_file()
 
 
