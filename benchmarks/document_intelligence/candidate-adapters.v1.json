@@ -32,7 +32,10 @@
       "heavyweight_models": true,
       "paid_api": false,
       "license_review_required": true,
-      "lambda_validation_required": true
+      "lambda_validation_required": true,
+      "runtime_command": "docling",
+      "runtime_env_override": "RESEARCH_ENGINE_DOCLING_BIN",
+      "structured_provenance_expected": true
     },
     {
       "adapter_id": "mineru",
@@ -49,7 +52,11 @@
       "heavyweight_models": true,
       "paid_api": false,
       "license_review_required": true,
-      "lambda_validation_required": true
+      "lambda_validation_required": true,
+      "runtime_command": "mineru-kit",
+      "runtime_env_override": "RESEARCH_ENGINE_MINERU_BIN",
+      "structured_provenance_expected": false,
+      "notes": "Uses stateless mineru-kit parse for isolated benchmark execution."
     },
     {
       "adapter_id": "paddle-pp-structure-v3",
@@ -67,7 +74,11 @@
       "heavyweight_models": true,
       "paid_api": false,
       "license_review_required": true,
-      "lambda_validation_required": true
+      "lambda_validation_required": true,
+      "runtime_command": "isolated Python + repository helper",
+      "runtime_env_override": "RESEARCH_ENGINE_PADDLE_PYTHON",
+      "structured_provenance_expected": true,
+      "notes": "External Python environment must contain PaddlePaddle + PaddleOCR; helper preserves per-page JSON plus combined Markdown/images."
     },
     {
       "adapter_id": "marker-surya",
@@ -85,7 +96,11 @@
       "heavyweight_models": true,
       "paid_api": false,
       "license_review_required": true,
-      "lambda_validation_required": true
+      "lambda_validation_required": true,
+      "runtime_command": "marker_single",
+      "runtime_env_override": "RESEARCH_ENGINE_MARKER_BIN",
+      "structured_provenance_expected": false,
+      "notes": "Adapter runs local Marker without --use_llm and with paginated Markdown output."
     },
     {
       "adapter_id": "mathpix-manual-oracle",
