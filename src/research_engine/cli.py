@@ -196,6 +196,16 @@ def main() -> None:
         help="JSON object merged into policy.budgets before explicit resume",
     )
 
+    doc_benchmark = sub.add_parser("document-benchmark-native")
+    doc_benchmark.add_argument("case_manifest")
+    doc_benchmark.add_argument("--bundle-root", required=True)
+    doc_benchmark.add_argument("--output-root", required=True)
+    doc_benchmark.add_argument(
+        "--modes",
+        default="plain,layout",
+        help="comma-separated native pypdf extraction modes",
+    )
+
     args = p.parse_args()
     if args.cmd == "artifact-put":
         receipt = ContentAddressedArtifactStore(args.root).put_file(args.path)
@@ -519,3 +529,18 @@ def main() -> None:
         service = daemon_from_env(with_workers=False)
         budgets = json.loads(args.budgets_json)
         print(json.dumps(service.resume_budget(args.run_id, budgets=budgets), default=str))
+    elif args.cmd == "document-benchmark-native":
+        from .document_benchmark import run_native_benchmark
+
+        modes = tuple(
+            part.strip()
+            for part in args.modes.split(",")
+            if part.strip()
+        )
+        result = run_native_benchmark(
+            case_manifest_path=args.case_manifest,
+            bundle_root=args.bundle_root,
+            output_root=args.output_root,
+            modes=modes,
+        )
+        print(json.dumps(result, default=str))
