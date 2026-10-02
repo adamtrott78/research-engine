@@ -56,17 +56,21 @@ def _peak_rss_bytes() -> int | None:
 def _safe_extract_text(page: Any, *, mode: str) -> tuple[str, str, tuple[str, ...]]:
     warnings: list[str] = []
     try:
-        text = page.extract_text(extraction_mode=mode) or ""
+        if mode == "plain":
+            text = page.extract_text() or ""
+        else:
+            text = page.extract_text(extraction_mode=mode) or ""
         return text, mode, tuple(warnings)
     except Exception as exc:
         warnings.append(f"{mode} extraction failed: {type(exc).__name__}: {exc}")
-    try:
-        text = page.extract_text() or ""
-        warnings.append("fell back to plain pypdf extraction")
-        return text, "plain", tuple(warnings)
-    except Exception as exc:
-        warnings.append(f"plain extraction failed: {type(exc).__name__}: {exc}")
-        return "", "failed", tuple(warnings)
+    if mode != "plain":
+        try:
+            text = page.extract_text() or ""
+            warnings.append("fell back to plain pypdf extraction")
+            return text, "plain", tuple(warnings)
+        except Exception as exc:
+            warnings.append(f"plain extraction failed: {type(exc).__name__}: {exc}")
+    return "", "failed", tuple(warnings)
 
 
 def _page_confidence(text: str) -> float:
@@ -94,8 +98,13 @@ def _write_json(path: Path, value: Any) -> None:
 
 
 class NativePdfAdapter:
-    adapter_id = NATIVE_ADAPTER_ID
     adapter_version = NATIVE_ADAPTER_VERSION
+
+    def __init__(self, extraction_mode: str = "plain") -> None:
+        if extraction_mode not in {"plain", "layout"}:
+            raise ValueError("native pypdf mode must be plain or layout")
+        self.extraction_mode = extraction_mode
+        self.adapter_id = f"{NATIVE_ADAPTER_ID}-{extraction_mode}"
 
     def available(self) -> tuple[bool, str | None]:
         try:
@@ -119,7 +128,7 @@ class NativePdfAdapter:
             raise ValueError("source PDF SHA-256 does not match benchmark manifest")
 
         cfg = {
-            "extraction_mode": "layout",
+            "extraction_mode": self.extraction_mode,
             "fallback_plain": True,
             "block_granularity": "page",
             **(config or {}),
@@ -319,15 +328,19 @@ def run_native_benchmark(
     case_manifest_path: str | Path,
     bundle_root: str | Path,
     output_root: str | Path,
+    modes: tuple[str, ...] = ("plain", "layout"),
 ) -> dict[str, Any]:
     bundle = Path(bundle_root)
     output = Path(output_root)
     output.mkdir(parents=True, exist_ok=True)
-    adapter = NativePdfAdapter()
+    if not modes:
+        raise ValueError("at least one native extraction mode is required")
+    adapters = [NativePdfAdapter(mode) for mode in modes]
+    cases = load_benchmark_cases(case_manifest_path)
 
     results: list[dict[str, Any]] = []
     total_started = time.perf_counter()
-    for case in load_benchmark_cases(case_manifest_path):
+    for case in cases:
         source = _resolve(bundle, case.source_location)
         oracle = (
             _resolve(bundle, case.mathpix_oracle_location)
@@ -364,79 +377,75 @@ def run_native_benchmark(
                     f"observed {detected_image_mode.value}"
                 )
 
-        case_output = output / case.case_id / adapter.adapter_id
-        started = time.perf_counter()
-        package = adapter.compile(
-            source_pdf_path=str(source),
-            source_artifact_id=f"source-artifact:sha256:{case.source_pdf_sha256}",
-            source_pdf_sha256=case.source_pdf_sha256,
-            output_directory=str(case_output),
-        )
-        elapsed = time.perf_counter() - started
-        markdown_path = case_output / package.manifest.document_markdown_path
-        native_markdown = markdown_path.read_text(encoding="utf-8")
-
-        comparison: dict[str, Any] = {}
-        if oracle_text is not None:
-            comparison = oracle_comparison(
-                native_markdown=native_markdown,
-                oracle_markdown=oracle_text,
+        for adapter in adapters:
+            case_output = output / case.case_id / adapter.adapter_id
+            started = time.perf_counter()
+            package = adapter.compile(
+                source_pdf_path=str(source),
+                source_artifact_id=f"source-artifact:sha256:{case.source_pdf_sha256}",
+                source_pdf_sha256=case.source_pdf_sha256,
+                output_directory=str(case_output),
             )
+            elapsed = time.perf_counter() - started
+            markdown_path = case_output / package.manifest.document_markdown_path
+            native_markdown = markdown_path.read_text(encoding="utf-8")
 
-        diagnostics_path = case_output / package.manifest.diagnostics_path
-        diagnostics = json.loads(diagnostics_path.read_text(encoding="utf-8"))
-        diagnostics["benchmark_case_id"] = case.case_id
-        diagnostics["difficulty_tags"] = list(case.difficulty_tags)
-        diagnostics["expected_features"] = case.expected_features
-        diagnostics["oracle_comparison"] = comparison
-        _write_json(diagnostics_path, diagnostics)
+            comparison: dict[str, Any] = {}
+            if oracle_text is not None:
+                comparison = oracle_comparison(
+                    native_markdown=native_markdown,
+                    oracle_markdown=oracle_text,
+                )
 
-        result = DocumentBenchmarkResult(
-            case_id=case.case_id,
-            adapter_id=adapter.adapter_id,
-            adapter_version=adapter.adapter_version,
-            package_id=package.manifest.package_id,
-            status="PASS",
-            quality=QualityMetrics(
-                text_fidelity=comparison.get("text_fidelity"),
-                reading_order=comparison.get("reading_order"),
-                provenance_accuracy=1.0,
-            ),
-            resources=ResourceMetrics(
-                wall_time_seconds=elapsed,
-                pages_per_second=case.page_count / elapsed if elapsed else 0.0,
-                peak_rss_bytes=_peak_rss_bytes(),
-                peak_vram_bytes=None,
-                model_load_seconds=0.0,
-            ),
-            output_markdown_chars=len(native_markdown),
-            output_markdown_tokens_estimate=max(
-                1,
-                (len(native_markdown) + 3) // 4,
-            ),
-            native_pages=case.page_count,
-            warnings=(
-                "native baseline preserves page provenance but does not "
-                "reconstruct table/equation/figure structure"
-            ,),
-        )
-        result_row = result.model_dump(mode="json")
-        result_row["mathpix_image_mode"] = (
-            detected_image_mode.value if detected_image_mode else None
-        )
-        result_row["oracle_comparison"] = comparison
-        _write_json(case_output / "benchmark-result.json", result_row)
-        results.append(result_row)
+            diagnostics_path = case_output / package.manifest.diagnostics_path
+            diagnostics = json.loads(diagnostics_path.read_text(encoding="utf-8"))
+            diagnostics["benchmark_case_id"] = case.case_id
+            diagnostics["difficulty_tags"] = list(case.difficulty_tags)
+            diagnostics["expected_features"] = case.expected_features
+            diagnostics["oracle_comparison"] = comparison
+            _write_json(diagnostics_path, diagnostics)
+
+            result = DocumentBenchmarkResult(
+                case_id=case.case_id,
+                adapter_id=adapter.adapter_id,
+                adapter_version=adapter.adapter_version,
+                package_id=package.manifest.package_id,
+                status="PASS",
+                quality=QualityMetrics(
+                    text_fidelity=comparison.get("text_fidelity"),
+                    reading_order=comparison.get("reading_order"),
+                    provenance_accuracy=1.0,
+                ),
+                resources=ResourceMetrics(
+                    wall_time_seconds=elapsed,
+                    pages_per_second=case.page_count / elapsed if elapsed else 0.0,
+                    peak_rss_bytes=_peak_rss_bytes(),
+                    peak_vram_bytes=None,
+                    model_load_seconds=0.0,
+                ),
+                output_markdown_chars=len(native_markdown),
+                output_markdown_tokens_estimate=len(_text_tokens(native_markdown)),
+                native_pages=case.page_count,
+                warnings=(
+                    "native baseline preserves page provenance but does not "
+                    "reconstruct table/equation/figure structure"
+                ,),
+            )
+            result_row = result.model_dump(mode="json")
+            result_row["mathpix_image_mode"] = (
+                detected_image_mode.value if detected_image_mode else None
+            )
+            result_row["oracle_comparison"] = comparison
+            _write_json(case_output / "benchmark-result.json", result_row)
+            results.append(result_row)
 
     elapsed_total = time.perf_counter() - total_started
     summary = {
         "schema_version": 1,
-        "adapter_id": adapter.adapter_id,
-        "adapter_version": adapter.adapter_version,
-        "cases": len(results),
-        "total_pages": sum(
-            case.page_count for case in load_benchmark_cases(case_manifest_path)
-        ),
+        "adapters": [adapter.adapter_id for adapter in adapters],
+        "cases": len(cases),
+        "result_rows": len(results),
+        "total_pages_per_adapter": sum(case.page_count for case in cases),
         "wall_time_seconds": elapsed_total,
         "results": results,
     }
