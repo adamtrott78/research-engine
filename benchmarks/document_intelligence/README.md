@@ -133,11 +133,17 @@ research-engine document-benchmark-native \
   --output-root /tmp/document-benchmark-native
 ```
 
-The native adapter uses pypdf's text layer only, emits one page-grounded block
-per source page, and writes `paper-package.v1` manifest/block/diagnostic files.
-It intentionally does **not** claim to reconstruct tables, equations, figures,
-or fine-grained reading order. Its role is to establish the cheapest possible
-baseline that every model-backed adapter must beat.
+The native baseline uses pypdf's text layer only and runs both `plain` and
+`layout` extraction modes by default. Each mode emits one page-grounded block
+per source page and writes independent `paper-package.v1`
+manifest/block/diagnostic files. The two native modes are measured separately
+because fixed-width layout reconstruction is not assumed to improve semantic
+reading order.
+
+Neither mode claims to reconstruct tables, equations, figures, or fine-grained
+document structure. Their role is to establish the cheapest possible baselines
+that every model-backed adapter must beat. Use `--modes plain` or
+`--modes layout` to run only one variant.
 
 The Mathpix comparison currently reports a coarse lexical multiset F1 and
 ordered-bigram F1. These are baseline diagnostics, not acceptance metrics by
