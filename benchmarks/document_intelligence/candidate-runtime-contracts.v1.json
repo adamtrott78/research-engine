@@ -123,14 +123,14 @@
         "page_provenance",
         "batching"
       ],
-      "runtime_notes": "Native mode uses the model-free SDK shim. standard_no_ocr uses a separate runtime pinned to official PyTorch 2.13.0 / TorchVision 0.28.0 CUDA 12.6 wheels, then installs docling-slim[convert-core,format-pdf,models-local]==2.131.0. convert-core is required because DocumentConverter imports core factories that require SciPy even when OCR is disabled. The runner fails closed if torch.cuda.is_available() is false. Prefetch bypasses docling-tools/model_downloader CLI imports and downloads only layout repos plus TableFormer directly. OCR/formula/code/picture-description/VLM/remote services remain disabled.",
+      "runtime_notes": "Native mode uses the model-free SDK shim. standard_no_ocr uses official PyTorch 2.13.0/TorchVision 0.28.0 CUDA 12.6 wheels, docling-slim[convert-core,format-pdf,models-local]==2.131.0, and the TableFormer package's official opencv-python-headless extra. Existing v3 structure runtimes migrate in place by installing only the OpenCV extra; fresh installs use the complete profile. Direct model prefetch remains layout + TableFormer only. OCR/formula/code/picture-description/VLM/remote services remain disabled.",
       "distribution": "docling-slim",
       "version_pattern": "2\\.131\\.0",
       "install_profiles": {
         "native": "python -m pip install 'docling-slim[cli,convert-core,format-pdf]==2.131.0'",
         "standard": "python -m pip install 'docling==2.131.0'",
         "vlm": "python -m pip install 'docling[vlm]==2.131.0'",
-        "standard_no_ocr": "python -m pip install torch==2.13.0 torchvision==0.28.0 --index-url https://download.pytorch.org/whl/cu126 && python -m pip install 'docling-slim[convert-core,format-pdf,models-local]==2.131.0'"
+        "standard_no_ocr": "python -m pip install torch==2.13.0 torchvision==0.28.0 --index-url https://download.pytorch.org/whl/cu126 && python -m pip install 'docling-slim[convert-core,format-pdf,models-local]==2.131.0' 'docling-ibm-models[opencv-python-headless]>=4.0.2,<5'"
       }
     },
     {
