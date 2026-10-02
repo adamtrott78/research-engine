@@ -31,8 +31,43 @@ require_stopped() {
     fi
 }
 
-selected_gpu=""
 selected_gpu_index=""
+selected_gpu_uuid=""
+
+run_cuda_probe() {
+    "$runtime/bin/python" - <<'PY'
+import json
+import torch
+
+result = {
+    "cuda_available": torch.cuda.is_available(),
+    "device_count": torch.cuda.device_count(),
+    "cuda_visible_devices": __import__("os").environ.get("CUDA_VISIBLE_DEVICES"),
+}
+if not result["cuda_available"] or result["device_count"] < 1:
+    print(json.dumps(result, sort_keys=True))
+    raise SystemExit(2)
+
+device = torch.device("cuda:0")
+result["device_name"] = torch.cuda.get_device_name(device)
+before_free, before_total = torch.cuda.mem_get_info(device)
+
+probe = torch.empty(256 * 1024 * 1024, dtype=torch.uint8, device=device)
+probe.fill_(1)
+torch.cuda.synchronize(device)
+
+after_free, _ = torch.cuda.mem_get_info(device)
+result["free_before_mib"] = round(before_free / 1024 / 1024, 1)
+result["free_after_mib"] = round(after_free / 1024 / 1024, 1)
+result["total_mib"] = round(before_total / 1024 / 1024, 1)
+result["allocation_probe_mib"] = 256
+print(json.dumps(result, sort_keys=True))
+
+del probe
+torch.cuda.empty_cache()
+torch.cuda.synchronize(device)
+PY
+}
 
 select_usable_gpu() {
     local row gpu_index gpu_uuid free_mib
@@ -44,11 +79,21 @@ select_usable_gpu() {
     }
 
     echo "=== GPU INVENTORY ==="
-    nvidia-smi         --query-gpu=index,uuid,name,memory.total,memory.used,memory.free,utilization.gpu,compute_mode,persistence_mode         --format=csv,noheader,nounits || true
+    nvidia-smi \
+        --query-gpu=index,uuid,name,memory.total,memory.used,memory.free,utilization.gpu,compute_mode,persistence_mode \
+        --format=csv,noheader,nounits || true
 
     echo
     echo "=== ACTIVE GPU COMPUTE PROCESSES ==="
-    nvidia-smi         --query-compute-apps=gpu_uuid,pid,process_name,used_gpu_memory         --format=csv,noheader,nounits || true
+    nvidia-smi \
+        --query-compute-apps=gpu_uuid,pid,process_name,used_gpu_memory \
+        --format=csv,noheader,nounits || true
+
+    echo
+    echo "=== CUDA ENVIRONMENT ==="
+    echo "INHERITED_CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES-<unset>}"
+    echo "INHERITED_NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES-<unset>}"
+    echo "CUDA_DEVICE_ORDER=${CUDA_DEVICE_ORDER-<unset>}"
 
     mapfile -t candidates < <(
         nvidia-smi \
@@ -69,19 +114,16 @@ select_usable_gpu() {
     }
 
     echo
-    echo "=== CUDA ALLOCATION PROBES ==="
-    for row in "${candidates[@]}"; do
-        IFS='|' read -r free_mib gpu_index gpu_uuid <<< "$row"
-        echo "GPU_PROBE_INDEX=$gpu_index"
-        echo "GPU_PROBE_UUID=$gpu_uuid"
-        echo "GPU_PROBE_FREE_MIB=$free_mib"
-        if CUDA_VISIBLE_DEVICES="$gpu_uuid" "$runtime/bin/python" - <<'PY'
+    echo "=== UNMASKED CUDA ALLOCATION CONTROL ==="
+    if env -u CUDA_VISIBLE_DEVICES "$runtime/bin/python" - <<'PY'
 import json
+import os
 import torch
 
 result = {
     "cuda_available": torch.cuda.is_available(),
     "device_count": torch.cuda.device_count(),
+    "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES"),
 }
 if not result["cuda_available"] or result["device_count"] < 1:
     print(json.dumps(result, sort_keys=True))
@@ -89,37 +131,39 @@ if not result["cuda_available"] or result["device_count"] < 1:
 
 device = torch.device("cuda:0")
 result["device_name"] = torch.cuda.get_device_name(device)
-before_free, before_total = torch.cuda.mem_get_info(device)
-
-# 256 MiB real allocation + write + synchronize. This catches the exact class
-# of error that torch.cuda.is_available() alone missed on the previous run.
 probe = torch.empty(256 * 1024 * 1024, dtype=torch.uint8, device=device)
 probe.fill_(1)
 torch.cuda.synchronize(device)
-
-after_free, _ = torch.cuda.mem_get_info(device)
-result["free_before_mib"] = round(before_free / 1024 / 1024, 1)
-result["free_after_mib"] = round(after_free / 1024 / 1024, 1)
-result["total_mib"] = round(before_total / 1024 / 1024, 1)
 result["allocation_probe_mib"] = 256
 print(json.dumps(result, sort_keys=True))
-
-del probe
-torch.cuda.empty_cache()
-torch.cuda.synchronize(device)
 PY
-        then
-            selected_gpu="$gpu_uuid"
+    then
+        echo "UNMASKED_CUDA_ALLOCATION=PASS"
+    else
+        echo "UNMASKED_CUDA_ALLOCATION=FAIL"
+    fi
+
+    echo
+    echo "=== PER-GPU INDEX CUDA ALLOCATION PROBES ==="
+    for row in "${candidates[@]}"; do
+        IFS='|' read -r free_mib gpu_index gpu_uuid <<< "$row"
+        echo "GPU_PROBE_INDEX=$gpu_index"
+        echo "GPU_PROBE_UUID=$gpu_uuid"
+        echo "GPU_PROBE_FREE_MIB=$free_mib"
+
+        if CUDA_VISIBLE_DEVICES="$gpu_index" run_cuda_probe; then
             selected_gpu_index="$gpu_index"
+            selected_gpu_uuid="$gpu_uuid"
             echo "SELECTED_PHYSICAL_GPU_INDEX=$selected_gpu_index"
-            echo "SELECTED_PHYSICAL_GPU_UUID=$selected_gpu"
+            echo "SELECTED_PHYSICAL_GPU_UUID=$selected_gpu_uuid"
             return 0
         fi
+
         echo "GPU_PROBE_FAILED_INDEX=$gpu_index"
         echo "GPU_PROBE_FAILED_UUID=$gpu_uuid"
     done
 
-    echo "GPU_SELECTION_ERROR=no GPU passed real CUDA allocation probe" >&2
+    echo "GPU_SELECTION_ERROR=no GPU passed numeric-index CUDA allocation probe" >&2
     return 1
 }
 
@@ -208,9 +252,10 @@ echo "RUNTIME_SIZE=$(du -sh "$runtime" | awk '{print $1}')"
 echo
 echo "=== SELECT HEALTHY CUDA DEVICE ==="
 select_usable_gpu || fail "NO_USABLE_CUDA_DEVICE" 42
-export CUDA_VISIBLE_DEVICES="$selected_gpu"
+export CUDA_VISIBLE_DEVICES="$selected_gpu_index"
 echo "CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES"
 echo "SELECTED_PHYSICAL_GPU_INDEX=$selected_gpu_index"
+echo "SELECTED_PHYSICAL_GPU_UUID=$selected_gpu_uuid"
 echo "TORCH_CUDA_AVAILABLE=$("$runtime/bin/python" -c 'import torch; print(torch.cuda.is_available())')"
 echo "TORCH_CUDA_DEVICE=$("$runtime/bin/python" -c 'import torch; print(torch.cuda.get_device_name(0))')"
 
