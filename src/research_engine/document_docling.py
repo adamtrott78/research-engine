@@ -256,7 +256,7 @@ def _block_markdown(document: dict[str, Any], item: dict[str, Any]) -> str:
     if label in {"table", "document_index"}:
         return _table_markdown(item)
     if label == "picture":
-        return _caption_text(document, item)
+        return ""
     text = item.get("text")
     return str(text).strip() if text is not None else ""
 
@@ -398,6 +398,13 @@ def normalize_docling_document(
             "docling_label": label,
             "provenance_count": len(all_regions),
         }
+        if label == "picture":
+            parameters["caption_refs"] = [
+                ref["$ref"]
+                for ref in item.get("captions") or []
+                if isinstance(ref, dict) and isinstance(ref.get("$ref"), str)
+            ]
+            parameters["caption_text"] = _caption_text(document, item)
         if len(all_regions) > 1:
             parameters["additional_provenance"] = [
                 region.model_dump(mode="json") for region in all_regions[1:]
