@@ -52,6 +52,8 @@ def test_candidate_registry_pins_versions_licenses_and_modes():
     }
     assert rows["docling"]["current_version"] == "2.131.0"
     assert rows["docling"]["license"]["code"] == "MIT"
+    assert "convert-core" in rows["docling"]["install_profiles"]["native"]
+    assert "format-pdf" in rows["docling"]["install_profiles"]["native"]
     assert rows["mineru"]["version_pattern"] == r"4\..+"
     assert "additional terms" in rows["mineru"]["license"]["code"]
     assert rows["paddle-pp-structure-v3"]["version_pattern"] == r"3\.7\..+"
