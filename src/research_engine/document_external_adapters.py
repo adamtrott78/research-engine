@@ -171,16 +171,20 @@ def probe_candidate(
     )
     matches = _version_matches(actual, str(spec["version_pattern"]))
     reason = None
-    if matches is False:
+    available = actual is not None
+    if actual is None:
+        reason = (
+            "runtime executable exists but the pinned package distribution "
+            "could not be verified in that runtime"
+        )
+    elif matches is False:
         reason = (
             f"installed version {actual!r} does not match pinned "
             f"contract {spec['version_pattern']!r}"
         )
-    elif matches is None:
-        reason = "runtime executable exists but package version could not be verified"
     return RuntimeProbe(
         adapter_id=adapter_id,
-        available=True,
+        available=available,
         executable=executable,
         actual_version=actual,
         expected_version=expected,
