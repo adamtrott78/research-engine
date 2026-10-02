@@ -145,10 +145,17 @@ def test_docling_standard_no_ocr_bakeoff_is_stopped_local_and_bounded():
     assert "--prefetch-models" in text
     assert "docling-tools" not in text
     assert "models download" not in text
+    assert "docling-standard-no-ocr-core-cu126-opencv-v4" in text
     assert "docling-standard-no-ocr-core-cu126-v3" in text
     assert "torch==2.13.0 torchvision==0.28.0" in text
     assert "download.pytorch.org/whl/cu126" in text
     assert "SCIPY_VERSION=" in text
+    assert "DOCLING_IBM_MODELS_VERSION=" in text
+    assert "OPENCV_VERSION=" in text
+    assert "docling-ibm-models[opencv-python-headless]>=4.0.2,<5" in text
+    assert "MIGRATE_RUNTIME_PROFILE=" in text
+    assert "TABLEFORMER_IMPORT_PREFLIGHT=PASS" in text
+    assert "from docling_ibm_models.tableformer.data_management.tf_predictor import TFPredictor" in text
     assert "NO_USABLE_CUDA_DEVICE" in text
     assert "torch.cuda.get_device_name(0)" in text
     assert "--query-gpu=index,uuid,name,memory.total,memory.used,memory.free,utilization.gpu,compute_mode,persistence_mode" in text
