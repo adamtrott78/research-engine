@@ -222,6 +222,13 @@ def _format_command(
             / "runtimes"
             / "docling_native.py"
         ),
+        "docling_standard_no_ocr_shim": str(
+            repository_root()
+            / "benchmarks"
+            / "document_intelligence"
+            / "runtimes"
+            / "docling_standard_no_ocr.py"
+        ),
     }
     return [str(part).format(**values) for part in template]
 
