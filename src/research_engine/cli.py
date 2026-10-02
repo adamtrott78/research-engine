@@ -232,6 +232,16 @@ def main() -> None:
     external_benchmark.add_argument("--registry")
     external_benchmark.add_argument("--timeout-seconds", type=int, default=1800)
 
+    docling_normalize = sub.add_parser("document-normalize-docling-benchmark")
+    docling_normalize.add_argument("case_manifest")
+    docling_normalize.add_argument("--bundle-root", required=True)
+    docling_normalize.add_argument("--raw-docling-root", required=True)
+    docling_normalize.add_argument("--output-root", required=True)
+    docling_normalize.add_argument(
+        "--docling-version",
+        default="2.131.0",
+    )
+
     args = p.parse_args()
     if args.cmd == "artifact-put":
         receipt = ContentAddressedArtifactStore(args.root).put_file(args.path)
@@ -604,5 +614,18 @@ def main() -> None:
             mode=args.mode,
             registry_path=args.registry,
             timeout_seconds=args.timeout_seconds,
+        )
+        print(json.dumps(result, default=str))
+    elif args.cmd == "document-normalize-docling-benchmark":
+        from .document_docling_benchmark import (
+            run_docling_normalization_benchmark,
+        )
+
+        result = run_docling_normalization_benchmark(
+            case_manifest_path=args.case_manifest,
+            bundle_root=args.bundle_root,
+            raw_docling_root=args.raw_docling_root,
+            output_root=args.output_root,
+            docling_version=args.docling_version,
         )
         print(json.dumps(result, default=str))
