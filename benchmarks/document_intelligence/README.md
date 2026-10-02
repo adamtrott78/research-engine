@@ -162,6 +162,32 @@ Initial candidates are intentionally component-oriented:
 - deterministic OCR/table/formula components where useful;
 - hybrid adapters composed from measured component winners.
 
+Pinned versions, licenses, mode commands, capability metadata, and isolated
+runtime requirements are recorded in:
+
+```text
+candidate-runtime-contracts.v1.json
+runtimes/README.md
+```
+
+The research-engine core does not install those heavyweight runtimes. Inspect
+what is available with:
+
+```bash
+research-engine document-adapter-status
+```
+
+A single installed candidate can be exercised with
+`research-engine document-adapter-run`, and the full seed with
+`research-engine document-benchmark-external`. Candidate subprocesses run
+without a shell and with remote LLM/OCR API credentials removed from their
+environment.
+
+Until a parser-specific structured-output normalizer proves page/block
+provenance, external results are marked `RAW_EXTERNAL_OUTPUT` and have no
+`paper-package.v1` package ID. This prevents a visually good Markdown export
+from being mistaken for provenance-safe research input.
+
 No candidate is accepted based on Markdown appearance alone.
 
 ## Metrics
