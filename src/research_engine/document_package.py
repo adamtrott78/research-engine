@@ -340,7 +340,9 @@ class DocumentBenchmarkResult(BaseModel):
     case_id: str
     adapter_id: str
     adapter_version: str
-    package_id: str
+    package_id: str | None = None
+    normalization_status: str = "PAPER_PACKAGE_V1"
+    raw_output_paths: tuple[str, ...] = ()
     status: str
     quality: QualityMetrics
     resources: ResourceMetrics
