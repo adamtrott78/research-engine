@@ -90,6 +90,28 @@
           ],
           "benchmark_phase": "VLM_ESCALATION",
           "gpu_preferred": true
+        },
+        "standard_no_ocr": {
+          "class": "SPECIALIZED_LOCAL_MODEL",
+          "command": [
+            "{python}",
+            "{docling_standard_no_ocr_shim}",
+            "{source}",
+            "{output_dir}"
+          ],
+          "model_inference": true,
+          "expected_outputs": [
+            "{source_stem}.md",
+            "{source_stem}.json"
+          ],
+          "benchmark_phase": "SPECIALIZED_INFERENCE",
+          "gpu_preferred": true,
+          "runtime_surface": "python-sdk-shim",
+          "ocr": false,
+          "table_structure": true,
+          "table_mode": "fast",
+          "formula_enrichment": false,
+          "remote_services": false
         }
       },
       "capabilities": [
@@ -101,13 +123,14 @@
         "page_provenance",
         "batching"
       ],
-      "runtime_notes": "Native mode uses lightweight docling-slim CLI+convert-core+PDF extras but executes through the repository's Python SDK shim (DocumentConverter + NativePdfFormatOption), bypassing CLI OCR/VLM plugin initialization. Standard/VLM modes remain CLI-driven and are deferred. Keep model cache outside Git.",
+      "runtime_notes": "Native mode uses the model-free SDK shim. standard_no_ocr uses a separate docling-slim[format-pdf,models-local,cli] runtime and SDK shim with OCR/formula/code/picture-description/VLM features disabled, TableFormer FAST enabled, explicit local artifacts_path, and remote services disabled. Standard OCR and VLM modes remain deferred.",
       "distribution": "docling-slim",
       "version_pattern": "2\\.131\\.0",
       "install_profiles": {
         "native": "python -m pip install 'docling-slim[cli,convert-core,format-pdf]==2.131.0'",
         "standard": "python -m pip install 'docling==2.131.0'",
-        "vlm": "python -m pip install 'docling[vlm]==2.131.0'"
+        "vlm": "python -m pip install 'docling[vlm]==2.131.0'",
+        "standard_no_ocr": "python -m pip install 'docling-slim[format-pdf,models-local,cli]==2.131.0'"
       }
     },
     {
@@ -374,6 +397,7 @@
       "id": "SPECIALIZED_INFERENCE",
       "purpose": "Measure bounded OCR/layout/table/formula inference before broad VLM use.",
       "modes": [
+        "docling/standard_no_ocr",
         "docling/standard",
         "mineru/basic",
         "mineru/standard",
