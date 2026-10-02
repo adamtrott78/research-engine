@@ -8,7 +8,8 @@ unit="research-engine-daemon.service"
 core_venv="$state/venv"
 runtime="$state/document-runtimes/docling-standard-no-ocr"
 models="$state/document-models/docling-standard-no-ocr-2.131.0"
-profile_id="docling-standard-no-ocr-core-cu126-v3"
+profile_id="docling-standard-no-ocr-core-cu126-opencv-v4"
+previous_profile_id="docling-standard-no-ocr-core-cu126-v3"
 profile_file="$runtime/.research-engine-profile"
 manifest="$root/benchmarks/document_intelligence/cases/milcom-mathpix-seed-v1.json"
 shim="$root/benchmarks/document_intelligence/runtimes/docling_standard_no_ocr.py"
@@ -225,12 +226,15 @@ fi
 
 echo
 echo "=== PREPARE ISOLATED STRUCTURE RUNTIME ==="
-if [ -d "$runtime" ]; then
-    existing_profile="$(cat "$profile_file" 2>/dev/null || true)"
-    if [ "$existing_profile" != "$profile_id" ]; then
-        echo "RECREATE_RUNTIME_PROFILE=$existing_profile->$profile_id"
-        rm -rf "$runtime"
-    fi
+existing_profile="$(cat "$profile_file" 2>/dev/null || true)"
+if [ -d "$runtime" ] && [ "$existing_profile" = "$previous_profile_id" ]; then
+    echo "MIGRATE_RUNTIME_PROFILE=$existing_profile->$profile_id"
+    "$runtime/bin/python" -m pip install \
+        "docling-ibm-models[opencv-python-headless]>=4.0.2,<5"
+    printf '%s\n' "$profile_id" > "$profile_file"
+elif [ -d "$runtime" ] && [ "$existing_profile" != "$profile_id" ]; then
+    echo "RECREATE_RUNTIME_PROFILE=$existing_profile->$profile_id"
+    rm -rf "$runtime"
 fi
 if [ ! -x "$runtime/bin/python" ]; then
     python3 -m venv "$runtime"
@@ -239,14 +243,22 @@ if [ ! -x "$runtime/bin/python" ]; then
         torch==2.13.0 torchvision==0.28.0 \
         --index-url https://download.pytorch.org/whl/cu126
     "$runtime/bin/python" -m pip install \
-        "docling-slim[convert-core,format-pdf,models-local]==2.131.0"
+        "docling-slim[convert-core,format-pdf,models-local]==2.131.0" \
+        "docling-ibm-models[opencv-python-headless]>=4.0.2,<5"
     printf '%s\n' "$profile_id" > "$profile_file"
 fi
 
 echo "DOCLING_VERSION=$("$runtime/bin/python" -c 'import importlib.metadata as m; print(m.version("docling-slim"))')"
+echo "DOCLING_IBM_MODELS_VERSION=$("$runtime/bin/python" -c 'import importlib.metadata as m; print(m.version("docling-ibm-models"))')"
 echo "TORCH_VERSION=$("$runtime/bin/python" -c 'import torch; print(torch.__version__)')"
 echo "TORCHVISION_VERSION=$("$runtime/bin/python" -c 'import torchvision; print(torchvision.__version__)')"
 echo "SCIPY_VERSION=$("$runtime/bin/python" -c 'import scipy; print(scipy.__version__)')"
+echo "OPENCV_VERSION=$("$runtime/bin/python" -c 'import cv2; print(cv2.__version__)')"
+"$runtime/bin/python" - <<'PY'
+import cv2
+from docling_ibm_models.tableformer.data_management.tf_predictor import TFPredictor
+print("TABLEFORMER_IMPORT_PREFLIGHT=PASS")
+PY
 echo "RUNTIME_SIZE=$(du -sh "$runtime" | awk '{print $1}')"
 
 echo
