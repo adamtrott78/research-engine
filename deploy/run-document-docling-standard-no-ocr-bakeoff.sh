@@ -8,6 +8,8 @@ unit="research-engine-daemon.service"
 core_venv="$state/venv"
 runtime="$state/document-runtimes/docling-standard-no-ocr"
 models="$state/document-models/docling-standard-no-ocr-2.131.0"
+profile_id="docling-standard-no-ocr-direct-prefetch-v2"
+profile_file="$runtime/.research-engine-profile"
 manifest="$root/benchmarks/document_intelligence/cases/milcom-mathpix-seed-v1.json"
 shim="$root/benchmarks/document_intelligence/runtimes/docling_standard_no_ocr.py"
 tmp_root="$adam/.workspace-control/tmp"
@@ -87,11 +89,19 @@ fi
 
 echo
 echo "=== PREPARE ISOLATED STRUCTURE RUNTIME ==="
+if [ -d "$runtime" ]; then
+    existing_profile="$(cat "$profile_file" 2>/dev/null || true)"
+    if [ "$existing_profile" != "$profile_id" ]; then
+        echo "RECREATE_RUNTIME_PROFILE=$existing_profile->$profile_id"
+        rm -rf "$runtime"
+    fi
+fi
 if [ ! -x "$runtime/bin/python" ]; then
     python3 -m venv "$runtime"
+    "$runtime/bin/python" -m pip install --upgrade pip
+    "$runtime/bin/python" -m pip install "docling-slim[format-pdf,models-local]==2.131.0"
+    printf '%s\n' "$profile_id" > "$profile_file"
 fi
-"$runtime/bin/python" -m pip install --upgrade pip
-"$runtime/bin/python" -m pip install "docling-slim[format-pdf,models-local,cli]==2.131.0"
 
 echo "DOCLING_VERSION=$("$runtime/bin/python" -c 'import importlib.metadata as m; print(m.version("docling-slim"))')"
 echo "TORCH_VERSION=$("$runtime/bin/python" -c 'import torch; print(torch.__version__)')"
@@ -103,7 +113,7 @@ require_stopped
 echo
 echo "=== PREFETCH ONLY LAYOUT + TABLEFORMER MODELS ==="
 mkdir -p "$models"
-"$runtime/bin/docling-tools" models download layout tableformer --output-dir "$models"
+"$runtime/bin/python" "$shim" --prefetch-models "$models"
 echo "MODEL_ARTIFACT_SIZE=$(du -sh "$models" | awk '{print $1}')"
 find "$models" -maxdepth 2 -type d -print | sort | head -80
 
@@ -111,7 +121,7 @@ require_stopped
 
 echo
 echo "=== SDK PREFLIGHT ==="
-export RESEARCH_ENGINE_DOCLING_BIN="$runtime/bin/docling"
+export RESEARCH_ENGINE_DOCLING_BIN="$runtime/bin/python"
 export RESEARCH_ENGINE_DOCLING_ARTIFACTS="$models"
 export RESEARCH_ENGINE_DOCLING_DEVICE="${RESEARCH_ENGINE_DOCLING_DEVICE:-auto}"
 export RESEARCH_ENGINE_DOCLING_THREADS="${RESEARCH_ENGINE_DOCLING_THREADS:-$(nproc 2>/dev/null || echo 4)}"

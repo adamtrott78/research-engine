@@ -140,9 +140,13 @@ def test_docling_standard_no_ocr_bakeoff_is_stopped_local_and_bounded():
     ).read_text()
     assert "RESEARCH_ENGINE_DAEMON_MUST_REMAIN_STOPPED" in text
     assert "systemctl --user start" not in text
-    assert "docling-slim[format-pdf,models-local,cli]==2.131.0" in text
-    assert "models download layout tableformer" in text
+    assert "docling-slim[format-pdf,models-local]==2.131.0" in text
+    assert "--prefetch-models" in text
+    assert "docling-tools" not in text
+    assert "models download" not in text
+    assert "docling-standard-no-ocr-direct-prefetch-v2" in text
     assert "RESEARCH_ENGINE_DOCLING_ARTIFACTS" in text
+    assert 'RESEARCH_ENGINE_DOCLING_BIN="$runtime/bin/python"' in text
     assert "HF_HUB_OFFLINE=1" in text
     assert "TRANSFORMERS_OFFLINE=1" in text
     assert "standard_no_ocr" in text
