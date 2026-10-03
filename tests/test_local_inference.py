@@ -121,9 +121,9 @@ def test_owner_applies_bounded_backpressure(tmp_path: Path):
                 {"op": "infer", "value": "first", "delay": 0.6},
             )
             deadline = time.monotonic() + 2
-            while owner.health()["requests_accepted"] < 1:
+            while owner.health()["spawn_count"] < 1:
                 if time.monotonic() >= deadline:
-                    raise AssertionError("first request was not accepted")
+                    raise AssertionError("first request did not start")
                 time.sleep(0.01)
 
             second = pool.submit(
