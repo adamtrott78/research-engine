@@ -246,10 +246,10 @@
     },
     {
       "adapter_id": "paddle-pp-structure-v3",
-      "current_version": "3.7.x",
-      "version_constraint": "paddleocr[doc-parser]>=3.7,<3.8",
+      "current_version": "3.7.0",
+      "version_constraint": "paddleocr[doc-parser]==3.7.0",
       "python": ">=3.8",
-      "install": "install a hardware-appropriate PaddlePaddle build, then python -m pip install 'paddleocr[doc-parser]>=3.7,<3.8'",
+      "install": "install PaddlePaddle 3.3.0 for target hardware, then python -m pip install 'paddleocr[doc-parser]==3.7.0'",
       "executable": "python",
       "executable_env": "RESEARCH_ENGINE_PADDLE_PYTHON",
       "version_probe_python": "import importlib.metadata; print(importlib.metadata.version('paddleocr'))",
@@ -275,6 +275,34 @@
           ],
           "benchmark_phase": "SPECIALIZED_INFERENCE",
           "gpu_preferred": true
+        },
+        "table_recognition_v2_crop": {
+          "class": "SPECIALIZED_LOCAL_MODEL",
+          "command": [
+            "{python}",
+            "{paddle_table_v2_shim}",
+            "{target_plan}",
+            "--bundle-root",
+            "{bundle_root}",
+            "--output-root",
+            "{output_dir}",
+            "--model-cache",
+            "{model_cache}",
+            "--device",
+            "gpu:0"
+          ],
+          "model_inference": true,
+          "expected_outputs": [
+            "paddle-table-output-summary.json",
+            "**/result.json",
+            "**/table-crop.png"
+          ],
+          "benchmark_phase": "SPECIALIZED_INFERENCE",
+          "gpu_preferred": true,
+          "crop_only": true,
+          "layout_detection": false,
+          "document_preprocessing": false,
+          "remote_services": false
         }
       },
       "capabilities": [
@@ -287,9 +315,9 @@
         "charts",
         "reading_order"
       ],
-      "runtime_notes": "Use the repository shim so page Markdown and image assets are concatenated consistently. English-only recognition configuration should be evaluated on this corpus.",
+      "runtime_notes": "Use the repository shim so page Markdown and image assets are concatenated consistently. English-only recognition configuration should be evaluated on this corpus. The table_recognition_v2_crop mode is a residual-only PP-TableMagic path: it renders only previously localized failed table bboxes and runs TableRecognitionPipelineV2 with layout/orientation/unwarping disabled while keeping OCR+table classification/structure/cell detection enabled.",
       "distribution": "paddleocr",
-      "version_pattern": "3\\.7\\..+"
+      "version_pattern": "3\\.7\\.0"
     },
     {
       "adapter_id": "marker",
