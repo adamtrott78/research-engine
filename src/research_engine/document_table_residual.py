@@ -78,6 +78,11 @@ def build_tableformer_accurate_target_plan(
                     "source_location": cases[case_id].source_location,
                     "source_pdf_sha256": cases[case_id].source_pdf_sha256,
                     "page_number": asset.source_region.page_number,
+                    "pdf_bbox": (
+                        list(asset.source_region.pdf_bbox)
+                        if asset.source_region.pdf_bbox is not None
+                        else None
+                    ),
                     "table_asset_id": asset.id,
                     "baseline_candidate_index": candidate_index,
                     "reference_index": reference_index,
