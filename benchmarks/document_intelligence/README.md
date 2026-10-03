@@ -496,3 +496,30 @@ request failures, drained queues, and sampled GPU/system-memory telemetry.
 
 The machine-readable architecture and acceptance contract is retained in
 `local-inference-service-contract.v1.json`.
+
+
+## EXTRACT / VERIFY paper-package A/B
+
+Document-parser quality does not by itself justify changing semantic research
+context. The paper-package A/B gate therefore evaluates downstream behavior
+against completed historical EXTRACT and VERIFY jobs.
+
+The paper-package arm uses normalized Docling-native blocks for lexical text.
+The validated standard/no-OCR package contributes structural policy signals,
+currently the conservative start of the references section. EXTRACT can omit
+pages strictly after that boundary; VERIFY retains the full package page set so
+an authoritative cited page is never removed by context optimization.
+
+Before any semantic replay, every historical evidence quote is checked against
+the package-derived text on its original page. The default preflight requires
+at least 95% of quotes to achieve token recall >= 0.8. Failure stops the gate
+before any Terra/Codex calls.
+
+The semantic sample selects low/median/high historical-input-token EXTRACT and
+VERIFY jobs. Package disagreement triggers a current-PDF control only for that
+job. A package-only failure is a context-regression signal; disagreement in
+both arms is treated as model-variance ambiguity rather than silently blamed on
+the document compiler.
+
+Exact token usage and latency are retained separately from any quantized
+ChatGPT-plan allowance observations.
