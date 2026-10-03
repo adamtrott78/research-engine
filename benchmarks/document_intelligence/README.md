@@ -366,3 +366,36 @@ Formula promotion is not automatic. The benchmark requires at least 0.8
 reference-weighted matched-content F1, at least 0.8 reference coverage at
 F1>=0.5, and non-zero content/coverage on every equation-bearing case.
 The original PDF remains scientific authority throughout.
+
+
+## Targeted TableFormer ACCURATE residual gate
+
+The content-aware table audit deliberately reports both genuine extraction
+failures and representational differences against the Mathpix benchmark
+reference. A heavier table mode must therefore be opened only for intrinsic
+failures, not every low benchmark score.
+
+The targeted selector is intentionally narrow: only standard-no-OCR TableFormer
+FAST assets whose normalized table grid is actually empty are eligible. The
+selector maps each failed table asset back to its authoritative PDF page using
+paper-package provenance.
+
+Run the stopped-daemon gate with:
+
+```bash
+bash deploy/run-tableformer-accurate-residual-gate.sh
+```
+
+The gate reuses the already-installed Docling 2.131.0 standard runtime and
+existing layout/TableFormer model cache. It does not rebuild the runtime or
+redownload models. It converts only the selected pages using
+`TableFormerMode.ACCURATE`, with OCR, formula enrichment, picture analysis,
+remote services, and broad document reruns disabled.
+
+Evaluation compares only the selected failed table references. The original PDF
+remains scientific authority and Mathpix remains a manual benchmark reference.
+
+New operator-facing temporary outputs are written beneath the visible
+`~/adamArchives/Adam/workspace-control-tmp/` directory so JupyterLab can
+browse/download them. Hidden `.workspace-control/tmp` paths are treated as
+legacy input compatibility only.
