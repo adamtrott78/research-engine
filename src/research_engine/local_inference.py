@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import os
 import queue
-import select
 import subprocess
 import threading
 import time
@@ -64,6 +63,8 @@ class LocalModelOwner:
         self._lock = threading.Lock()
         self._next_request_id = 1
         self._process: subprocess.Popen[str] | None = None
+        self._stdout_lines: queue.Queue[str | None] | None = None
+        self._stdout_reader: threading.Thread | None = None
         self._log_handle = None
         self._closed = False
         self._spawn_count = 0
@@ -159,6 +160,23 @@ class LocalModelOwner:
             bufsize=1,
         )
         self._process = proc
+        stdout_lines: queue.Queue[str | None] = queue.Queue()
+        self._stdout_lines = stdout_lines
+
+        def read_stdout() -> None:
+            assert proc.stdout is not None
+            try:
+                for line in proc.stdout:
+                    stdout_lines.put(line.rstrip("\n"))
+            finally:
+                stdout_lines.put(None)
+
+        self._stdout_reader = threading.Thread(
+            target=read_stdout,
+            name=f"local-inference-stdout:{self.spec.family}",
+            daemon=True,
+        )
+        self._stdout_reader.start()
         with self._lock:
             self._spawn_count += 1
         return proc
@@ -176,6 +194,10 @@ class LocalModelOwner:
         proc.stdin.write(json.dumps(request, separators=(",", ":")) + "\n")
         proc.stdin.flush()
 
+        stdout_lines = self._stdout_lines
+        if stdout_lines is None:
+            raise LocalInferenceError("model process stdout reader is unavailable")
+
         deadline = time.monotonic() + self.spec.request_timeout_seconds
         while True:
             remaining = deadline - time.monotonic()
@@ -184,23 +206,20 @@ class LocalModelOwner:
                     f"protocol timeout waiting for {self.spec.family} "
                     f"request {pending.request_id}"
                 )
-            if proc.poll() is not None:
-                raise LocalInferenceError(
-                    f"{self.spec.family} server exited with code "
-                    f"{proc.returncode}"
-                )
-            ready, _, _ = select.select([proc.stdout], [], [], min(remaining, 1.0))
-            if not ready:
-                continue
-            line = proc.stdout.readline()
-            if line == "":
+            try:
+                line = stdout_lines.get(timeout=min(remaining, 1.0))
+            except queue.Empty:
                 if proc.poll() is not None:
                     raise LocalInferenceError(
-                        f"{self.spec.family} server closed stdout "
-                        f"(exit={proc.returncode})"
+                        f"{self.spec.family} server exited with code "
+                        f"{proc.returncode}"
                     )
                 continue
-            line = line.rstrip("\n")
+            if line is None:
+                raise LocalInferenceError(
+                    f"{self.spec.family} server closed stdout "
+                    f"(exit={proc.poll()})"
+                )
             if not line.startswith(RESPONSE_PREFIX):
                 continue
             payload = json.loads(line[len(RESPONSE_PREFIX):])
@@ -249,6 +268,9 @@ class LocalModelOwner:
     def _stop_process(self) -> None:
         proc = self._process
         self._process = None
+        stdout_reader = self._stdout_reader
+        self._stdout_reader = None
+        self._stdout_lines = None
         if proc is None:
             return
         if proc.poll() is None:
@@ -276,6 +298,8 @@ class LocalModelOwner:
             proc.stdin.close()
         if proc.stdout is not None:
             proc.stdout.close()
+        if stdout_reader is not None:
+            stdout_reader.join(timeout=1)
         if self._log_handle is not None:
             self._log_handle.close()
             self._log_handle = None
