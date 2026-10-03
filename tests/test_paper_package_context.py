@@ -230,3 +230,48 @@ def test_hybrid_context_uses_caption_for_blank_figure(tmp_path: Path):
     extractor = HybridPaperPackagePageTextExtractor(native_package_root=root)
     pages = extractor(source)
     assert pages[0]["text"] == "Figure: Figure 1. Detection rate."
+
+
+
+def test_verify_policy_keeps_pages_after_reference_start(tmp_path: Path):
+    source = tmp_path / "paper.pdf"
+    source.write_bytes(b"%PDF-fixture")
+    native_blocks = [
+        DocumentBlock(
+            id=f"p{page}",
+            kind=BlockKind.PARAGRAPH,
+            markdown=f"Native page {page}",
+            source_region=PdfRegion(page_number=page),
+            derivation=(_step(),),
+        )
+        for page in range(1, 5)
+    ]
+    standard_blocks = [
+        DocumentBlock(
+            id="h1",
+            kind=BlockKind.HEADING,
+            markdown="References",
+            source_region=PdfRegion(page_number=3, section_path=("References",)),
+            derivation=(_step(),),
+        )
+    ]
+    native_root = tmp_path / "native"
+    standard_root = tmp_path / "standard"
+    _write_package(
+        native_root,
+        "case",
+        _package(source=source, compiler="native", blocks=native_blocks),
+    )
+    _write_package(
+        standard_root,
+        "case",
+        _package(source=source, compiler="standard", blocks=standard_blocks),
+    )
+
+    extractor = HybridPaperPackagePageTextExtractor(
+        native_package_root=native_root,
+        standard_package_root=standard_root,
+        exclude_trailing_references=False,
+    )
+    pages = extractor(source)
+    assert [row["page_number"] for row in pages] == [1, 2, 3, 4]
