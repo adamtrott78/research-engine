@@ -523,3 +523,21 @@ the document compiler.
 
 Exact token usage and latency are retained separately from any quantized
 ChatGPT-plan allowance observations.
+
+
+## Measured localization matrix v2
+
+`localization-matrix.v2.json` is the measured production-placement policy for
+the research pipeline.
+
+It covers every research `JobType` exactly once and is checked against
+`JOB_TIERS` in CI. It also records the finalized document-component decisions:
+authoritative PDF remains semantic authority; native/standard Docling stays
+local document support; targeted formula/table residuals use the validated
+shared local inference service; OCR/general document VLM remain disabled; and
+paper-package context remains a derived cache/benchmark representation rather
+than the EXTRACT/VERIFY production hydrator.
+
+Any future proposal to retier SCREEN, EXTRACT, or VERIFY must add a controlled
+quality benchmark and a material resource or allowance benefit before changing
+the scheduler contract.

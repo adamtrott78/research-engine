@@ -125,3 +125,19 @@ The acceptance sequence is:
 Semantic replays call the delegate directly and never invoke
 SemanticResultMaterializer. They may record operational calibration events but
 must not mutate scientific evidence or verification state.
+
+
+### Measured localization policy
+
+The production placement policy is captured in
+`benchmarks/document_intelligence/localization-matrix.v2.json`.
+
+The v2 matrix is evidence-backed rather than aspirational. It preserves the
+scheduler's current job tiers and explicitly records where local processing is
+validated, where remote/web/human reasoning is retained, and where candidate
+localization was rejected or deferred.
+
+In particular, EXTRACT and VERIFY remain STANDARD semantic jobs over
+authoritative-PDF context. The measured paper-package A/B did not justify
+replacing that baseline. Specialized local document models remain targeted
+sidecar/escalation components rather than a silent semantic-context substitute.

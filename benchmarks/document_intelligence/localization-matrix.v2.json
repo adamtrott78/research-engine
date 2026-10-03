@@ -1,0 +1,280 @@
+{
+  "schema_version": 2,
+  "title": "Research-engine measured localization matrix v2",
+  "baseline_research_engine_sha": "8c875a62d44e91ed91207cdc78d715acb0909346",
+  "status": "VALIDATED_POLICY",
+  "principle": "Localize deterministic transport, parsing, provenance, accounting, and measured specialized-model residuals; retain authoritative-PDF semantic hydration and remote semantic reasoning unless a controlled benchmark demonstrates equivalent quality with a material resource or allowance benefit.",
+  "global_invariants": [
+    "The original PDF/source artifact remains scientific authority.",
+    "Paper-package.v1 is a derived/cache/benchmark representation and MUST NOT replace authoritative-PDF hydration for production EXTRACT or VERIFY.",
+    "EXTRACT and VERIFY remain STANDARD semantic jobs over authoritative-PDF context.",
+    "VERIFY remains radius-0 cited-page hydration unless separately revalidated.",
+    "Local heavyweight document models are shared process owners with bounded per-family queues; duplicate per-worker model ownership is forbidden.",
+    "OCR, general document VLM, chart VLM, embeddings, reranking, and local semantic replacements remain disabled/deferred unless a measured residual or benchmark justifies them.",
+    "Web-dependent discovery/novelty retrieval remains external/freshness-capable.",
+    "Sustained research remains disabled until production acceptance and licensing gates are complete."
+  ],
+  "job_type_decisions": [
+    {
+      "job_type": "DISCOVERY",
+      "executor_tier": "CHEAP",
+      "production_placement": "REMOTE_SEMANTIC_WITH_EXTERNAL_WEB",
+      "localization_decision": "RETAIN",
+      "local_support": [
+        "query/result normalization",
+        "deduplication",
+        "bounded candidate handling"
+      ],
+      "authority": "external source records",
+      "rationale": "Freshness-sensitive retrieval is inherently external; no measured local semantic replacement exists."
+    },
+    {
+      "job_type": "SCREEN",
+      "executor_tier": "CHEAP",
+      "production_placement": "REMOTE_SEMANTIC",
+      "localization_decision": "RETAIN",
+      "local_support": [
+        "deterministic candidate bounds",
+        "identity/deduplication"
+      ],
+      "authority": "screen result",
+      "rationale": "Local screening remained only a candidate in v1 and has no promotion benchmark; retain the existing CHEAP semantic path."
+    },
+    {
+      "job_type": "ACQUIRE",
+      "executor_tier": "DETERMINISTIC",
+      "production_placement": "LOCAL_DETERMINISTIC",
+      "localization_decision": "VALIDATED_LOCAL",
+      "local_support": [
+        "provider fetch",
+        "media validation",
+        "hashing",
+        "content-addressed storage",
+        "deduplication"
+      ],
+      "authority": "content-addressed source artifact",
+      "rationale": "Already implemented by DeterministicResearchExecutor and preserves source bytes/identity."
+    },
+    {
+      "job_type": "EXTRACT",
+      "executor_tier": "STANDARD",
+      "production_placement": "REMOTE_SEMANTIC_AUTHORITATIVE_PDF_CONTEXT",
+      "localization_decision": "RETAIN_BASELINE",
+      "local_support": [
+        "source-artifact lookup",
+        "PDF text hydration",
+        "page/provenance assembly",
+        "optional document-sidecar enrichment"
+      ],
+      "authority": "materialized evidence grounded to source artifact/page",
+      "rationale": "Nine-paper A/B rejected paper-package context as a wholesale replacement: all three contemporaneous controlled EXTRACT pairs differed materially while controlled input-token savings were negligible overall."
+    },
+    {
+      "job_type": "VERIFY",
+      "executor_tier": "STANDARD",
+      "production_placement": "REMOTE_SEMANTIC_AUTHORITATIVE_PDF_CITED_PAGES",
+      "localization_decision": "RETAIN_BASELINE",
+      "local_support": [
+        "evidence-id lookup",
+        "locator validation",
+        "radius-0 cited-page selection",
+        "fail-closed missing-page checks"
+      ],
+      "authority": "verification event over authoritative evidence/source page",
+      "rationale": "Paper-package VERIFY looked quality-promising but demonstrated no compelling contemporaneous efficiency advantage; existing cited-page PDF hydration remains simpler and safer."
+    },
+    {
+      "job_type": "CHECKPOINT",
+      "executor_tier": "DETERMINISTIC",
+      "production_placement": "LOCAL_DETERMINISTIC",
+      "localization_decision": "VALIDATED_LOCAL",
+      "local_support": [
+        "checkpoint construction",
+        "fingerprinting",
+        "manifest/count persistence"
+      ],
+      "authority": "knowledge checkpoint",
+      "rationale": "Already implemented by DeterministicResearchExecutor with no semantic reasoning requirement."
+    },
+    {
+      "job_type": "SYNTHESIZE",
+      "executor_tier": "STRONG",
+      "production_placement": "REMOTE_STRONG_REASONING",
+      "localization_decision": "RETAIN",
+      "local_support": [
+        "checkpoint/evidence context assembly",
+        "citation formatting"
+      ],
+      "authority": "derived synthesis grounded to checkpoint evidence",
+      "rationale": "Cross-paper interpretation is high-level reasoning; no measured local replacement benefit exists."
+    },
+    {
+      "job_type": "GAP_GENERATE",
+      "executor_tier": "STRONG",
+      "production_placement": "REMOTE_STRONG_REASONING",
+      "localization_decision": "RETAIN",
+      "local_support": [
+        "checkpoint hydration",
+        "bounded fanout",
+        "candidate packaging"
+      ],
+      "authority": "gap candidate grounded to checkpoint evidence",
+      "rationale": "Research-gap reasoning remains a strong-model function; deterministic fanout bounds are already localized."
+    },
+    {
+      "job_type": "NOVELTY_SEARCH",
+      "executor_tier": "CHEAP",
+      "production_placement": "REMOTE_SEMANTIC_WITH_EXTERNAL_WEB",
+      "localization_decision": "RETAIN",
+      "local_support": [
+        "query bounds",
+        "deduplication",
+        "result packaging"
+      ],
+      "authority": "external novelty-search evidence",
+      "rationale": "Currentness requires external web retrieval; no safe fully local substitute exists."
+    },
+    {
+      "job_type": "NOVELTY_ARBITRATE",
+      "executor_tier": "STRONG",
+      "production_placement": "REMOTE_STRONG_REASONING",
+      "localization_decision": "RETAIN",
+      "local_support": [
+        "checkpoint/gap/search packet hydration",
+        "provenance packaging"
+      ],
+      "authority": "novelty arbitration record",
+      "rationale": "Final novelty judgment/conflict resolution remains high-level semantic reasoning."
+    },
+    {
+      "job_type": "HUMAN_REVIEW",
+      "executor_tier": "HUMAN",
+      "production_placement": "HUMAN",
+      "localization_decision": "RETAIN",
+      "local_support": [
+        "request packaging",
+        "durable status/audit state"
+      ],
+      "authority": "human decision",
+      "rationale": "Human gate is intentionally non-automated authority."
+    }
+  ],
+  "component_decisions": [
+    {
+      "component": "source_acquisition_transport",
+      "decision": "VALIDATED_LOCAL",
+      "production_path": "DeterministicResearchExecutor + content-addressed artifact store",
+      "evidence": "ACQUIRE is deterministic in JOB_TIERS and production executor."
+    },
+    {
+      "component": "document_native_lexical_text",
+      "decision": "VALIDATED_LOCAL_SUPPORT_ONLY",
+      "production_path": "authoritative PDF hydration remains semantic baseline; native Docling/pypdf are local parsing substrates",
+      "evidence": "Native Docling benchmark preserved lexical/order/provenance substrate; package context was not promoted."
+    },
+    {
+      "component": "layout_structure_overlay",
+      "decision": "VALIDATED_TARGETED_LOCAL",
+      "production_path": "Docling standard_no_ocr structural overlay",
+      "evidence": "Headings/provenance/caption-linked figures validated; overlay does not replace native lexical substrate."
+    },
+    {
+      "component": "formula_recognition",
+      "decision": "VALIDATED_TARGETED_LOCAL_PENDING_LICENSE",
+      "production_path": "CodeFormulaV2 targeted page/region escalation through shared local inference broker",
+      "evidence": "Matched-content F1 0.8236607354503158, reference coverage 0.98, all equation cases nonzero; dual-GPU broker/concurrency gate passed.",
+      "blocker": "Final deployment/redistribution license review."
+    },
+    {
+      "component": "table_reconstruction",
+      "decision": "VALIDATED_CASCADED_LOCAL",
+      "production_path": "TableFormer FAST -> ACCURATE -> PP-TableMagic crop fallback on persistent empty grid -> authoritative-PDF verification",
+      "evidence": "Paddle fallback 3/3 targets; weighted matched-content F1 0.8902691511387163; weighted aligned-cell F1 0.8472714360469462."
+    },
+    {
+      "component": "figure_caption_pairing",
+      "decision": "VALIDATED_LOCAL_STRUCTURE",
+      "production_path": "caption-linked figures only; uncaptioned pictures not semantically promoted",
+      "evidence": "35/44 candidate pictures caption-linked; figure-caption benchmark strong."
+    },
+    {
+      "component": "ocr",
+      "decision": "DEFER_DISABLED",
+      "production_path": "off by default",
+      "evidence": "No measured residual justified OCR in the current corpus after targeted formula/table routing."
+    },
+    {
+      "component": "general_document_vlm",
+      "decision": "DEFER_DISABLED",
+      "production_path": "off",
+      "evidence": "No measured residual justified global VLM escalation."
+    },
+    {
+      "component": "chart_figure_semantics",
+      "decision": "DEFER",
+      "production_path": "no local chart/general VLM in production",
+      "evidence": "Not required by measured residuals; retain authoritative figure/caption for future escalation."
+    },
+    {
+      "component": "paper_package_cache",
+      "decision": "VALIDATED_DERIVED_CACHE_NOT_SEMANTIC_BASELINE",
+      "production_path": "content-addressed derived package/benchmark cache only",
+      "evidence": "Zero-model quote recovery 140/142 (0.985915...), but contemporaneous semantic A/B measured context differences."
+    },
+    {
+      "component": "chunking_and_context_assembly",
+      "decision": "VALIDATED_CURRENT_PDF_HYDRATOR",
+      "production_path": "ResearchContextHydrator over authoritative PDF; VERIFY radius 0",
+      "evidence": "Paper-package replacement measured 1/4 agreement on controlled pairs; baseline retained."
+    },
+    {
+      "component": "embeddings",
+      "decision": "DEFER_NOT_REQUIRED",
+      "production_path": "no new embedding localization in critical path",
+      "evidence": "No measured need or quality/resource benchmark supporting production promotion."
+    },
+    {
+      "component": "retrieval_and_reranking",
+      "decision": "DEFER_NOT_REQUIRED",
+      "production_path": "retain existing retrieval behavior",
+      "evidence": "No measured need or benchmark supporting a new local reranker in the validated pipeline."
+    },
+    {
+      "component": "screen_semantic_offload",
+      "decision": "DEFER_RETAIN_CHEAP_REMOTE",
+      "production_path": "CHEAP semantic SCREEN",
+      "evidence": "No measured local-screen benchmark; scheduler already routes SCREEN to CHEAP."
+    },
+    {
+      "component": "extract_semantic_offload",
+      "decision": "REJECT_FOR_CURRENT_BASELINE",
+      "production_path": "STANDARD semantic EXTRACT over authoritative PDF",
+      "evidence": "All 3 controlled package-vs-PDF EXTRACT pairs failed direct agreement; package context not safe as replacement."
+    },
+    {
+      "component": "verify_semantic_offload",
+      "decision": "DEFER_RETAIN_STANDARD_REMOTE",
+      "production_path": "STANDARD semantic VERIFY over authoritative cited pages",
+      "evidence": "Quality acceptable in sample but no compelling controlled efficiency gain or local-model benchmark."
+    },
+    {
+      "component": "shared_heavy_model_ownership",
+      "decision": "VALIDATED_LOCAL",
+      "production_path": "one broker per daemon, one persistent owner process per model family, bounded queues, distinct GPUs where available",
+      "evidence": "Lambda concurrency gate: one PID/model load/spawn per family; zero failures; queues drained; warm mixed wave ~7.33x faster."
+    },
+    {
+      "component": "ops_telemetry_accounting",
+      "decision": "VALIDATED_LOCAL",
+      "production_path": "PostgreSQL telemetry/calibration/usage records",
+      "evidence": "Used for measured A/B, model usage, concurrency and operational state."
+    }
+  ],
+  "fallback_policy": [
+    "Authoritative PDF/page/region is always the scientific fallback.",
+    "If specialized formula/table local inference fails, do not silently invent structure; retain/return authoritative PDF context and route to explicit semantic/human escalation.",
+    "If deterministic source acquisition cannot support a provider, fail closed with unsupported-provider semantics rather than fabricating source state.",
+    "If VERIFY cited pages are unavailable, fail closed with MISSING_VERIFICATION_SOURCE_PAGE.",
+    "If a future local semantic candidate is proposed for SCREEN/EXTRACT/VERIFY, require a controlled quality benchmark and material resource/allowance benefit before changing JOB_TIERS."
+  ]
+}
