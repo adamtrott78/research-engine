@@ -75,3 +75,25 @@ Document compilation keeps table inference cascaded and region-scoped:
 The Paddle fallback passed its three-target Lambda benchmark but is deliberately
 not a default document parser. Full PP-StructureV3, Marker, MinerU, and broad
 document-VLM parsing remain outside this routing path.
+
+
+### Shared local document inference
+
+The validated equation and persistent-empty-grid table escalations are served
+through a shared process-local broker rather than by loading heavyweight models
+inside each document worker.
+
+When explicitly enabled with
+`RESEARCH_ENGINE_LOCAL_INFERENCE_ENABLED=1`, the daemon owns one long-lived
+CodeFormulaV2 subprocess and one long-lived PP-TableMagic subprocess. All
+deterministic workers receive the same broker object.
+
+Each model family has a bounded FIFO queue and executes serially within its own
+isolated runtime. Formula and table requests may execute concurrently when
+bound to distinct GPUs. This preserves dependency isolation while preventing
+duplicate model loads across concurrent PDFs.
+
+The service is opt-in until the stopped-daemon Lambda concurrency/resource gate
+passes. The broker health snapshot reports process PIDs, spawn counts, queue
+depths, accepted/completed/failed requests, and the model-load metadata returned
+by each server.
