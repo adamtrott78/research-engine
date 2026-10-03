@@ -350,3 +350,30 @@ come from the preserved standard Docling JSON. Each target page is processed
 individually with OCR, table structure, code enrichment, picture analysis,
 remote services, and general-document VLM disabled. The formula-specific
 CodeFormulaV2 stage is the sole new semantic parser stage enabled by this gate.
+
+
+## Visible temporary artifact directory
+
+New operator-facing benchmark and diagnostic outputs must be written under:
+
+```text
+~/adamArchives/Adam/workspace-control-tmp/
+```
+
+rather than a hidden dot-directory. This keeps artifacts browseable and
+downloadable from JupyterLab. Existing artifacts under
+`~/adamArchives/Adam/.workspace-control/tmp/` remain valid legacy inputs and
+must not be moved or regenerated merely to satisfy this convention.
+
+The targeted TableFormer residual gate follows this rule:
+
+```bash
+bash deploy/run-tableformer-accurate-residual-gate.sh
+```
+
+It reads the preserved legacy standard/no-OCR package and table audit, selects
+only table assets with genuinely empty FAST-mode grids, reuses the existing
+Docling/TableFormer runtime and model cache, runs ACCURATE mode only on those
+pages, and writes all new plan/raw/evaluation artifacts to the visible temporary
+root. Set `WORKSPACE_CONTROL_TMP_ROOT` to another visible directory when
+needed.
