@@ -185,6 +185,31 @@ def main() -> None:
     extract_audit = sub.add_parser("audit-extract-provenance")
     extract_audit.add_argument("run_id")
 
+    paper_ab_plan = sub.add_parser("paper-package-ab-plan")
+    paper_ab_plan.add_argument("--run-id")
+    paper_ab_plan.add_argument("--expected-papers", type=int, default=9)
+
+    paper_ab_preflight = sub.add_parser("paper-package-ab-preflight")
+    paper_ab_preflight.add_argument("run_id")
+    paper_ab_preflight.add_argument("--native-package-root", required=True)
+    paper_ab_preflight.add_argument("--standard-package-root", required=True)
+    paper_ab_preflight.add_argument("--expected-papers", type=int, default=9)
+    paper_ab_preflight.add_argument("--quote-threshold", type=float, default=0.8)
+    paper_ab_preflight.add_argument(
+        "--required-quote-fraction",
+        type=float,
+        default=0.95,
+    )
+
+    paper_ab_replay = sub.add_parser("paper-package-ab-replay")
+    paper_ab_replay.add_argument("run_id")
+    paper_ab_replay.add_argument("--native-package-root", required=True)
+    paper_ab_replay.add_argument("--standard-package-root", required=True)
+    paper_ab_replay.add_argument(
+        "--no-control-on-disagreement",
+        action="store_true",
+    )
+
     budget_status = sub.add_parser("budget-status")
     budget_status.add_argument("run_id")
 
@@ -562,6 +587,60 @@ def main() -> None:
         from .calibration import extraction_audit_from_env
 
         result = extraction_audit_from_env().run(run_id=args.run_id)
+        print(json.dumps(result, default=str))
+    elif args.cmd == "paper-package-ab-plan":
+        from .paper_package_ab import planner_from_env
+
+        result = planner_from_env().plan(
+            run_id=args.run_id,
+            expected_papers=args.expected_papers,
+        )
+        print(json.dumps(result, default=str))
+    elif args.cmd == "paper-package-ab-preflight":
+        from .paper_package_ab import (
+            PaperPackageABPreflight,
+            package_extractor_from_paths,
+            planner_from_env,
+        )
+
+        planner = planner_from_env()
+        extractor = package_extractor_from_paths(
+            native_package_root=args.native_package_root,
+            standard_package_root=args.standard_package_root,
+        )
+        service = PaperPackageABPreflight(
+            store=planner.store,
+            artifact_root=os.environ["RESEARCH_ENGINE_ARTIFACT_ROOT"],
+            package_extractor=extractor,
+        )
+        result = service.run(
+            run_id=args.run_id,
+            expected_papers=args.expected_papers,
+            quote_threshold=args.quote_threshold,
+            required_quote_fraction=args.required_quote_fraction,
+        )
+        print(json.dumps(result, default=str))
+    elif args.cmd == "paper-package-ab-replay":
+        from .paper_package_ab import (
+            PaperPackageABReplay,
+            package_extractor_from_paths,
+            planner_from_env,
+        )
+
+        planner = planner_from_env()
+        extractor = package_extractor_from_paths(
+            native_package_root=args.native_package_root,
+            standard_package_root=args.standard_package_root,
+        )
+        service = PaperPackageABReplay(
+            store=planner.store,
+            artifact_root=os.environ["RESEARCH_ENGINE_ARTIFACT_ROOT"],
+            package_extractor=extractor,
+        )
+        result = service.run_representative(
+            run_id=args.run_id,
+            control_on_disagreement=not args.no_control_on_disagreement,
+        )
         print(json.dumps(result, default=str))
     elif args.cmd == "budget-status":
         from .daemon import daemon_from_env
