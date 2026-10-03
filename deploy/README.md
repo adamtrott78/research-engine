@@ -449,3 +449,36 @@ human-facing JSON reports are written beneath
 The final result distinguishes a package-context regression from model variance
 and reports exact semantic token/latency deltas. It does not infer plan
 allowance consumption from token counts.
+
+
+## Lambda production acceptance
+
+Before the bounded production-integration stage, synchronize the validated
+shared local-inference settings into the live production env while the daemon is
+stopped:
+
+```bash
+bash deploy/configure-production-local-inference.sh
+```
+
+The helper creates a timestamped backup beneath
+`~/.research-engine/backups/` and prints the exact rollback command.
+
+Then run:
+
+```bash
+bash deploy/run-lambda-production-acceptance.sh
+```
+
+The acceptance runner starts/checks PostgreSQL only. It does **not** start
+`research-engine-daemon.service`. It requires a clean main checkout, the
+installed systemd unit to match the repository unit, Codex-only production
+configuration, one worker per tier for first acceptance, radius-0 VERIFY,
+shared local inference enabled with bounded queues, all validated local
+runtimes/caches, two healthy GPUs, a quiescent non-human queue, and the measured
+localization/license contracts.
+
+Its runtime smoke checks are bounded and read-only: small GPU allocations,
+zero-spawn broker construction, one existing authoritative-PDF hydration, and
+read-only operational reporting. Human-facing results are written beneath
+visible `~/adamArchives/Adam/workspace-control-tmp/`.
