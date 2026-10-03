@@ -160,7 +160,7 @@ def test_paddle_runner_is_stopped_daemon_targeted_and_visible():
     ).read_text(encoding="utf-8")
 
     assert "RESEARCH_ENGINE_DAEMON_MUST_REMAIN_STOPPED" in text
-    assert 'visible_tmp_root="\${WORKSPACE_CONTROL_TMP_ROOT:-$adam/workspace-control-tmp}"' in text
+    assert 'visible_tmp_root="${WORKSPACE_CONTROL_TMP_ROOT:-$adam/workspace-control-tmp}"' in text
     assert "EXPECTED_EXACTLY_THREE_PERSISTENT_TABLE_TARGETS" in text
     assert "paddlepaddle-gpu==3.3.0" in text
     assert '"paddleocr[doc-parser]==3.7.0"' in text
