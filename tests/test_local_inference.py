@@ -246,3 +246,19 @@ def test_concurrency_runner_is_stopped_daemon_reuses_existing_runtimes():
     assert "prefetch" not in text.lower()
     assert "LOCAL_INFERENCE_CONCURRENCY_GATE=PASS" in text
     assert "workspace-control-tmp" in text
+
+
+def test_daemon_constructs_one_shared_broker_for_deterministic_workers():
+    root = Path(__file__).parents[1]
+    daemon_text = (root / "src" / "research_engine" / "daemon.py").read_text(
+        encoding="utf-8"
+    )
+    worker_text = (
+        root / "src" / "research_engine" / "worker_runtime.py"
+    ).read_text(encoding="utf-8")
+
+    assert daemon_text.count("local_inference_service_from_env()") == 1
+    assert "local_inference=local_inference" in daemon_text
+    assert "self.local_inference = local_inference" in daemon_text
+    assert "self.local_inference.close()" in daemon_text
+    assert "local_inference=local_inference" in worker_text
