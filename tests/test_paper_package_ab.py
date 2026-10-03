@@ -1,5 +1,6 @@
 from research_engine.orchestration import JobType
 from research_engine.paper_package_ab import (
+    PaperPackageABPosthoc,
     PaperPackageABPreflight,
     agreement_pass,
     extract_agreement,
@@ -215,3 +216,161 @@ def test_preflight_uses_extract_extractor_for_catalog_coverage():
     assert extractor.calls == [["abc"]]
     assert result["decision"] == "PASS"
     assert result["package_coverage"]["native_covered"] == 1
+
+
+
+def test_posthoc_compares_package_and_pdf_controls_without_model_calls():
+    service = object.__new__(PaperPackageABPosthoc)
+    service.store = None
+    events = [
+        {
+            "id": 1,
+            "calibration_type": "PAPER_PACKAGE_EXTRACT_AB",
+            "source_job_id": "extract:1",
+            "replay_input_tokens": 900,
+            "replay_cached_input_tokens": 100,
+            "replay_output_tokens": 50,
+            "replay_reasoning_output_tokens": 20,
+            "wall_time_ms": 1000,
+            "result_summary": {
+                "evidence": [
+                    {
+                        "type": "RESULT",
+                        "normalized_form": "same result",
+                        "raw_source_form": "same quote",
+                        "page_number": 2,
+                    }
+                ]
+            },
+            "created_at": "2026-10-03T00:00:00Z",
+        },
+        {
+            "id": 2,
+            "calibration_type": "PAPER_PACKAGE_EXTRACT_AB_CONTROL_PDF",
+            "source_job_id": "extract:1",
+            "replay_input_tokens": 1000,
+            "replay_cached_input_tokens": 100,
+            "replay_output_tokens": 52,
+            "replay_reasoning_output_tokens": 21,
+            "wall_time_ms": 1100,
+            "result_summary": {
+                "evidence": [
+                    {
+                        "type": "RESULT",
+                        "normalized_form": "same result",
+                        "raw_source_form": "same quote",
+                        "page_number": 2,
+                    }
+                ]
+            },
+            "created_at": "2026-10-03T00:00:01Z",
+        },
+        {
+            "id": 3,
+            "calibration_type": "PAPER_PACKAGE_VERIFY_AB",
+            "source_job_id": "verify:1",
+            "replay_input_tokens": 800,
+            "replay_cached_input_tokens": 50,
+            "replay_output_tokens": 30,
+            "replay_reasoning_output_tokens": 10,
+            "wall_time_ms": 900,
+            "result_summary": {
+                "verified": True,
+                "accepted_evidence_ids": ["e:1"],
+                "issues": [],
+            },
+            "created_at": "2026-10-03T00:00:02Z",
+        },
+        {
+            "id": 4,
+            "calibration_type": "PAPER_PACKAGE_VERIFY_AB_CONTROL_PDF",
+            "source_job_id": "verify:1",
+            "replay_input_tokens": 1000,
+            "replay_cached_input_tokens": 50,
+            "replay_output_tokens": 31,
+            "replay_reasoning_output_tokens": 11,
+            "wall_time_ms": 950,
+            "result_summary": {
+                "verified": True,
+                "accepted_evidence_ids": ["e:1"],
+                "issues": [],
+            },
+            "created_at": "2026-10-03T00:00:03Z",
+        },
+        {
+            "id": 5,
+            "calibration_type": "PAPER_PACKAGE_VERIFY_AB",
+            "source_job_id": "verify:2",
+            "replay_input_tokens": 700,
+            "replay_cached_input_tokens": 25,
+            "replay_output_tokens": 20,
+            "replay_reasoning_output_tokens": 5,
+            "wall_time_ms": 800,
+            "result_summary": {
+                "verified": False,
+                "accepted_evidence_ids": [],
+                "issues": ["unsupported"],
+            },
+            "created_at": "2026-10-03T00:00:04Z",
+        },
+    ]
+    service._events = lambda _run_id: events
+
+    result = service.run(run_id="run")
+
+    assert result["decision"] == "PASS_CONTEMPORANEOUS_EQUIVALENCE"
+    assert result["package_events"] == 3
+    assert result["controlled_pairs"] == 2
+    assert result["controlled_pair_passes"] == 2
+    assert result["controlled_pair_agreement_rate"] == 1.0
+    assert result["controlled_pdf_input_tokens"] == 2000
+    assert result["controlled_package_input_tokens"] == 1700
+    assert result["controlled_input_reduction_fraction"] == 0.15
+    controlled = [row for row in result["rows"] if row["controlled_pair"]]
+    assert all(row["package_vs_pdf_agreement_pass"] is True for row in controlled)
+
+
+def test_posthoc_detects_contemporaneous_context_difference():
+    service = object.__new__(PaperPackageABPosthoc)
+    service.store = None
+    service._events = lambda _run_id: [
+        {
+            "id": 1,
+            "calibration_type": "PAPER_PACKAGE_VERIFY_AB",
+            "source_job_id": "verify:1",
+            "replay_input_tokens": 800,
+            "replay_cached_input_tokens": 0,
+            "replay_output_tokens": 20,
+            "replay_reasoning_output_tokens": 0,
+            "wall_time_ms": 100,
+            "result_summary": {
+                "verified": True,
+                "accepted_evidence_ids": ["e:1"],
+                "issues": [],
+            },
+            "created_at": "2026-10-03T00:00:00Z",
+        },
+        {
+            "id": 2,
+            "calibration_type": "PAPER_PACKAGE_VERIFY_AB_CONTROL_PDF",
+            "source_job_id": "verify:1",
+            "replay_input_tokens": 1000,
+            "replay_cached_input_tokens": 0,
+            "replay_output_tokens": 20,
+            "replay_reasoning_output_tokens": 0,
+            "wall_time_ms": 100,
+            "result_summary": {
+                "verified": False,
+                "accepted_evidence_ids": [],
+                "issues": ["unsupported"],
+            },
+            "created_at": "2026-10-03T00:00:01Z",
+        },
+    ]
+
+    result = service.run(run_id="run")
+
+    assert result["decision"] == "MEASURED_CONTEXT_DIFFERENCE"
+    assert result["controlled_pairs"] == 1
+    assert result["controlled_pair_passes"] == 0
+    assert result["controlled_pair_agreement_rate"] == 0.0
