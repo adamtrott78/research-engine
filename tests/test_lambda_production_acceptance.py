@@ -74,6 +74,9 @@ def test_production_env_sync_is_backup_first_and_requires_stopped_daemon():
     assert "RESEARCH_ENGINE_DAEMON_MUST_BE_STOPPED_BEFORE_ENV_UPDATE" in script
     assert "cp -a \"$envf\" \"$backup\"" in script
     assert "BEGIN MANAGED LOCAL DOCUMENT INFERENCE" in script
+    assert "RESEARCH_ENGINE_VERIFY_PAGE_RADIUS=0" in script
+    assert '"RESEARCH_ENGINE_VERIFY_PAGE_RADIUS"' in script
+    assert "VERIFY_PAGE_RADIUS_WRITE_FAILED" in script
     assert "RESEARCH_ENGINE_LOCAL_INFERENCE_ENABLED=1" in script
     assert "RESEARCH_ENGINE_FORMULA_GPU_INDEX=0" in script
     assert "RESEARCH_ENGINE_TABLE_GPU_INDEX=1" in script
