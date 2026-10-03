@@ -392,6 +392,7 @@ def test_formula_runtime_is_explicitly_formula_only_and_page_bounded():
     ).read_text(encoding="utf-8")
 
     assert 'MODEL_REPO = "docling-project/CodeFormulaV2"' in text
+    assert 'MODEL_REVISION = "0284bc97b73c88776957d00d6695dd63a5a8784e"' in text
     assert "do_ocr=False" in text
     assert "do_table_structure=False" in text
     assert "do_code_enrichment=False" in text
