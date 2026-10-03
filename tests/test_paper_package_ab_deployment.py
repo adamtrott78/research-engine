@@ -47,3 +47,26 @@ def test_paper_package_ab_batch_shims_load_each_converter_once():
     assert standard.count("converter = build_converter()") == 1
     assert 'for item in plan.get("source_artifacts", [])' in native
     assert 'for item in plan.get("source_artifacts", [])' in standard
+
+
+
+def test_paper_package_ab_resume_gate_reuses_normalized_packages_only():
+    script = (
+        ROOT / "deploy" / "resume-extract-verify-paper-package-ab.sh"
+    ).read_text()
+
+    assert "RESUME_ROOT_REQUIRED" in script
+    assert "RESUME_ROOT_MUST_BE_UNDER_VISIBLE_WORKSPACE_CONTROL_TMP" in script
+    assert "EXPECTED_NINE_NATIVE_PACKAGES" in script
+    assert "EXPECTED_NINE_STANDARD_PACKAGES" in script
+    assert "RESEARCH_ENGINE_DAEMON_MUST_REMAIN_STOPPED" in script
+    assert "pg_isready" in script
+    assert "paper-package-ab-preflight" in script
+    assert "paper-package-ab-replay" in script
+    assert "PAPER_PACKAGE_AB_RESUME_GATE=MEASURED" in script
+
+    assert "docling_native_batch" not in script
+    assert "docling_standard_no_ocr_batch" not in script
+    assert "normalize_docling_document" not in script
+    assert "pip install" not in script
+    assert "python3 -m venv" not in script

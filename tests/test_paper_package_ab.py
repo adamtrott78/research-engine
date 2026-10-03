@@ -1,5 +1,6 @@
 from research_engine.orchestration import JobType
 from research_engine.paper_package_ab import (
+    PaperPackageABPreflight,
     agreement_pass,
     extract_agreement,
     quote_token_recall,
@@ -175,3 +176,42 @@ def test_execution_metadata_does_not_affect_agreement():
     assert agreement["verified_equal"] is True
     assert agreement["accepted_evidence_ids_equal"] is True
     assert agreement["issues_equal"] is True
+
+
+
+def test_preflight_uses_extract_extractor_for_catalog_coverage():
+    class Planner:
+        def plan(self, **_kwargs):
+            return {
+                "source_artifacts": [
+                    {"sha256": "abc"},
+                ]
+            }
+
+        def completed_jobs(self, *_args, **_kwargs):
+            return []
+
+    class Extractor:
+        def __init__(self):
+            self.calls = []
+
+        def coverage(self, shas):
+            self.calls.append(list(shas))
+            return {
+                "requested": 1,
+                "native_covered": 1,
+                "standard_covered": 1,
+                "missing_native": [],
+                "missing_standard": [],
+            }
+
+    service = object.__new__(PaperPackageABPreflight)
+    extractor = Extractor()
+    service.planner = Planner()
+    service.package_extract_extractor = extractor
+
+    result = service.run(run_id="run", expected_papers=1)
+
+    assert extractor.calls == [["abc"]]
+    assert result["decision"] == "PASS"
+    assert result["package_coverage"]["native_covered"] == 1
