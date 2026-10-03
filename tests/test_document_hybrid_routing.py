@@ -446,7 +446,8 @@ def test_formula_runtime_is_explicitly_formula_only_and_page_bounded():
     assert "do_code_enrichment=False" in text
     assert "do_formula_enrichment=True" in text
     assert "enable_remote_services=False" in text
-    assert "page_range=(args.page, args.page)" in text
+    assert "page_range=(page_number, page_number)" in text
+    assert "run_formula_page(" in text
     assert 'CodeFormulaVlmOptions.from_preset(' in text
     assert '"codeformulav2"' in text
     assert "TransformersVlmEngineOptions" in text

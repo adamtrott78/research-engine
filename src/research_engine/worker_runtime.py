@@ -174,6 +174,7 @@ def deterministic_worker_from_env(
     worker_id: str | None = None,
     logical_agent_id: str | None = None,
     lease_seconds: int = 300,
+    local_inference=None,
 ) -> AgentWorker:
     from .deterministic_executor import DeterministicResearchExecutor
 
@@ -185,6 +186,7 @@ def deterministic_worker_from_env(
     executor = DeterministicResearchExecutor(
         store=store,
         artifact_root=artifact_root,
+        local_inference=local_inference,
     )
     logical_agent_id = logical_agent_id or "deterministic:standalone"
     return AgentWorker(

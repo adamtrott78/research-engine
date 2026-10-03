@@ -106,12 +106,14 @@ class ResearchDaemon:
         workers,
         poll_seconds: float = 2.0,
         limits: DaemonLimits | None = None,
+        local_inference=None,
     ):
         self.queue = queue
         self.planner = planner
         self.workers = tuple(workers)
         self.poll_seconds = poll_seconds
         self.limits = limits or DaemonLimits()
+        self.local_inference = local_inference
 
     def _active_run_ids(self) -> list[str]:
         with self.queue.store.connect() as conn:
@@ -411,22 +413,26 @@ class ResearchDaemon:
             "stale_workers_marked": 0,
             "budget_paused_runs": 0,
         }
-        while True:
-            tick = self.tick()
-            ticks += 1
-            totals["recovered_leases"] += tick.recovered_leases
-            totals["jobs_processed"] += tick.jobs_processed
-            totals["stale_workers_marked"] += tick.stale_workers_marked
-            totals["budget_paused_runs"] += tick.budget_paused_runs
+        try:
+            while True:
+                tick = self.tick()
+                ticks += 1
+                totals["recovered_leases"] += tick.recovered_leases
+                totals["jobs_processed"] += tick.jobs_processed
+                totals["stale_workers_marked"] += tick.stale_workers_marked
+                totals["budget_paused_runs"] += tick.budget_paused_runs
 
-            if max_ticks is not None and ticks >= max_ticks:
-                return {
-                    "ticks": ticks,
-                    **totals,
-                    "health": self.health_snapshot(),
-                }
-            if self.poll_seconds > 0:
-                time.sleep(self.poll_seconds)
+                if max_ticks is not None and ticks >= max_ticks:
+                    return {
+                        "ticks": ticks,
+                        **totals,
+                        "health": self.health_snapshot(),
+                    }
+                if self.poll_seconds > 0:
+                    time.sleep(self.poll_seconds)
+        finally:
+            if self.local_inference is not None:
+                self.local_inference.close()
 
     def health_snapshot(self) -> dict[str, Any]:
         with self.queue.store.connect() as conn:
@@ -514,6 +520,11 @@ class ResearchDaemon:
             "expired_leases": expired_leases,
             "provider_backoffs": provider_backoffs,
             "admission": self.admission_status(),
+            "local_inference": (
+                self.local_inference.health()
+                if self.local_inference is not None
+                else {"enabled": False}
+            ),
         }
 
     @staticmethod
@@ -651,6 +662,7 @@ def daemon_from_env(
     limits: DaemonLimits | None = None,
     with_workers: bool = True,
 ) -> ResearchDaemon:
+    from .local_inference import local_inference_service_from_env
     from .worker_runtime import deterministic_worker_from_env, semantic_worker_from_env
 
     dsn = os.environ["RESEARCH_ENGINE_DATABASE_URL"]
@@ -670,6 +682,11 @@ def daemon_from_env(
     queue = OrchestratorStore(store)
     planner = ResearchPlanner(queue)
     workers = []
+    local_inference = (
+        local_inference_service_from_env()
+        if with_workers
+        else None
+    )
     if with_workers:
         prefix = f"daemon:{socket.gethostname()}:{os.getpid()}"
         counts = worker_counts_from_env()
@@ -679,6 +696,7 @@ def daemon_from_env(
                     worker_id=f"{prefix}:deterministic:{index}",
                     logical_agent_id=f"deterministic:{index}",
                     lease_seconds=lease_seconds,
+                    local_inference=local_inference,
                 )
             )
         for tier in (ExecutorTier.CHEAP, ExecutorTier.STANDARD, ExecutorTier.STRONG):
@@ -698,4 +716,5 @@ def daemon_from_env(
         workers=workers,
         poll_seconds=poll_seconds,
         limits=limits,
+        local_inference=local_inference,
     )

@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "task": "research-engine-local-document-pipeline-v1",
+  "component": "shared_local_document_inference_service",
+  "status": "CI_GATE_BEFORE_LAMBDA",
+  "ownership": {
+    "scope": "one broker per research-engine daemon process",
+    "formula_owner": "one long-lived subprocess in isolated Docling/CodeFormulaV2 runtime",
+    "table_owner": "one long-lived subprocess in isolated PaddleOCR/PP-TableMagic runtime",
+    "deterministic_workers": "all deterministic workers receive the same broker instance",
+    "duplicate_model_instances_per_family": "forbidden"
+  },
+  "scheduling": {
+    "queue": "bounded FIFO per model family",
+    "default_max_pending": 8,
+    "overflow": "fail immediately with LocalInferenceBackpressureError",
+    "per_family_execution": "serialized",
+    "cross_family_execution": "concurrent when assigned distinct GPUs",
+    "default_formula_gpu_index": 0,
+    "default_table_gpu_index": 1
+  },
+  "runtime_boundaries": {
+    "formula": {
+      "runtime": "~/.research-engine/document-runtimes/docling-formula-enrichment",
+      "model_cache": "~/.research-engine/document-models/docling-formula-enrichment-2.131.0",
+      "model": "docling-project/CodeFormulaV2@0284bc97b73c88776957d00d6695dd63a5a8784e",
+      "protocol_server": "benchmarks/document_intelligence/runtimes/docling_formula_server.py"
+    },
+    "table": {
+      "runtime": "~/.research-engine/document-runtimes/paddle-table-recognition-v2",
+      "model_cache": "~/.research-engine/document-models/paddle-table-recognition-v2-3.7.0",
+      "model_family": "PaddleOCR 3.7.0 General Table Recognition v2 / PP-TableMagic",
+      "protocol_server": "benchmarks/document_intelligence/runtimes/paddle_table_server.py"
+    },
+    "protocol": "newline JSON requests with prefixed JSON responses over subprocess stdin/stdout",
+    "server_logs": "stderr redirected to per-family log files",
+    "model_downloads_during_concurrency_gate": false
+  },
+  "lambda_acceptance": {
+    "first_wave": "3 formula page requests + 3 table crop requests submitted concurrently",
+    "warm_wave": "1 formula + 1 table request repeated concurrently using the same owners",
+    "requires_distinct_healthy_gpus": true,
+    "checks": [
+      "exactly one server PID observed for formula requests",
+      "exactly one server PID observed for table requests",
+      "model_load_count remains 1 for each family",
+      "owner spawn_count remains 1 for each family",
+      "no failed requests",
+      "queues drain to zero",
+      "GPU peak memory/utilization and host memory are sampled"
+    ],
+    "daemon_state": "inactive/dead throughout benchmark",
+    "human_facing_output_root": "~/adamArchives/Adam/workspace-control-tmp/"
+  },
+  "production_enablement": {
+    "environment_flag": "RESEARCH_ENGINE_LOCAL_INFERENCE_ENABLED=1",
+    "default": "disabled until Lambda concurrency gate passes",
+    "shutdown": "daemon owns broker lifecycle and closes both model-owner subprocesses",
+    "scientific_authority": "ORIGINAL_PDF",
+    "oracle_dependency": false
+  }
+}

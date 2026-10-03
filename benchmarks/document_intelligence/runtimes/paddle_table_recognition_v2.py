@@ -96,6 +96,78 @@ def _pipeline(*, device: str):
     )
 
 
+def run_table_crop(
+    pipeline,
+    *,
+    source_pdf: str | Path,
+    page_number: int,
+    pdf_bbox: list[float],
+    output_dir: str | Path,
+    dpi: int = 300,
+    padding_pt: float = 6.0,
+) -> dict[str, Any]:
+    source = Path(source_pdf).resolve()
+    output = Path(output_dir).resolve()
+    if not source.is_file():
+        raise FileNotFoundError(source)
+    if page_number < 1:
+        raise ValueError("page_number must be >= 1")
+    if len(pdf_bbox) != 4:
+        raise ValueError("pdf_bbox must contain four values")
+
+    output.mkdir(parents=True, exist_ok=True)
+    crop_path = output / "table-crop.png"
+    crop_meta = _render_crop(
+        source_pdf=source,
+        page_number=page_number,
+        bbox=[float(x) for x in pdf_bbox],
+        output_path=crop_path,
+        dpi=dpi,
+        padding_pt=padding_pt,
+    )
+
+    results = list(
+        pipeline.predict(
+            input=str(crop_path),
+            use_doc_orientation_classify=False,
+            use_doc_unwarping=False,
+            use_layout_detection=False,
+            use_ocr_model=True,
+        )
+    )
+    if len(results) != 1:
+        raise RuntimeError(
+            f"expected one table result, got {len(results)}"
+        )
+
+    payload = results[0].json
+    if callable(payload):
+        payload = payload()
+    result_path = output / "result.json"
+    result_path.write_text(
+        json.dumps(
+            payload,
+            indent=2,
+            ensure_ascii=False,
+            sort_keys=True,
+            default=_json_default,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return {
+        "source": source.name,
+        "page": page_number,
+        "crop_path": str(crop_path),
+        "result_json": str(result_path),
+        "crop": crop_meta,
+        "layout_detection": False,
+        "doc_orientation_classify": False,
+        "doc_unwarping": False,
+        "ocr": True,
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("target_plan")
@@ -149,55 +221,28 @@ def main() -> int:
             raise FileNotFoundError(source_pdf)
 
         target_dir = output_root / case_id / table_asset_id
-        crop_path = target_dir / "table-crop.png"
-        crop_meta = _render_crop(
+        result = run_table_crop(
+            pipeline,
             source_pdf=source_pdf,
             page_number=page_number,
-            bbox=bbox,
-            output_path=crop_path,
+            pdf_bbox=bbox,
+            output_dir=target_dir,
             dpi=args.dpi,
             padding_pt=args.padding_pt,
         )
-
-        results = list(
-            pipeline.predict(
-                input=str(crop_path),
-                use_doc_orientation_classify=False,
-                use_doc_unwarping=False,
-                use_layout_detection=False,
-                use_ocr_model=True,
-            )
-        )
-        if len(results) != 1:
-            raise RuntimeError(
-                f"{case_id}/{table_asset_id}: expected one result, got {len(results)}"
-            )
-
-        payload = results[0].json
-        if callable(payload):
-            payload = payload()
-        result_path = target_dir / "result.json"
-        result_path.write_text(
-            json.dumps(
-                payload,
-                indent=2,
-                ensure_ascii=False,
-                sort_keys=True,
-                default=_json_default,
-            )
-            + "\n",
-            encoding="utf-8",
-        )
-
         outputs.append(
             {
                 "case_id": case_id,
                 "table_asset_id": table_asset_id,
                 "page_number": page_number,
                 "reference_index": int(target["reference_index"]),
-                "crop_path": str(crop_path.relative_to(output_root)),
-                "result_json": str(result_path.relative_to(output_root)),
-                "crop": crop_meta,
+                "crop_path": str(
+                    Path(result["crop_path"]).relative_to(output_root)
+                ),
+                "result_json": str(
+                    Path(result["result_json"]).relative_to(output_root)
+                ),
+                "crop": result["crop"],
             }
         )
         print(
@@ -206,7 +251,7 @@ def main() -> int:
                     "case_id": case_id,
                     "table_asset_id": table_asset_id,
                     "page_number": page_number,
-                    "result_json": str(result_path),
+                    "result_json": result["result_json"],
                 },
                 sort_keys=True,
             )
