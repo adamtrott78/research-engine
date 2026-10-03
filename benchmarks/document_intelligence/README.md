@@ -353,7 +353,8 @@ cells fall below the diagnostic threshold. Those Mathpix-derived residuals may
 inform engineering changes but cannot become a production routing dependency.
 
 The formula experiment uses Docling 2.131.0's `codeformulav2` preset with the
-local `docling-project/CodeFormulaV2` model. OCR, table reconstruction, code
+local `docling-project/CodeFormulaV2` model pinned to
+`0284bc97b73c88776957d00d6695dd63a5a8784e`. OCR, table reconstruction, code
 enrichment, picture analysis, remote services, and the general document-VLM
 pipeline remain disabled in that experiment. The model is fetched only into the
 formula benchmark cache after the measured equation residual has justified it.
