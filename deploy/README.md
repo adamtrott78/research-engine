@@ -419,3 +419,33 @@ per-request outputs are written beneath visible
 The production daemon integration remains disabled by default until this gate
 passes. Enabling `RESEARCH_ENGINE_LOCAL_INFERENCE_ENABLED=1` causes one broker
 to be created per daemon process and shared across all deterministic workers.
+
+
+## EXTRACT / VERIFY paper-package A/B gate
+
+Run the bounded stopped-daemon downstream-context gate with:
+
+```bash
+bash deploy/run-extract-verify-paper-package-ab.sh
+```
+
+The runner discovers the preserved run containing exactly nine completed
+EXTRACT and nine completed VERIFY jobs. It verifies every source artifact by
+SHA-256, symlinks the immutable bytes into a visible workspace with a `.pdf`
+suffix, and reuses the already-installed Docling native and standard/no-OCR
+runtimes.
+
+Each Docling runtime creates one converter and processes all nine PDFs in a
+single process. The runner does not create environments, prefetch models, or
+redownload weights.
+
+A zero-model quote/provenance preflight must pass before semantic replay starts.
+The representative semantic phase runs low/median/high EXTRACT and VERIFY
+package arms and executes a current-PDF control only after package disagreement.
+Scientific state is never materialized; operational calibration events and
+human-facing JSON reports are written beneath
+`~/adamArchives/Adam/workspace-control-tmp/`.
+
+The final result distinguishes a package-context regression from model variance
+and reports exact semantic token/latency deltas. It does not infer plan
+allowance consumption from token counts.
