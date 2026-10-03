@@ -246,10 +246,10 @@
     },
     {
       "adapter_id": "paddle-pp-structure-v3",
-      "current_version": "3.7.0",
-      "version_constraint": "paddleocr[doc-parser]==3.7.0",
+      "current_version": "3.7.x",
+      "version_constraint": "paddleocr[doc-parser]>=3.7,<3.8",
       "python": ">=3.8",
-      "install": "install PaddlePaddle 3.3.0 for target hardware, then python -m pip install 'paddleocr[doc-parser]==3.7.0'",
+      "install": "install a hardware-appropriate PaddlePaddle build, then python -m pip install 'paddleocr[doc-parser]>=3.7,<3.8'",
       "executable": "python",
       "executable_env": "RESEARCH_ENGINE_PADDLE_PYTHON",
       "version_probe_python": "import importlib.metadata; print(importlib.metadata.version('paddleocr'))",
@@ -317,7 +317,7 @@
       ],
       "runtime_notes": "Use the repository shim so page Markdown and image assets are concatenated consistently. English-only recognition configuration should be evaluated on this corpus. The table_recognition_v2_crop mode is a residual-only PP-TableMagic path: it renders only previously localized failed table bboxes and runs TableRecognitionPipelineV2 with layout/orientation/unwarping disabled while keeping OCR+table classification/structure/cell detection enabled.",
       "distribution": "paddleocr",
-      "version_pattern": "3\\.7\\.0"
+      "version_pattern": "3\\.7\\..+"
     },
     {
       "adapter_id": "marker",
