@@ -56,7 +56,7 @@ for raw in sys.stdin:
         })
         continue
     seq += 1
-    sys.stdout.write("model-startup-or-runtime-noise\\n")
+    sys.stdout.write("model-startup-or-runtime-noise\n")
     sys.stdout.flush()
     time.sleep(float(request.get("delay", 0)))
     respond({
