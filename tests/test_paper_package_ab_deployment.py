@@ -70,3 +70,23 @@ def test_paper_package_ab_resume_gate_reuses_normalized_packages_only():
     assert "normalize_docling_document" not in script
     assert "pip install" not in script
     assert "python3 -m venv" not in script
+
+
+
+def test_paper_package_ab_posthoc_makes_no_semantic_or_parser_calls():
+    script = (
+        ROOT / "deploy" / "run-paper-package-ab-posthoc.sh"
+    ).read_text()
+
+    assert "RESEARCH_ENGINE_DAEMON_MUST_REMAIN_STOPPED" in script
+    assert "paper-package-ab-posthoc" in script
+    assert "COMPARE ALREADY-RECORDED PACKAGE VS PDF CONTROL OUTPUTS" in script
+    assert "PAPER_PACKAGE_AB_POSTHOC=MEASURED" in script
+    assert "workspace-control-tmp" in script
+    assert "pg_isready" in script
+
+    assert "paper-package-ab-replay" not in script
+    assert "docling" not in script.lower()
+    assert "pip install" not in script
+    assert "python3 -m venv" not in script
+    assert "Codex" not in script

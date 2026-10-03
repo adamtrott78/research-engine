@@ -865,6 +865,210 @@ class PaperPackageABReplay:
         }
 
 
+class PaperPackageABPosthoc:
+    """Compare already-recorded package and current-PDF calibration outputs.
+
+    This stage performs no semantic model call. It reads calibration-event
+    result summaries produced by the representative A/B replay and directly
+    compares the package arm with any disagreement-triggered current-PDF
+    controls under the same current model generation.
+    """
+
+    PACKAGE_TYPES = {
+        "PAPER_PACKAGE_EXTRACT_AB": JobType.EXTRACT,
+        "PAPER_PACKAGE_VERIFY_AB": JobType.VERIFY,
+    }
+    CONTROL_TYPES = {
+        "PAPER_PACKAGE_EXTRACT_AB_CONTROL_PDF": JobType.EXTRACT,
+        "PAPER_PACKAGE_VERIFY_AB_CONTROL_PDF": JobType.VERIFY,
+    }
+
+    def __init__(self, *, store: PostgresStore):
+        self.store = store
+
+    def _events(self, run_id: str) -> list[dict[str, Any]]:
+        wanted = tuple(self.PACKAGE_TYPES) + tuple(self.CONTROL_TYPES)
+        with self.store.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT id,calibration_type,source_job_id,
+                           replay_input_tokens,replay_cached_input_tokens,
+                           replay_output_tokens,replay_reasoning_output_tokens,
+                           wall_time_ms,result_summary,created_at
+                    FROM research_calibration_events
+                    WHERE source_run_id=%s
+                      AND calibration_type = ANY(%s)
+                    ORDER BY created_at,id
+                    """,
+                    (run_id, list(wanted)),
+                )
+                rows = cur.fetchall()
+                cols = [d.name for d in cur.description]
+        return [dict(zip(cols, row, strict=True)) for row in rows]
+
+    @staticmethod
+    def _latest_by_type_and_job(
+        rows: list[dict[str, Any]],
+    ) -> dict[tuple[str, str], dict[str, Any]]:
+        latest: dict[tuple[str, str], dict[str, Any]] = {}
+        for row in rows:
+            key = (str(row["calibration_type"]), str(row["source_job_id"]))
+            latest[key] = row
+        return latest
+
+    def run(self, *, run_id: str) -> dict[str, Any]:
+        events = self._events(run_id)
+        latest = self._latest_by_type_and_job(events)
+
+        package_rows: list[tuple[str, JobType, dict[str, Any]]] = []
+        for calibration_type, job_type in self.PACKAGE_TYPES.items():
+            for (event_type, job_id), row in latest.items():
+                if event_type == calibration_type:
+                    package_rows.append((job_id, job_type, row))
+        package_rows.sort(key=lambda row: (str(row[1]), row[0]))
+        if not package_rows:
+            raise ValueError(
+                f"no package A/B calibration events found for run {run_id}"
+            )
+
+        rows: list[dict[str, Any]] = []
+        controlled_pairs = 0
+        controlled_pair_passes = 0
+        controlled_package_input = 0
+        controlled_pdf_input = 0
+        controlled_package_cached = 0
+        controlled_pdf_cached = 0
+
+        for job_id, job_type, package in package_rows:
+            control_type = (
+                "PAPER_PACKAGE_EXTRACT_AB_CONTROL_PDF"
+                if job_type == JobType.EXTRACT
+                else "PAPER_PACKAGE_VERIFY_AB_CONTROL_PDF"
+            )
+            control = latest.get((control_type, job_id))
+            pair_agreement = None
+            pair_pass = None
+            input_reduction = None
+            cached_input_reduction = None
+            if control is not None:
+                controlled_pairs += 1
+                package_result = dict(package["result_summary"] or {})
+                control_result = dict(control["result_summary"] or {})
+                pair_agreement = (
+                    extract_agreement(control_result, package_result)
+                    if job_type == JobType.EXTRACT
+                    else verify_agreement(control_result, package_result)
+                )
+                pair_pass = agreement_pass(job_type, pair_agreement)
+                controlled_pair_passes += int(pair_pass)
+
+                package_input = int(package["replay_input_tokens"])
+                pdf_input = int(control["replay_input_tokens"])
+                package_cached = int(package["replay_cached_input_tokens"])
+                pdf_cached = int(control["replay_cached_input_tokens"])
+                controlled_package_input += package_input
+                controlled_pdf_input += pdf_input
+                controlled_package_cached += package_cached
+                controlled_pdf_cached += pdf_cached
+                input_reduction = (
+                    (pdf_input - package_input) / pdf_input
+                    if pdf_input > 0
+                    else None
+                )
+                cached_input_reduction = (
+                    (pdf_cached - package_cached) / pdf_cached
+                    if pdf_cached > 0
+                    else None
+                )
+
+            rows.append(
+                {
+                    "source_job_id": job_id,
+                    "job_type": str(job_type),
+                    "package_event_id": int(package["id"]),
+                    "pdf_control_event_id": (
+                        int(control["id"]) if control is not None else None
+                    ),
+                    "controlled_pair": control is not None,
+                    "package_vs_pdf_agreement": pair_agreement,
+                    "package_vs_pdf_agreement_pass": pair_pass,
+                    "package_input_tokens": int(package["replay_input_tokens"]),
+                    "pdf_control_input_tokens": (
+                        int(control["replay_input_tokens"])
+                        if control is not None
+                        else None
+                    ),
+                    "package_cached_input_tokens": int(
+                        package["replay_cached_input_tokens"]
+                    ),
+                    "pdf_control_cached_input_tokens": (
+                        int(control["replay_cached_input_tokens"])
+                        if control is not None
+                        else None
+                    ),
+                    "controlled_input_reduction_fraction": input_reduction,
+                    "controlled_cached_input_reduction_fraction": (
+                        cached_input_reduction
+                    ),
+                }
+            )
+
+        controlled_pair_rate = (
+            controlled_pair_passes / controlled_pairs
+            if controlled_pairs
+            else 1.0
+        )
+        controlled_input_reduction = (
+            (controlled_pdf_input - controlled_package_input)
+            / controlled_pdf_input
+            if controlled_pdf_input > 0
+            else None
+        )
+        controlled_cached_input_reduction = (
+            (controlled_pdf_cached - controlled_package_cached)
+            / controlled_pdf_cached
+            if controlled_pdf_cached > 0
+            else None
+        )
+        decision = (
+            "PASS_CONTEMPORANEOUS_EQUIVALENCE"
+            if controlled_pairs > 0
+            and controlled_pair_passes == controlled_pairs
+            else (
+                "NO_CONTROLS_AVAILABLE"
+                if controlled_pairs == 0
+                else "MEASURED_CONTEXT_DIFFERENCE"
+            )
+        )
+
+        return {
+            "schema_version": 1,
+            "analysis_type": "PAPER_PACKAGE_AB_POSTHOC_CONTEMPORANEOUS",
+            "source_run_id": run_id,
+            "decision": decision,
+            "package_events": len(package_rows),
+            "controlled_pairs": controlled_pairs,
+            "controlled_pair_passes": controlled_pair_passes,
+            "controlled_pair_agreement_rate": controlled_pair_rate,
+            "controlled_pdf_input_tokens": controlled_pdf_input,
+            "controlled_package_input_tokens": controlled_package_input,
+            "controlled_input_reduction_fraction": controlled_input_reduction,
+            "controlled_pdf_cached_input_tokens": controlled_pdf_cached,
+            "controlled_package_cached_input_tokens": controlled_package_cached,
+            "controlled_cached_input_reduction_fraction": (
+                controlled_cached_input_reduction
+            ),
+            "rows": rows,
+        }
+
+
+def posthoc_from_env() -> PaperPackageABPosthoc:
+    return PaperPackageABPosthoc(
+        store=PostgresStore(os.environ["RESEARCH_ENGINE_DATABASE_URL"])
+    )
+
+
 def planner_from_env() -> PaperPackageABPlanner:
     return PaperPackageABPlanner(
         store=PostgresStore(os.environ["RESEARCH_ENGINE_DATABASE_URL"]),
