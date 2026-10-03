@@ -1,4 +1,5 @@
 import json
+import subprocess
 from pathlib import Path
 
 
@@ -116,3 +117,17 @@ def test_acceptance_broker_bootstrap_is_zero_spawn():
     assert 'health["formula"]["spawn_count"] != 0' in script
     assert 'health["table"]["spawn_count"] != 0' in script
     assert "service.close()" in script
+
+
+
+def test_lambda_production_shell_scripts_parse():
+    for name in (
+        "configure-production-local-inference.sh",
+        "run-lambda-production-acceptance.sh",
+    ):
+        subprocess.run(
+            ["bash", "-n", str(ROOT / "deploy" / name)],
+            check=True,
+            text=True,
+            capture_output=True,
+        )
