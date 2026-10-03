@@ -311,12 +311,27 @@ class PaperPackageABPreflight:
             store=store,
             artifact_root=artifact_root,
         )
-        self.package_hydrator = ResearchContextHydrator(
+        self.package_extract_extractor = package_extractor
+        self.package_verify_extractor = HybridPaperPackagePageTextExtractor(
+            native_package_root=package_extractor.native.root,
+            standard_package_root=(
+                package_extractor.standard.root
+                if package_extractor.standard is not None
+                else None
+            ),
+            max_chars=package_extractor.max_chars,
+            exclude_trailing_references=False,
+        )
+        self.package_extract_hydrator = ResearchContextHydrator(
             store=store,
             artifact_root=artifact_root,
-            text_extractor=package_extractor,
+            text_extractor=self.package_extract_extractor,
         )
-        self.package_extractor = package_extractor
+        self.package_verify_hydrator = ResearchContextHydrator(
+            store=store,
+            artifact_root=artifact_root,
+            text_extractor=self.package_verify_extractor,
+        )
 
     @staticmethod
     def _context(hydrated: ResearchJob) -> dict[str, Any]:
@@ -386,7 +401,17 @@ class PaperPackageABPreflight:
         for job_type in (JobType.EXTRACT, JobType.VERIFY):
             for job in self.planner.completed_jobs(run_id, job_type):
                 pdf_job = self.pdf_hydrator.hydrate(job)
-                package_job = self.package_hydrator.hydrate(job)
+                package_extractor = (
+                    self.package_extract_extractor
+                    if job_type == JobType.EXTRACT
+                    else self.package_verify_extractor
+                )
+                package_hydrator = (
+                    self.package_extract_hydrator
+                    if job_type == JobType.EXTRACT
+                    else self.package_verify_hydrator
+                )
+                package_job = package_hydrator.hydrate(job)
                 pdf_context = self._context(pdf_job)
                 package_context = self._context(package_job)
                 pdf_pages = list(pdf_context.get("pages") or [])
@@ -405,7 +430,7 @@ class PaperPackageABPreflight:
                     evidence=evidence,
                 )
                 source = dict(package_context.get("source_artifact") or {})
-                source_path = self.package_hydrator.artifact_store.path_for_hash(
+                source_path = package_hydrator.artifact_store.path_for_hash(
                     str(source["sha256"])
                 )
                 rows.append(
@@ -414,7 +439,7 @@ class PaperPackageABPreflight:
                         "job_type": str(job_type),
                         "artifact_id": str(source.get("id") or ""),
                         "source_sha256": str(source.get("sha256") or ""),
-                        "package": self.package_extractor.describe(source_path),
+                        "package": package_extractor.describe(source_path),
                         "pdf_context_pages": len(pdf_pages),
                         "package_context_pages": len(package_pages),
                         "pdf_context_chars": sum(
@@ -612,10 +637,25 @@ class PaperPackageABReplay:
             store=store,
             artifact_root=artifact_root,
         )
-        self.package_hydrator = ResearchContextHydrator(
+        self.package_extract_hydrator = ResearchContextHydrator(
             store=store,
             artifact_root=artifact_root,
             text_extractor=package_extractor,
+        )
+        verify_extractor = HybridPaperPackagePageTextExtractor(
+            native_package_root=package_extractor.native.root,
+            standard_package_root=(
+                package_extractor.standard.root
+                if package_extractor.standard is not None
+                else None
+            ),
+            max_chars=package_extractor.max_chars,
+            exclude_trailing_references=False,
+        )
+        self.package_verify_hydrator = ResearchContextHydrator(
+            store=store,
+            artifact_root=artifact_root,
+            text_extractor=verify_extractor,
         )
         self.pdf_hydrator = ResearchContextHydrator(
             store=store,
@@ -747,7 +787,11 @@ class PaperPackageABReplay:
                 historical = self.planner.usage(source.id)
                 package = self._execute(
                     source=source,
-                    hydrator=self.package_hydrator,
+                    hydrator=(
+                        self.package_extract_hydrator
+                        if job_type == JobType.EXTRACT
+                        else self.package_verify_hydrator
+                    ),
                     calibration_type=f"PAPER_PACKAGE_{str(job_type)}_AB",
                     configuration={
                         "arm": "paper_package",
