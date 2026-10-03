@@ -210,6 +210,9 @@ def main() -> None:
         action="store_true",
     )
 
+    paper_ab_posthoc = sub.add_parser("paper-package-ab-posthoc")
+    paper_ab_posthoc.add_argument("run_id")
+
     budget_status = sub.add_parser("budget-status")
     budget_status.add_argument("run_id")
 
@@ -641,6 +644,11 @@ def main() -> None:
             run_id=args.run_id,
             control_on_disagreement=not args.no_control_on_disagreement,
         )
+        print(json.dumps(result, default=str))
+    elif args.cmd == "paper-package-ab-posthoc":
+        from .paper_package_ab import posthoc_from_env
+
+        result = posthoc_from_env().run(run_id=args.run_id)
         print(json.dumps(result, default=str))
     elif args.cmd == "budget-status":
         from .daemon import daemon_from_env
