@@ -141,3 +141,24 @@ In particular, EXTRACT and VERIFY remain STANDARD semantic jobs over
 authoritative-PDF context. The measured paper-package A/B did not justify
 replacing that baseline. Specialized local document models remain targeted
 sidecar/escalation components rather than a silent semantic-context substitute.
+
+
+### Lambda production acceptance
+
+The local document pipeline is not enabled for sustained research merely because
+its component benchmarks pass. Production acceptance is a separate bounded gate.
+
+The production env enables one shared local-inference broker per daemon with
+one formula owner on GPU 0 and one table owner on GPU 1. The live env can be
+updated idempotently with a backup using
+`deploy/configure-production-local-inference.sh`.
+
+`deploy/run-lambda-production-acceptance.sh` then validates the installed
+systemd unit, Codex-only production env, PostgreSQL quiescence, document
+runtimes/model caches, GPU allocation, measured localization policy, internal
+CodeFormulaV2 deployment-license review, zero-spawn broker construction, and a
+read-only authoritative-PDF hydration smoke test.
+
+The acceptance runner never starts the research daemon, never performs a
+semantic call, never spawns the heavyweight model servers, and fails closed if
+a RUNNING research run or QUEUED/RUNNING non-human job is present.
