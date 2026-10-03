@@ -154,6 +154,59 @@ def build_converter():
     )
 
 
+def run_formula_page(
+    converter,
+    *,
+    source_pdf: str | Path,
+    output_dir: str | Path,
+    page_number: int,
+) -> dict:
+    if page_number < 1:
+        raise ValueError("page_number must be >= 1")
+
+    source = Path(source_pdf).resolve()
+    output = Path(output_dir).resolve()
+    if not source.is_file():
+        raise FileNotFoundError(source)
+    output.mkdir(parents=True, exist_ok=True)
+
+    result = converter.convert(
+        source,
+        page_range=(page_number, page_number),
+    )
+    document = result.document
+    json_path = output / f"{source.stem}.json"
+    markdown_path = output / f"{source.stem}.md"
+    json_path.write_text(
+        json.dumps(
+            document.export_to_dict(),
+            indent=2,
+            sort_keys=True,
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    markdown_path.write_text(
+        document.export_to_markdown().rstrip() + "\n",
+        encoding="utf-8",
+    )
+    return {
+        "adapter_id": "docling",
+        "mode": "formula_enrichment_targeted",
+        "model": MODEL_REPO,
+        "model_revision": MODEL_REVISION,
+        "source": source.name,
+        "page": page_number,
+        "json_path": str(json_path),
+        "markdown_path": str(markdown_path),
+        "do_ocr": False,
+        "do_table_structure": False,
+        "do_formula_enrichment": True,
+        "general_document_vlm_pipeline": False,
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("source_pdf", nargs="?")
@@ -178,49 +231,14 @@ def main() -> int:
     if args.page < 1:
         parser.error("--page must be >= 1")
 
-    source = Path(args.source_pdf).resolve()
-    output = Path(args.output_dir).resolve()
-    if not source.is_file():
-        raise FileNotFoundError(source)
-    output.mkdir(parents=True, exist_ok=True)
-
     converter = build_converter()
-    result = converter.convert(
-        source,
-        page_range=(args.page, args.page),
+    result = run_formula_page(
+        converter,
+        source_pdf=args.source_pdf,
+        output_dir=args.output_dir,
+        page_number=args.page,
     )
-    document = result.document
-    (output / f"{source.stem}.json").write_text(
-        json.dumps(
-            document.export_to_dict(),
-            indent=2,
-            sort_keys=True,
-            ensure_ascii=False,
-        )
-        + "\n",
-        encoding="utf-8",
-    )
-    (output / f"{source.stem}.md").write_text(
-        document.export_to_markdown().rstrip() + "\n",
-        encoding="utf-8",
-    )
-    print(
-        json.dumps(
-            {
-                "adapter_id": "docling",
-                "mode": "formula_enrichment_targeted",
-                "model": MODEL_REPO,
-                "model_revision": MODEL_REVISION,
-                "source": source.name,
-                "page": args.page,
-                "do_ocr": False,
-                "do_table_structure": False,
-                "do_formula_enrichment": True,
-                "general_document_vlm_pipeline": False,
-            },
-            sort_keys=True,
-        )
-    )
+    print(json.dumps(result, sort_keys=True))
     return 0
 
 
