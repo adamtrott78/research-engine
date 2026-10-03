@@ -20,7 +20,8 @@
     "preset": "codeformulav2",
     "engine": "transformers",
     "license": "cdla-permissive-2.0",
-    "license_review_status": "benchmark use documented; review redistribution/deployment obligations before production promotion"
+    "license_review_status": "benchmark use documented; review redistribution/deployment obligations before production promotion",
+    "revision": "0284bc97b73c88776957d00d6695dd63a5a8784e"
   },
   "promotion_gate": {
     "weighted_content_f1_on_matched_min": 0.8,
