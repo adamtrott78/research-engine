@@ -37,10 +37,12 @@ class DeterministicResearchExecutor:
         store,
         artifact_root: str | Path,
         arxiv_provider: Any | None = None,
+        local_inference: Any | None = None,
     ):
         self.store = store
         self.artifact_store = ContentAddressedArtifactStore(artifact_root)
         self.arxiv_provider = arxiv_provider or ArxivProvider(self.artifact_store)
+        self.local_inference = local_inference
 
     def execute(self, job: ResearchJob) -> dict[str, Any]:
         if job.executor_tier != ExecutorTier.DETERMINISTIC:
