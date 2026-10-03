@@ -9,6 +9,14 @@ from .document_docling import _table_grid
 from .document_package import BlockKind, PaperPackage
 
 
+TABLE_ACCURATE_ROUTE = "docling_tableformer_accurate_targeted"
+TABLE_PADDLE_FALLBACK_ROUTE = "paddle_table_recognition_v2_crop"
+TABLE_FALLBACK_WARNING = (
+    "RECOVERED_BY_PADDLE_TABLE_FALLBACK; "
+    "AUTHORITATIVE_PDF_VERIFICATION_REQUIRED"
+)
+
+
 def _load_package(root: Path, case_id: str) -> tuple[PaperPackage, Path]:
     package_root = root / case_id / "paper-package-v1"
     package_path = package_root / "package.json"
@@ -72,6 +80,22 @@ def _table_signal(package_root: Path, table: Any) -> dict[str, Any]:
             else "grid is empty or sparsely populated"
         ),
         "authoritative_pdf_verification_required": True,
+        "escalation": (
+            None
+            if structurally_usable
+            else {
+                "status": "TARGETED_ESCALATION_REQUIRED",
+                "first_route": TABLE_ACCURATE_ROUTE,
+                "fallback_route": TABLE_PADDLE_FALLBACK_ROUTE,
+                "fallback_trigger": "persistent_empty_grid_after_tableformer_accurate",
+                "fallback_warning": TABLE_FALLBACK_WARNING,
+                "reason": (
+                    "standard FAST structure is unusable; retry TableFormer ACCURATE "
+                    "for this table region, then use the promoted Paddle table-crop "
+                    "fallback only if the ACCURATE grid is still empty"
+                ),
+            }
+        ),
     }
 
 
@@ -173,10 +197,25 @@ def build_hybrid_routing_report(
                 overlay = True
                 reasons.append("formula region requires targeted enrichment")
 
+            page_table_escalations = [
+                table["escalation"]
+                for table in tables
+                if table["page_number"] == page_number
+                and table.get("escalation") is not None
+            ]
             page_routes[page_number] = {
                 "page_number": page_number,
                 "lexical_source": "docling_native",
                 "structure_overlay": "docling_standard_no_ocr" if overlay else None,
+                "table_escalation": (
+                    {
+                        "first_route": TABLE_ACCURATE_ROUTE,
+                        "fallback_route": TABLE_PADDLE_FALLBACK_ROUTE,
+                        "fallback_trigger": "persistent_empty_grid_after_tableformer_accurate",
+                    }
+                    if page_table_escalations
+                    else None
+                ),
                 "formula_escalation": (
                     "docling_codeformulav2_targeted"
                     if page_number in equation_pages
@@ -217,6 +256,14 @@ def build_hybrid_routing_report(
         "default_lexical_substrate": "docling_native",
         "structure_overlay": "docling_standard_no_ocr",
         "formula_escalation": "docling_codeformulav2_targeted",
+        "table_escalation_policy": {
+            "first_route": TABLE_ACCURATE_ROUTE,
+            "fallback_route": TABLE_PADDLE_FALLBACK_ROUTE,
+            "fallback_trigger": "persistent_empty_grid_after_tableformer_accurate",
+            "fallback_scope": "validated_pdf_table_bbox_only",
+            "fallback_warning": TABLE_FALLBACK_WARNING,
+            "benchmark_oracle_used_for_routing": False,
+        },
         "cases": len(rows),
         "summary": {
             "pages": sum(row["source_page_count"] for row in rows),
@@ -234,6 +281,11 @@ def build_hybrid_routing_report(
             ),
             "tables_residual_review": sum(
                 table["status"] == "RESIDUAL_REVIEW_REQUIRED"
+                for row in rows
+                for table in row["tables"]
+            ),
+            "tables_targeted_escalation": sum(
+                table.get("escalation") is not None
                 for row in rows
                 for table in row["tables"]
             ),

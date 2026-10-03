@@ -58,3 +58,20 @@ PostgreSQL integration uses the official pgvector image tag `pgvector/pgvector:0
 ## Continuous integration
 
 GitHub Actions runs the unit suite plus the PostgreSQL/pgvector integration test against a real PostgreSQL 18 + pgvector service. Local Docker is optional for development; CI is the canonical portable runtime check for the v1 database boundary.
+
+
+### Table escalation policy
+
+Document compilation keeps table inference cascaded and region-scoped:
+
+1. Docling standard/no-OCR TableFormer FAST is the normal structure tier.
+2. An intrinsically unusable FAST grid opens a targeted TableFormer ACCURATE
+   retry for that table/page only.
+3. If ACCURATE still emits an empty grid, the validated PDF table bbox is sent
+   to the promoted PaddleOCR General Table Recognition v2 crop fallback.
+4. Paddle-recovered tables remain derived evidence and require authoritative
+   PDF verification.
+
+The Paddle fallback passed its three-target Lambda benchmark but is deliberately
+not a default document parser. Full PP-StructureV3, Marker, MinerU, and broad
+document-VLM parsing remain outside this routing path.
