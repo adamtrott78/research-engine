@@ -97,3 +97,31 @@ The service is opt-in until the stopped-daemon Lambda concurrency/resource gate
 passes. The broker health snapshot reports process PIDs, spawn counts, queue
 depths, accepted/completed/failed requests, and the model-load metadata returned
 by each server.
+
+
+### EXTRACT / VERIFY paper-package A/B
+
+Paper-package context is not allowed to replace the current PDF hydrator until a
+non-materializing replay demonstrates source-grounded agreement.
+
+The A/B path keeps Docling native as the lexical substrate and uses
+standard/no-OCR structure only for conservative context assembly. EXTRACT may
+exclude pages strictly after the detected reference-section start. VERIFY never
+applies that trimming policy; exact cited pages remain available fail-closed.
+
+The acceptance sequence is:
+
+1. resolve the preserved nine-paper research run and authoritative source
+   artifacts;
+2. compile native and standard/no-OCR paper packages using the already
+   validated local runtimes;
+3. run a zero-model historical-quote/page-recovery preflight across all
+   completed EXTRACT and VERIFY jobs;
+4. only after that preflight passes, replay low/median/high historical-cost
+   EXTRACT and VERIFY jobs against paper-package context;
+5. if a package replay disagrees with history, run the current PDF context as a
+   control for that job to distinguish context regression from model variance.
+
+Semantic replays call the delegate directly and never invoke
+SemanticResultMaterializer. They may record operational calibration events but
+must not mutate scientific evidence or verification state.
