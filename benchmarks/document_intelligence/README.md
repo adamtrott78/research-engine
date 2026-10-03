@@ -430,3 +430,37 @@ bash deploy/run-paddle-table-fallback-gate.sh
 The gate selects exactly the persistent empty-grid residuals and writes all new
 crops, raw outputs, and evaluation JSON beneath the visible
 `~/adamArchives/Adam/workspace-control-tmp/` root.
+
+
+## Promoted persistent-empty-grid table fallback
+
+The bounded Lambda PP-TableMagic gate recovered all three tables for which
+Docling TableFormer FAST and ACCURATE both detected a table region but emitted
+zero structured cells. The aggregate recovery gate passed:
+
+- 3/3 target tables materialized;
+- reference coverage at content F1 >= 0.5: 1.0;
+- weighted matched-content F1: 0.8902691511387163;
+- weighted aligned-cell F1: 0.8472714360469462.
+
+This result promotes PaddleOCR 3.7.0 General Table Recognition v2 only as the
+persistent-empty-grid fallback. It does not replace Docling TableFormer.
+
+Production routing is:
+
+```text
+Docling standard_no_ocr / TableFormer FAST
+  -> TableFormer ACCURATE only when the FAST grid is unusable
+  -> Paddle PP-TableMagic crop only when ACCURATE still has an empty grid
+  -> authoritative-PDF verification remains required
+```
+
+The two Scheirer recoveries were strong (content F1 1.0 and ~0.957). The Fadul
+recovery was materially better than the zero-cell TableFormer output but still
+showed row/column drift in part of the table (content F1 ~0.714, aligned-cell
+F1 ~0.761). Therefore every Paddle-recovered table carries the warning
+`RECOVERED_BY_PADDLE_TABLE_FALLBACK; AUTHORITATIVE_PDF_VERIFICATION_REQUIRED`.
+
+The compact measured decision is retained in
+`paddle-table-promotion-decision.v1.json`. Mathpix remains benchmark reference
+only and is never consulted by production routing.
