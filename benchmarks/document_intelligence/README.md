@@ -541,3 +541,17 @@ than the EXTRACT/VERIFY production hydrator.
 Any future proposal to retier SCREEN, EXTRACT, or VERIFY must add a controlled
 quality benchmark and a material resource or allowance benefit before changing
 the scheduler contract.
+
+
+## Production acceptance and CodeFormulaV2 deployment review
+
+`lambda-production-acceptance-contract.v1.json` captures the bounded Lambda
+acceptance requirements after parser/routing/concurrency/localization
+validation.
+
+`codeformulav2-license-review.v1.json` records the deployment review for the
+pinned CodeFormulaV2 revision. The published model metadata declares
+CDLA-Permissive-2.0. The current production scope is internal inference from a
+local cache; research-engine does not redistribute the weights. Any future
+redistribution must preserve the applicable sharing obligation and should
+trigger a fresh review.

@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "stage": "lambda_production_acceptance",
+  "baseline_research_engine_sha": "d89d874949570ce8bb593f8ceffb7fd772af3f5f",
+  "objective": "Prove the installed Lambda production dependencies/configuration match the validated document-pipeline architecture without starting sustained research or mutating scientific state.",
+  "required_state": {
+    "git_branch": "main",
+    "clean_checkout": true,
+    "research_daemon": "inactive/dead PID 0 before and after",
+    "postgres": "running/healthy",
+    "semantic_backend": "codex",
+    "verify_page_radius": 0,
+    "local_inference_enabled": true,
+    "local_inference_max_pending": 8,
+    "local_inference_timeout_seconds": 900,
+    "formula_gpu_index": 0,
+    "table_gpu_index": 1
+  },
+  "dependency_checks": [
+    "native systemd unit matches repository deployment unit",
+    "production env contains no OPENAI_API_KEY and points to an executable Codex binary",
+    "core research-engine venv and persistent artifact root exist",
+    "Docling native and standard/no-OCR runtimes/model cache exist",
+    "CodeFormulaV2 and PP-TableMagic isolated runtimes/model caches exist",
+    "at least two NVIDIA GPUs are visible and each model-family runtime can make a bounded CUDA allocation on its assigned GPU",
+    "PostgreSQL accepts connections and required durable tables are readable"
+  ],
+  "policy_checks": [
+    "localization-matrix.v2 covers every JobType and matches JOB_TIERS",
+    "EXTRACT remains STANDARD over authoritative-PDF context",
+    "VERIFY remains STANDARD with radius-0 cited-page hydration",
+    "paper-package context is not the production EXTRACT/VERIFY hydrator",
+    "local heavyweight model owners can be constructed from production env without downloads or process spawn"
+  ],
+  "safety_checks": [
+    "no active RUNNING research run",
+    "no QUEUED/RUNNING non-HUMAN jobs before bounded integration",
+    "acceptance runner never starts research-engine-daemon.service",
+    "acceptance runner performs no semantic model call and no scientific materialization",
+    "acceptance runner leaves daemon inactive/dead"
+  ],
+  "license_review": "benchmarks/document_intelligence/codeformulav2-license-review.v1.json",
+  "pass_condition": "All dependency, policy, safety, GPU-allocation, and read-only health checks pass with daemon inactive/dead.",
+  "output_root": "~/adamArchives/Adam/workspace-control-tmp/lambda-production-acceptance-<UTC stamp>/"
+}
