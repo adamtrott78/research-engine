@@ -399,3 +399,34 @@ New operator-facing temporary outputs are written beneath the visible
 `~/adamArchives/Adam/workspace-control-tmp/` directory so JupyterLab can
 browse/download them. Hidden `.workspace-control/tmp` paths are treated as
 legacy input compatibility only.
+
+
+## Targeted Paddle table-recognition fallback
+
+TableFormer FAST and ACCURATE are considered exhausted only for table assets
+that remain present in Docling provenance but contain zero structured cells in
+both modes. That measured residual opens one alternate specialized component:
+PaddleOCR 3.7.0 General Table Recognition v2 (PP-TableMagic).
+
+The fallback is region-scoped, not a document parser. It renders the validated
+Docling table bbox from the authoritative PDF at 300 DPI with a 6-point margin,
+then supplies only that crop to `TableRecognitionPipelineV2`. Document
+orientation classification, unwarping, and layout detection are disabled.
+Table classification, wired/wireless structure recognition, cell detection,
+and OCR remain enabled because they are the table pipeline itself.
+
+The benchmark pins PaddleOCR 3.7.0 and PaddlePaddle 3.3.0 and records the
+explicit model family in
+`paddle-table-fallback-contract.v1.json`. One pipeline instance stays resident
+while all selected crops are processed. Mathpix remains benchmark reference
+only; the original PDF region is authoritative.
+
+Run the stopped-daemon Lambda gate with:
+
+```bash
+bash deploy/run-paddle-table-fallback-gate.sh
+```
+
+The gate selects exactly the persistent empty-grid residuals and writes all new
+crops, raw outputs, and evaluation JSON beneath the visible
+`~/adamArchives/Adam/workspace-control-tmp/` root.
