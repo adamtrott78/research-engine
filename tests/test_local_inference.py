@@ -9,6 +9,7 @@ import pytest
 
 from research_engine.local_inference import (
     LocalInferenceBackpressureError,
+    LocalInferenceError,
     LocalInferenceService,
     LocalModelOwner,
     LocalModelProcessSpec,
@@ -179,6 +180,25 @@ def test_env_factory_is_opt_in(monkeypatch):
 
     monkeypatch.setenv("RESEARCH_ENGINE_LOCAL_INFERENCE_ENABLED", "0")
     assert local_inference_service_from_env() is None
+
+
+def test_env_factory_can_require_explicit_enablement(monkeypatch):
+    monkeypatch.setenv("RESEARCH_ENGINE_LOCAL_INFERENCE_ENABLED", "0")
+    with pytest.raises(LocalInferenceError, match="disabled"):
+        local_inference_service_from_env(require_enabled=True)
+
+
+def test_deterministic_executor_keeps_shared_broker_reference(tmp_path: Path):
+    from research_engine.deterministic_executor import DeterministicResearchExecutor
+
+    marker = object()
+    executor = DeterministicResearchExecutor(
+        store=object(),
+        artifact_root=tmp_path / "artifacts",
+        arxiv_provider=object(),
+        local_inference=marker,
+    )
+    assert executor.local_inference is marker
 
 
 def test_runtime_servers_build_models_once_and_use_protocol():
