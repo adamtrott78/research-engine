@@ -7,6 +7,7 @@ from pathlib import Path
 
 
 MODEL_REPO = "docling-project/CodeFormulaV2"
+MODEL_REVISION = "0284bc97b73c88776957d00d6695dd63a5a8784e"
 
 
 def _device_name():
@@ -69,14 +70,14 @@ def prefetch_formula_models(output_dir: Path) -> None:
             {
                 "prefetch": "formula",
                 "repo_id": MODEL_REPO,
-                "revision": "main",
+                "revision": MODEL_REVISION,
             },
             sort_keys=True,
         )
     )
     download_hf_model(
         repo_id=MODEL_REPO,
-        revision="main",
+        revision=MODEL_REVISION,
         local_dir=output_dir / MODEL_REPO.replace("/", "--"),
         force=False,
         progress=True,
@@ -120,6 +121,7 @@ def build_converter():
             compile_model=False,
         ),
     )
+    formula_options.model_spec.revision = MODEL_REVISION
     formula_options.extract_code = False
     formula_options.extract_formulas = True
 
@@ -208,6 +210,7 @@ def main() -> int:
                 "adapter_id": "docling",
                 "mode": "formula_enrichment_targeted",
                 "model": MODEL_REPO,
+                "model_revision": MODEL_REVISION,
                 "source": source.name,
                 "page": args.page,
                 "do_ocr": False,
