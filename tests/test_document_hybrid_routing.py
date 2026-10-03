@@ -242,9 +242,57 @@ def test_hybrid_router_keeps_native_substrate_and_selective_structure(tmp_path: 
     assert len(row["unpromoted_pictures"]) == 1
     assert row["tables"][0]["status"] == "ACCEPT_STRUCTURE_WITH_PDF_VERIFY"
     assert row["tables"][0]["authoritative_pdf_verification_required"] is True
+    assert row["tables"][0]["escalation"] is None
+    assert report["summary"]["tables_targeted_escalation"] == 0
     assert row["formula_target_pages"] == [2]
     assert row["page_routes"][1]["formula_escalation"] == (
         "docling_codeformulav2_targeted"
+    )
+
+
+def test_hybrid_router_escalates_only_unusable_tables(tmp_path: Path):
+    manifest = tmp_path / "cases.json"
+    _manifest(manifest)
+    native = tmp_path / "native"
+    standard = tmp_path / "standard"
+    _write_package(native, standard=False)
+    _write_package(standard, standard=True)
+
+    table_json = (
+        standard / "case" / "paper-package-v1" / "tables" / "table-0001.json"
+    )
+    table_json.write_text(
+        json.dumps({"data": {"table_cells": []}}),
+        encoding="utf-8",
+    )
+
+    report = build_hybrid_routing_report(
+        case_manifest_path=manifest,
+        native_package_root=native,
+        standard_package_root=standard,
+    )
+    row = report["results"][0]
+    table = row["tables"][0]
+
+    assert table["status"] == "RESIDUAL_REVIEW_REQUIRED"
+    assert table["escalation"]["first_route"] == (
+        "docling_tableformer_accurate_targeted"
+    )
+    assert table["escalation"]["fallback_route"] == (
+        "paddle_table_recognition_v2_crop"
+    )
+    assert table["escalation"]["fallback_trigger"] == (
+        "persistent_empty_grid_after_tableformer_accurate"
+    )
+    assert "AUTHORITATIVE_PDF_VERIFICATION_REQUIRED" in (
+        table["escalation"]["fallback_warning"]
+    )
+    assert report["summary"]["tables_targeted_escalation"] == 1
+    assert row["page_routes"][0]["table_escalation"]["first_route"] == (
+        "docling_tableformer_accurate_targeted"
+    )
+    assert row["page_routes"][0]["table_escalation"]["fallback_route"] == (
+        "paddle_table_recognition_v2_crop"
     )
 
 
