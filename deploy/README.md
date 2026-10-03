@@ -396,3 +396,26 @@ enable PP-StructureV3, formulas, charts, a document VLM, Marker, or MinerU.
 
 The runtime and model cache live under `.research-engine`; all human-facing
 benchmark outputs live under visible `workspace-control-tmp`.
+
+
+## Shared local inference concurrency gate
+
+After the formula and table quality routes are promoted, validate model
+ownership and concurrency while the research daemon remains stopped:
+
+```bash
+bash deploy/run-local-inference-concurrency-gate.sh
+```
+
+The runner requires the existing CodeFormulaV2 and PP-TableMagic runtimes and
+model caches. It does not create virtual environments or prefetch models.
+
+On a dual-GPU host it probes both runtimes with real allocations, binds formula
+and table ownership to distinct healthy GPUs, and runs a six-request mixed cold
+wave followed by a two-request warm reuse wave. New human-facing reports and
+per-request outputs are written beneath visible
+`~/adamArchives/Adam/workspace-control-tmp/`.
+
+The production daemon integration remains disabled by default until this gate
+passes. Enabling `RESEARCH_ENGINE_LOCAL_INFERENCE_ENABLED=1` causes one broker
+to be created per daemon process and shared across all deterministic workers.
