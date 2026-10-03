@@ -275,6 +275,34 @@
           ],
           "benchmark_phase": "SPECIALIZED_INFERENCE",
           "gpu_preferred": true
+        },
+        "table_recognition_v2_crop": {
+          "class": "SPECIALIZED_LOCAL_MODEL",
+          "command": [
+            "{python}",
+            "{paddle_table_v2_shim}",
+            "{target_plan}",
+            "--bundle-root",
+            "{bundle_root}",
+            "--output-root",
+            "{output_dir}",
+            "--model-cache",
+            "{model_cache}",
+            "--device",
+            "gpu:0"
+          ],
+          "model_inference": true,
+          "expected_outputs": [
+            "paddle-table-output-summary.json",
+            "**/result.json",
+            "**/table-crop.png"
+          ],
+          "benchmark_phase": "SPECIALIZED_INFERENCE",
+          "gpu_preferred": true,
+          "crop_only": true,
+          "layout_detection": false,
+          "document_preprocessing": false,
+          "remote_services": false
         }
       },
       "capabilities": [
@@ -287,7 +315,7 @@
         "charts",
         "reading_order"
       ],
-      "runtime_notes": "Use the repository shim so page Markdown and image assets are concatenated consistently. English-only recognition configuration should be evaluated on this corpus.",
+      "runtime_notes": "Use the repository shim so page Markdown and image assets are concatenated consistently. English-only recognition configuration should be evaluated on this corpus. The table_recognition_v2_crop mode is a residual-only PP-TableMagic path: it renders only previously localized failed table bboxes and runs TableRecognitionPipelineV2 with layout/orientation/unwarping disabled while keeping OCR+table classification/structure/cell detection enabled.",
       "distribution": "paddleocr",
       "version_pattern": "3\\.7\\..+"
     },

@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "task": "research-engine-local-document-pipeline-v1",
+  "adapter_id": "paddle-table-recognition-v2",
+  "mode": "table_crop_fallback",
+  "benchmark_only_until_promoted": true,
+  "selector": "Docling TableFormer FAST+ACCURATE table assets with persistent empty structured grids",
+  "runtime": {
+    "paddleocr": "3.7.0",
+    "paddlepaddle_gpu": "3.3.0",
+    "cuda_wheel_channel": "cu126",
+    "pypdfium2": "runtime dependency for deterministic PDF-region rendering"
+  },
+  "execution": {
+    "input": "authoritative PDF table crop derived from validated Docling page+bbox provenance",
+    "dpi": 300,
+    "padding_points": 6,
+    "doc_orientation_classify": false,
+    "doc_unwarping": false,
+    "layout_detection": false,
+    "ocr": true,
+    "remote_services": false,
+    "whole_page_or_document_parse": false,
+    "shared_pipeline_instance_across_targets": true
+  },
+  "models": {
+    "table_classification": "PP-LCNet_x1_0_table_cls",
+    "wired_structure": "SLANeXt_wired",
+    "wireless_structure": "SLANeXt_wireless",
+    "wired_cell_detection": "RT-DETR-L_wired_table_cell_det",
+    "wireless_cell_detection": "RT-DETR-L_wireless_table_cell_det",
+    "text_detection": "PP-OCRv5_server_det",
+    "text_recognition": "PP-OCRv5_server_rec"
+  },
+  "license": {
+    "code": "Apache-2.0",
+    "weights": "review selected official Paddle model cards before production promotion"
+  },
+  "promotion_gate": {
+    "weighted_content_f1_on_matched_min": 0.75,
+    "weighted_aligned_cell_f1_on_matched_min": 0.5,
+    "reference_coverage_at_content_f1_0_5_min": 1.0,
+    "all_targets_materialized": true,
+    "authority": "ORIGINAL_PDF",
+    "benchmark_reference": "MATHPIX_MANUAL_REFERENCE"
+  }
+}

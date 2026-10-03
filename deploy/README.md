@@ -377,3 +377,22 @@ Docling/TableFormer runtime and model cache, runs ACCURATE mode only on those
 pages, and writes all new plan/raw/evaluation artifacts to the visible temporary
 root. Set `WORKSPACE_CONTROL_TMP_ROOT` to another visible directory when
 needed.
+
+
+## Targeted Paddle table fallback
+
+After TableFormer FAST and ACCURATE have both produced empty grids for the same
+localized table assets, run:
+
+```bash
+bash deploy/run-paddle-table-fallback-gate.sh
+```
+
+The runner keeps the research daemon stopped, derives the same persistent
+empty-grid targets from preserved evidence, creates an isolated PaddleOCR 3.7.0
+/ PaddlePaddle 3.3.0 CUDA 12.6 runtime, and invokes PP-TableMagic only on
+300-DPI crops of those table bboxes. It does not parse whole documents or
+enable PP-StructureV3, formulas, charts, a document VLM, Marker, or MinerU.
+
+The runtime and model cache live under `.research-engine`; all human-facing
+benchmark outputs live under visible `workspace-control-tmp`.
