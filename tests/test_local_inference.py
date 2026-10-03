@@ -56,6 +56,8 @@ for raw in sys.stdin:
         })
         continue
     seq += 1
+    sys.stdout.write("model-startup-or-runtime-noise\\n")
+    sys.stdout.flush()
     time.sleep(float(request.get("delay", 0)))
     respond({
         "ok": True,
@@ -97,7 +99,7 @@ def test_owner_reuses_one_process_across_concurrent_callers(tmp_path: Path):
             ]
             results = [future.result() for future in futures]
 
-        assert {row["server_pid"] for row in results}.__len__() == 1
+        assert len({row["server_pid"] for row in results}) == 1
         assert {row["model_load_count"] for row in results} == {1}
         assert sorted(row["request_seq"] for row in results) == [1, 2, 3, 4, 5]
         health = owner.health()
