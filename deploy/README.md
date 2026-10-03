@@ -326,3 +326,27 @@ that tier while other eligible tiers can continue; a run enters
 
 The production Codex path requires no `OPENAI_API_KEY`. Never commit ChatGPT,
 Codex, API, or other credentials to this repository.
+
+
+## Hybrid document routing follow-up
+
+After the preserved Docling `standard_no_ocr` normalization replay has
+completed, run the adaptive-routing, table-residual, and targeted-formula gates
+together while the research daemon remains stopped:
+
+```bash
+bash deploy/run-document-hybrid-routing-followup.sh
+```
+
+The runner defaults to the preserved October 2 standard/no-OCR output root and
+accepts another absolute output root as its first argument. It fails closed
+unless the checkout is clean on `main`, the daemon is inactive/dead, the
+normalized standard package exists, and exactly one existing normalized
+Docling-native corpus can be located under the workspace-control temporary
+artifact root.
+
+Only the measured formula residual opens new inference. Formula target pages
+come from the preserved standard Docling JSON. Each target page is processed
+individually with OCR, table structure, code enrichment, picture analysis,
+remote services, and general-document VLM disabled. The formula-specific
+CodeFormulaV2 stage is the sole new semantic parser stage enabled by this gate.
