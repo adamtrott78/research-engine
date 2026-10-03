@@ -390,7 +390,7 @@ class PaperPackageABPreflight:
         source_shas = [
             str(row["sha256"]) for row in plan["source_artifacts"]
         ]
-        coverage = self.package_extractor.coverage(source_shas)
+        coverage = self.package_extract_extractor.coverage(source_shas)
         if coverage["missing_native"] or coverage["missing_standard"]:
             raise ValueError(
                 "paper-package coverage incomplete: "
