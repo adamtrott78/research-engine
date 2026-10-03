@@ -141,7 +141,7 @@ class LocalModelOwner:
         if proc is not None and proc.poll() is None:
             return proc
         if proc is not None:
-            self._process = None
+            self._stop_process()
 
         executable = Path(self.spec.command[0])
         if not executable.is_file():
