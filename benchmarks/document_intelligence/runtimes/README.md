@@ -210,3 +210,24 @@ documentation exists.
 The durable task capsule controls when candidate installation is allowed.
 Initial development and command-contract validation happen in GitHub/CI first.
 Only selected candidates advance to Lambda hardware/resource benchmarking.
+
+
+### Paddle Table Recognition v2 residual profile
+
+The full PP-StructureV3 candidate remains available for a future broad
+document-level benchmark, but the current table residual does not justify that
+scope. The approved first Paddle gate is the narrower General Table Recognition
+v2 / PP-TableMagic pipeline.
+
+The isolated Lambda profile pins:
+
+- PaddleOCR `3.7.0`;
+- PaddlePaddle GPU `3.3.0` from the official CUDA 12.6 wheel channel;
+- deterministic PDF crop rendering through `pypdfium2`;
+- explicit table classification, SLANeXt wired/wireless structure, RT-DETR
+  wired/wireless cell detection, and PP-OCRv5 server detection/recognition.
+
+Model downloads are cached under
+`~/.research-engine/document-models/paddle-table-recognition-v2-3.7.0`.
+The pipeline is initialized once per benchmark process and reused across the
+target crops.
