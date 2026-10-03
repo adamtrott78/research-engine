@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-10-03",
+  "component": "CodeFormulaV2",
+  "model_repo": "docling-project/CodeFormulaV2",
+  "pinned_revision": "0284bc97b73c88776957d00d6695dd63a5a8784e",
+  "declared_license": "cdla-permissive-2.0",
+  "source_model_card": "https://huggingface.co/docling-project/CodeFormulaV2",
+  "source_license_text": "https://cdla.dev/permissive-2-0/",
+  "deployment_scope": "Internal local inference on the user's controlled Lambda host; model weights are cached locally and are not redistributed by research-engine.",
+  "decision": "PASS_INTERNAL_DEPLOYMENT_WITH_SHARING_OBLIGATION",
+  "findings": [
+    "The published model metadata declares CDLA-Permissive-2.0.",
+    "CDLA-Permissive-2.0 permits recipients to use, modify, and share licensed Data subject to the agreement.",
+    "If licensed Data is shared, the text of the CDLA-Permissive-2.0 agreement must be made available with the shared Data.",
+    "The agreement imposes no restriction or obligation on Results as defined by the license.",
+    "The current research-engine deployment does not redistribute the CodeFormulaV2 weights; it uses a local cached copy for internal inference."
+  ],
+  "production_requirements": [
+    "Keep the pinned model/revision identity in the deployment contract.",
+    "Do not package or redistribute model weights with research-engine artifacts unless the applicable license text is made available with the redistributed Data.",
+    "Re-review the model card/license if the pinned revision or distribution model changes."
+  ],
+  "review_boundary": "Repository engineering review of the published license metadata/text for this deployment pattern; not legal advice."
+}
