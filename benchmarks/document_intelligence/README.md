@@ -464,3 +464,35 @@ F1 ~0.761). Therefore every Paddle-recovered table carries the warning
 The compact measured decision is retained in
 `paddle-table-promotion-decision.v1.json`. Mathpix remains benchmark reference
 only and is never consulted by production routing.
+
+
+## Shared local inference concurrency gate
+
+Validated specialized models are not production-ready merely because they are
+accurate in isolated one-shot scripts. Concurrent document ingestion must not
+instantiate duplicate heavyweight models per worker.
+
+The shared local inference service therefore uses one long-lived owner process
+per isolated runtime:
+
+- Docling/CodeFormulaV2 owns the equation-only escalation queue;
+- PaddleOCR/PP-TableMagic owns the persistent-empty-grid table-crop queue.
+
+All deterministic workers in one daemon process share the same broker. Each
+family queue is bounded and serialized; the two families can run concurrently
+on distinct physical GPUs.
+
+The stopped-daemon acceptance gate is:
+
+```bash
+bash deploy/run-local-inference-concurrency-gate.sh
+```
+
+It does not rebuild runtimes or download models. It reuses the validated local
+runtimes/caches, submits three formula pages and three table crops concurrently,
+then repeats one request from each family as a warm mixed wave. Acceptance
+requires one server PID and one model load per family, one spawn per owner, no
+request failures, drained queues, and sampled GPU/system-memory telemetry.
+
+The machine-readable architecture and acceptance contract is retained in
+`local-inference-service-contract.v1.json`.
