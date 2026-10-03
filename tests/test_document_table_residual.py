@@ -201,6 +201,7 @@ def test_plan_selects_only_true_empty_grid_residual(tmp_path: Path):
     assert plan["summary"]["target_tables"] == 1
     assert plan["summary"]["target_pages"] == 1
     assert plan["targets"][0]["page_number"] == 2
+    assert plan["targets"][0]["pdf_bbox"] == [1.0, 1.0, 10.0, 10.0]
     assert plan["targets"][0]["table_asset_id"] == "table-0001"
 
 
