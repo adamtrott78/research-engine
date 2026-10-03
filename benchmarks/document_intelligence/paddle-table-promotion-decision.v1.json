@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "task": "research-engine-local-document-pipeline-v1",
+  "decision": "PROMOTE_AS_PERSISTENT_EMPTY_GRID_TABLE_FALLBACK",
+  "authority": "ORIGINAL_PDF",
+  "benchmark_reference": "MATHPIX_MANUAL_REFERENCE",
+  "production_policy": {
+    "default_table_parser": "docling_standard_no_ocr_tableformer_fast",
+    "first_escalation": "docling_tableformer_accurate_targeted",
+    "fallback": "paddle_table_recognition_v2_crop",
+    "fallback_trigger": "persistent_empty_grid_after_tableformer_accurate",
+    "fallback_scope": "validated_pdf_table_bbox_only",
+    "fallback_warning": "RECOVERED_BY_PADDLE_TABLE_FALLBACK; AUTHORITATIVE_PDF_VERIFICATION_REQUIRED",
+    "benchmark_oracle_used_for_routing": false,
+    "broad_document_rerun": false
+  },
+  "measured_gate": {
+    "target_tables": 3,
+    "target_pages": 3,
+    "matched_tables": 3,
+    "all_targets_materialized": true,
+    "reference_coverage_at_content_f1_0_5": 1,
+    "weighted_content_f1_on_matched": 0.8902691511387163,
+    "weighted_aligned_cell_f1_on_matched": 0.8472714360469462,
+    "result": "PASS"
+  },
+  "per_target": [
+    {
+      "case_id": "2013_scheirer_toward_open_set_recognition",
+      "page_number": 12,
+      "table_asset_id": "table-0002",
+      "candidate_shape": [
+        14,
+        7
+      ],
+      "reference_shape": [
+        13,
+        7
+      ],
+      "content_f1": 1,
+      "aligned_cell_f1": 0.806208247534778,
+      "interpretation": "Content-complete recovery with a small structural offset from an extra blank/header-alignment row."
+    },
+    {
+      "case_id": "2013_scheirer_toward_open_set_recognition",
+      "page_number": 2,
+      "table_asset_id": "table-0001",
+      "candidate_shape": [
+        8,
+        5
+      ],
+      "reference_shape": [
+        7,
+        5
+      ],
+      "content_f1": 0.9565217391304348,
+      "aligned_cell_f1": 0.975,
+      "interpretation": "Near-exact recovery; one extra OCR-derived note row remains outside the reference table."
+    },
+    {
+      "case_id": "2021_fadul_adversarial_spread_spectrum_milcom",
+      "page_number": 3,
+      "table_asset_id": "table-0001",
+      "candidate_shape": [
+        33,
+        5
+      ],
+      "reference_shape": [
+        31,
+        4
+      ],
+      "content_f1": 0.7142857142857142,
+      "aligned_cell_f1": 0.7606060606060606,
+      "interpretation": "Substantive table content recovered from a zero-cell TableFormer residual, but row/column drift remains in the Eve block. Keep authoritative-PDF verification required."
+    }
+  ],
+  "rejected_interpretations": [
+    "Paddle is not promoted as the default table parser.",
+    "The result does not justify full PP-StructureV3 document parsing.",
+    "The result does not justify Marker, MinerU, or a general document VLM.",
+    "Mathpix is not a production dependency or scientific authority."
+  ]
+}
