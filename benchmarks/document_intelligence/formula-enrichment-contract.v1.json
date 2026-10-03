@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "task": "research-engine-local-document-pipeline-v1",
+  "adapter_id": "docling",
+  "docling_version": "2.131.0",
+  "mode": "formula_enrichment_targeted",
+  "benchmark_only_until_promoted": true,
+  "selector": "formula-bearing pages derived from preserved standard_no_ocr formula provenance",
+  "execution": {
+    "page_granularity": "one page per conversion",
+    "do_ocr": false,
+    "do_table_structure": false,
+    "do_code_enrichment": false,
+    "do_formula_enrichment": true,
+    "general_document_vlm_pipeline": false,
+    "remote_services": false
+  },
+  "model": {
+    "repo_id": "docling-project/CodeFormulaV2",
+    "preset": "codeformulav2",
+    "engine": "transformers",
+    "license": "cdla-permissive-2.0",
+    "license_review_status": "benchmark use documented; review redistribution/deployment obligations before production promotion",
+    "revision": "0284bc97b73c88776957d00d6695dd63a5a8784e"
+  },
+  "promotion_gate": {
+    "weighted_content_f1_on_matched_min": 0.8,
+    "weighted_reference_coverage_at_f1_0_5_min": 0.8,
+    "all_equation_cases_nonzero": true,
+    "authority": "ORIGINAL_PDF",
+    "benchmark_reference": "MATHPIX_MANUAL_REFERENCE"
+  }
+}

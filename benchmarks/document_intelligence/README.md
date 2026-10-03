@@ -311,3 +311,58 @@ metrics include:
 
 Mathpix remains a manual benchmark reference. The original PDF remains
 scientific authority, including when Mathpix and a candidate parser disagree.
+
+
+## Hybrid native/structure routing and targeted formula follow-up
+
+The parser bakeoff selects a hybrid component architecture rather than one
+whole-document winner. Production lexical text, reading order, and page
+provenance remain sourced from the validated Docling-native package.
+`standard_no_ocr` is a selective structure overlay:
+
+- title/heading structure with valid provenance is promoted;
+- picture blocks are promoted as semantic figures only when Docling links a
+  non-empty caption;
+- table grids are admitted only as derived structure candidates and always
+  retain an authoritative-PDF verification requirement;
+- standard/no-OCR equation text is not promoted after the measured zero-content
+  equation result; formula-bearing pages are instead flagged for targeted
+  enrichment.
+
+Production routing is deterministic and does not consult Mathpix. Mathpix is
+used only by benchmark diagnostics and promotion gates.
+
+The stopped-daemon follow-up runner executes the four related gates in one
+bounded operation:
+
+```bash
+bash deploy/run-document-hybrid-routing-followup.sh
+```
+
+An optional first argument overrides the preserved
+`document-docling-standard-no-ocr-OUTPUT_ROOT`. The runner reuses the existing
+normalized native and standard packages, writes the hybrid routing report,
+writes a compact table residual audit, derives formula-bearing pages from the
+preserved standard Docling provenance, then runs formula enrichment one page at
+a time only for those targets. It does not repeat the 73-page standard parser
+bakeoff.
+
+The table residual audit is benchmark-only. It exposes candidate/reference
+grids and normalized cell tokens when matched table content, shape, or aligned
+cells fall below the diagnostic threshold. Those Mathpix-derived residuals may
+inform engineering changes but cannot become a production routing dependency.
+
+The formula experiment uses Docling 2.131.0's `codeformulav2` preset with the
+local `docling-project/CodeFormulaV2` model pinned to
+`0284bc97b73c88776957d00d6695dd63a5a8784e`. OCR, table reconstruction, code
+enrichment, picture analysis, remote services, and the general document-VLM
+pipeline remain disabled in that experiment. The model is fetched only into the
+formula benchmark cache after the measured equation residual has justified it.
+The model card currently identifies the weights as
+`cdla-permissive-2.0`; deployment/redistribution obligations must be reviewed
+again before production promotion.
+
+Formula promotion is not automatic. The benchmark requires at least 0.8
+reference-weighted matched-content F1, at least 0.8 reference coverage at
+F1>=0.5, and non-zero content/coverage on every equation-bearing case.
+The original PDF remains scientific authority throughout.
