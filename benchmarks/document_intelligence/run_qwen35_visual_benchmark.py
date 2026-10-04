@@ -248,7 +248,6 @@ def main() -> int:
             gpu_memory_utilization=0.65,
             limit_mm_per_prompt={"image": 1},
             trust_remote_code=False,
-            enforce_eager=True,
             disable_log_stats=True,
             mm_processor_cache_gb=0.25,
         )
