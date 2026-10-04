@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "case_id": "malformed-layout-v1",
+  "task_stage": "residual_escalation_and_local_semantic_fallbacks",
+  "governing_contract": "../residual-escalation-contract.v1.json",
+  "status": "SOURCE_SELECTED_PENDING_BOUNDED_PREFETCH_HASH_AND_NATIVE_OPENER_AUDIT",
+  "source": {
+    "title": "Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks",
+    "authors": [
+      "Shaoqing Ren",
+      "Kaiming He",
+      "Ross Girshick",
+      "Jian Sun"
+    ],
+    "publication_year": 2015,
+    "repository": "arXiv",
+    "arxiv_id": "1506.01497",
+    "abstract_url": "https://arxiv.org/abs/1506.01497",
+    "pdf_url": "https://arxiv.org/pdf/1506.01497",
+    "expected_page_count_from_public_source": 14,
+    "authoritative_sha256": null,
+    "authoritative_sha256_status": "PENDING_BOUNDED_LAMBDA_PREFETCH"
+  },
+  "target_pages": [
+    {
+      "page_index_zero_based": 1,
+      "intended_residual": "LAYOUT_OR_READING_ORDER_ANOMALY",
+      "complexity_reason": "Full-width figure/caption above two independent text columns, footnotes at both column bottoms, a wrapped code URL, and continuation across page/column boundaries create a high-value native reading-order stress page.",
+      "acceptance_on_lambda": "This case is accepted only if the governing deterministic layout opener actually fires on the authoritative downloaded PDF. Required checks include duplicate-block ratio, interleaved/overlapping column order, and native-vs-structure token/order metrics.",
+      "if_opener_does_not_fire": "Reject this source as the malformed-layout case before model benchmarking; do not lower thresholds or invoke a VLM. Replace it with another source case and make that replacement durable first."
+    },
+    {
+      "page_index_zero_based": 3,
+      "intended_residual": "LAYOUT_OR_READING_ORDER_ANOMALY",
+      "complexity_reason": "Wide figure spans the page above dense two-column text with footnotes/equations and image labels; audit as a secondary candidate only if page 1 does not open.",
+      "acceptance_on_lambda": "Same oracle-free deterministic opener as the governing contract."
+    }
+  ],
+  "native_audit_requirements": [
+    "authoritative PDF SHA-256 and exact page count",
+    "Docling-native block order and bboxes",
+    "standard_no_ocr structure block order and bboxes",
+    "normalized same-page token F1",
+    "ordered-bigram F1",
+    "duplicate-block ratio",
+    "explicit column/overlap diagnostics",
+    "human-checked expected reading order only after the production opener fires"
+  ],
+  "replacement_policy": {
+    "fail_closed": true,
+    "threshold_relaxation_for_case_selection": false,
+    "model_inference_before_opener": false,
+    "action_if_no_target_page_opens": "Select a replacement complex born-digital/hybrid PDF and merge an updated case manifest before any layout candidate benchmark."
+  },
+  "authority_and_transport": [
+    "Original downloaded arXiv PDF is benchmark authority after SHA-256 capture.",
+    "Public web parse/screenshots only justify source selection; they do not establish a production layout anomaly.",
+    "PDF bytes stay outside Git; Git retains source locator, later hash, opener diagnostics, and compact annotations."
+  ],
+  "model_gate": "No OCR/VLM/model download or inference is opened by this manifest."
+}
