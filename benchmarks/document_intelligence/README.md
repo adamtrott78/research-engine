@@ -632,3 +632,27 @@ before a VLM; the compact document VLM is tried before the general multimodal
 model; and the general model is never run on every page. Already-promoted
 CodeFormulaV2 and FAST -> ACCURATE -> PP-TableMagic paths remain unchanged.
 
+## Residual source-case registration
+
+The three missing source cases required by
+`residual-escalation-contract.v1.json` are registered under `cases/` before
+any new model/runtime prefetch:
+
+- `scan-mixed-quality-v1.json`: NASA TN D-486, with one image-dominant scan
+  candidate and one degraded textual scan candidate;
+- `semantic-visuals-v1.json`: *Deep Residual Learning for Image Recognition*,
+  targeting a quantitative training-error chart and a relational architecture
+  diagram;
+- `malformed-layout-v1.json`: *Faster R-CNN*, targeting complex two-column
+  pages with full-width figures/footnotes as native reading-order stress cases.
+
+Registration does not claim that the public web crawl is the authoritative
+binary or that an opener has fired. The bounded Lambda source-prefetch/audit
+gate must download the original PDFs, capture SHA-256 and page counts, and run
+the same deterministic native/structure diagnostics used by production. The
+layout source is fail-closed: if no target page actually satisfies the
+governing opener, it is replaced before any layout model inference.
+
+Large PDFs, rendered crops, and future model weights stay outside Git. These
+manifests retain only stable source locators and compact benchmark metadata.
+

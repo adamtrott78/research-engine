@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "case_id": "scan-mixed-quality-v1",
+  "task_stage": "residual_escalation_and_local_semantic_fallbacks",
+  "governing_contract": "../residual-escalation-contract.v1.json",
+  "status": "SOURCE_SELECTED_PENDING_BOUNDED_PREFETCH_HASH_AND_NATIVE_AUDIT",
+  "source": {
+    "title": "Project Vanguard Magnetic-Field Instrumentation and Measurements",
+    "authors": [
+      "J. P. Heppner",
+      "J. D. Stolarik",
+      "I. R. Shapiro",
+      "J. C. Cain"
+    ],
+    "publication_year": 1960,
+    "repository": "NASA Technical Reports Server",
+    "document_id": "19980228065",
+    "report_number": "NASA-TN-D-486",
+    "metadata_url": "https://ntrs.nasa.gov/citations/19980228065",
+    "pdf_url": "https://ntrs.nasa.gov/api/citations/19980228065/downloads/19980228065.pdf",
+    "public_distribution": true,
+    "copyright_note": "Work of the US Government; NTRS metadata states Public Use Permitted.",
+    "expected_page_count_from_public_source": 28,
+    "authoritative_sha256": null,
+    "authoritative_sha256_status": "PENDING_BOUNDED_LAMBDA_PREFETCH"
+  },
+  "target_pages": [
+    {
+      "page_index_zero_based": 11,
+      "intended_residual": "SCAN_IMAGE_ONLY_OR_TEXTLESS_PAGE",
+      "visual_reason": "Full-page degraded/dark scanned waveform figure with caption; public web extraction exposed no page-specific P11 text lines, making it a useful textless/image-dominant candidate.",
+      "acceptance_on_lambda": "Production opener must independently confirm <32 non-whitespace native characters with raster/image coverage >=0.50, or absent native text layer while visible content exists.",
+      "if_opener_does_not_fire": "Do not force OCR. Search this same report for another qualifying image-dominant page; if none qualifies, replace the source case before OCR benchmarking."
+    },
+    {
+      "page_index_zero_based": 2,
+      "intended_residual": "LOW_CONFIDENCE_TEXT_OR_OCR_RECOVERY",
+      "visual_reason": "Scanned title/summary page; public extraction contains obvious corruption/character substitutions despite legible visible text.",
+      "acceptance_on_lambda": "Production low-confidence opener must independently fire using native text diagnostics; web crawler text is not routing evidence.",
+      "if_opener_does_not_fire": "Search other textual scan pages in the same report; replace source only if no page fires."
+    }
+  ],
+  "benchmark_annotations_required_before_quality_gate": [
+    "human-checked page transcription for each accepted textual OCR target",
+    "page-level visible-content confirmation",
+    "text-region bboxes where feasible",
+    "native text character count and replacement/control-character diagnostics",
+    "raster/image page coverage",
+    "authoritative PDF SHA-256 and exact page count",
+    "renderer DPI/config used for candidate OCR"
+  ],
+  "authority_and_transport": [
+    "Original downloaded NTRS PDF is scientific/benchmark authority after SHA-256 capture.",
+    "Web-extracted text and screenshots are source-selection evidence only, never benchmark oracle or production opener input.",
+    "PDF bytes remain outside Git; Git stores this manifest and later hashes/annotations only."
+  ],
+  "model_gate": "No OCR/VLM/model download is opened by this manifest."
+}
