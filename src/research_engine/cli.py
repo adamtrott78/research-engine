@@ -229,7 +229,11 @@ def main() -> None:
     bounded_validate_sidecar.add_argument("smoke_json")
 
     bounded_telemetry = sub.add_parser("bounded-integration-sidecar-telemetry")
-    bounded_telemetry.add_argument("artifact_id")
+    bounded_telemetry_group = bounded_telemetry.add_mutually_exclusive_group(
+        required=True
+    )
+    bounded_telemetry_group.add_argument("--artifact-id")
+    bounded_telemetry_group.add_argument("--smoke-json")
 
     bounded_compare = sub.add_parser("bounded-integration-compare-fingerprints")
     bounded_compare.add_argument("before_json")
@@ -747,7 +751,13 @@ def main() -> None:
             if not result["pass"]:
                 raise SystemExit("SIDECAR_SMOKE_VALIDATION_FAILED")
         elif args.cmd == "bounded-integration-sidecar-telemetry":
-            result = inspector.sidecar_telemetry(args.artifact_id)
+            artifact_id = args.artifact_id
+            if args.smoke_json:
+                smoke = json.loads(
+                    Path(args.smoke_json).read_text(encoding="utf-8")
+                )
+                artifact_id = str(smoke["artifact_id"])
+            result = inspector.sidecar_telemetry(str(artifact_id))
             if not result["telemetry_pass"]:
                 raise SystemExit("SIDECAR_TELEMETRY_VALIDATION_FAILED")
         elif args.cmd == "bounded-integration-compare-fingerprints":
