@@ -8,6 +8,7 @@ from types import SimpleNamespace
 from pypdf import PdfReader, PdfWriter
 
 from research_engine import residual_source_audit as audit
+from research_engine.document_package import BlockKind
 
 
 ROOT = Path(__file__).parents[1]
@@ -17,11 +18,23 @@ def _region(*, page_number=1, bbox=None):
     return SimpleNamespace(page_number=page_number, pdf_bbox=bbox)
 
 
-def _block(text, bbox, *, block_id="b"):
+def _block(
+    text,
+    bbox,
+    *,
+    block_id="b",
+    kind=BlockKind.PARAGRAPH,
+    parameters=None,
+):
+    derivation = ()
+    if parameters is not None:
+        derivation = (SimpleNamespace(parameters=parameters),)
     return SimpleNamespace(
         id=block_id,
+        kind=kind,
         markdown=text,
         source_region=_region(bbox=bbox),
+        derivation=derivation,
     )
 
 
@@ -53,7 +66,17 @@ def _reader(tmp_path, *, width=600, height=800):
 
 def test_scan_opener_fires_only_with_visible_nontext(tmp_path):
     reader = _reader(tmp_path)
-    native = _package(figures=[_asset((0, 0, 600, 500))])
+    native = _package(
+        blocks=[
+            _block(
+                "",
+                (0, 0, 600, 500),
+                block_id="picture-1",
+                kind=BlockKind.FIGURE,
+                parameters={"caption_text": ""},
+            )
+        ]
+    )
     standard = _package()
 
     metrics = audit._page_metrics(
@@ -116,18 +139,24 @@ def test_layout_opener_detects_interleaved_columns(tmp_path):
     )
 
 
-def test_semantic_region_locator_requires_caption_link_and_bbox():
+def test_semantic_region_locator_uses_normalized_figure_block_linkage():
     caption = _block(
         "Figure 6. Training error curves.",
         (50, 650, 550, 700),
         block_id="cap-6",
+        kind=BlockKind.CAPTION,
     )
-    figure = _asset(
+    figure = _block(
+        "",
         (60, 300, 540, 640),
-        caption_block_id="cap-6",
-        asset_id="fig-6",
+        block_id="fig-6",
+        kind=BlockKind.FIGURE,
+        parameters={
+            "caption_text": "Figure 6. Training error curves.",
+            "caption_refs": ["#/texts/42"],
+        },
     )
-    standard = _package(blocks=[caption], figures=[figure])
+    standard = _package(blocks=[caption, figure])
 
     locator = audit._semantic_region_locator(
         standard=standard,
@@ -135,7 +164,8 @@ def test_semantic_region_locator_requires_caption_link_and_bbox():
     )
 
     assert locator["status"] == "LINKED_FIGURE"
-    assert locator["linked_figures"][0]["figure_asset_id"] == "fig-6"
+    assert locator["linked_figures"][0]["figure_block_id"] == "fig-6"
+    assert locator["linked_figures"][0]["caption_refs"] == ["#/texts/42"]
     assert locator["linked_figures"][0]["pdf_bbox"] == [60, 300, 540, 640]
 
 
