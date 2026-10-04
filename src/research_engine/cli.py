@@ -216,6 +216,25 @@ def main() -> None:
     sidecar_smoke = sub.add_parser("document-sidecar-smoke")
     sidecar_smoke.add_argument("--artifact-id")
 
+    bounded_preflight = sub.add_parser("bounded-integration-preflight")
+
+    bounded_fingerprint = sub.add_parser("bounded-integration-fingerprint")
+
+    bounded_workers = sub.add_parser("bounded-integration-workers")
+    bounded_workers.add_argument("process_id", type=int)
+
+    bounded_validate_sidecar = sub.add_parser(
+        "bounded-integration-validate-sidecar"
+    )
+    bounded_validate_sidecar.add_argument("smoke_json")
+
+    bounded_telemetry = sub.add_parser("bounded-integration-sidecar-telemetry")
+    bounded_telemetry.add_argument("artifact_id")
+
+    bounded_compare = sub.add_parser("bounded-integration-compare-fingerprints")
+    bounded_compare.add_argument("before_json")
+    bounded_compare.add_argument("after_json")
+
     budget_status = sub.add_parser("budget-status")
     budget_status.add_argument("run_id")
 
@@ -689,6 +708,55 @@ def main() -> None:
             print(json.dumps(result, default=str))
         finally:
             broker.close()
+    elif args.cmd.startswith("bounded-integration-"):
+        from .bounded_integration import (
+            BoundedProductionIntegrationInspector,
+            compare_fingerprints,
+            validate_sidecar_smoke,
+        )
+        from .postgres import PostgresStore
+
+        store = PostgresStore(os.environ["RESEARCH_ENGINE_DATABASE_URL"])
+        inspector = BoundedProductionIntegrationInspector(store)
+        if args.cmd == "bounded-integration-preflight":
+            result = inspector.quiescence()
+            if not result["safe_for_idle_daemon_smoke"]:
+                raise SystemExit("BOUNDED_INTEGRATION_NOT_QUIESCENT")
+        elif args.cmd == "bounded-integration-fingerprint":
+            result = inspector.scientific_fingerprint()
+        elif args.cmd == "bounded-integration-workers":
+            result = inspector.workers_for_process(args.process_id)
+            if not result["worker_registration_pass"]:
+                raise SystemExit("DAEMON_WORKER_REGISTRATION_MISMATCH")
+            if not result["quiescence"]["safe_for_idle_daemon_smoke"]:
+                raise SystemExit("NONHUMAN_WORK_APPEARED_DURING_DAEMON_SMOKE")
+        elif args.cmd == "bounded-integration-validate-sidecar":
+            payload = json.loads(
+                Path(args.smoke_json).read_text(encoding="utf-8")
+            )
+            result = validate_sidecar_smoke(payload)
+            if not result["pass"]:
+                raise SystemExit("SIDECAR_SMOKE_VALIDATION_FAILED")
+        elif args.cmd == "bounded-integration-sidecar-telemetry":
+            result = inspector.sidecar_telemetry(args.artifact_id)
+            if not result["telemetry_pass"]:
+                raise SystemExit("SIDECAR_TELEMETRY_VALIDATION_FAILED")
+        elif args.cmd == "bounded-integration-compare-fingerprints":
+            before = json.loads(
+                Path(args.before_json).read_text(encoding="utf-8")
+            )
+            after = json.loads(
+                Path(args.after_json).read_text(encoding="utf-8")
+            )
+            result = compare_fingerprints(before, after)
+            if not result["unchanged"]:
+                raise SystemExit(
+                    "SCIENTIFIC_STATE_CHANGED:"
+                    + ",".join(result["changed_tables"])
+                )
+        else:
+            raise RuntimeError(f"unsupported bounded integration command: {args.cmd}")
+        print(json.dumps(result, default=str))
     elif args.cmd == "budget-status":
         from .daemon import daemon_from_env
 
