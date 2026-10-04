@@ -58,10 +58,11 @@ select_structure_gpu() {
     local row free_mib index
     for row in "${candidates[@]}"; do
         IFS='|' read -r free_mib index <<< "$row"
-        echo "STRUCTURE_GPU_PROBE_INDEX=$index"
-        echo "STRUCTURE_GPU_PROBE_FREE_MIB=$free_mib"
+        echo "STRUCTURE_GPU_PROBE_INDEX=$index" >&2
+        echo "STRUCTURE_GPU_PROBE_FREE_MIB=$free_mib" >&2
         if CUDA_VISIBLE_DEVICES="$index" "$standard_runtime/bin/python" - <<'PY'
 import json
+import sys
 import torch
 
 payload = {
@@ -69,7 +70,7 @@ payload = {
     "device_count": torch.cuda.device_count(),
 }
 if not payload["cuda_available"] or payload["device_count"] < 1:
-    print(json.dumps(payload, sort_keys=True))
+    print(json.dumps(payload, sort_keys=True), file=sys.stderr)
     raise SystemExit(2)
 device = torch.device("cuda:0")
 probe = torch.empty(128 * 1024 * 1024, dtype=torch.uint8, device=device)
@@ -77,7 +78,7 @@ probe.fill_(1)
 torch.cuda.synchronize(device)
 payload["device_name"] = torch.cuda.get_device_name(device)
 payload["allocation_probe_mib"] = 128
-print(json.dumps(payload, sort_keys=True))
+print(json.dumps(payload, sort_keys=True), file=sys.stderr)
 PY
         then
             printf '%s\n' "$index"
