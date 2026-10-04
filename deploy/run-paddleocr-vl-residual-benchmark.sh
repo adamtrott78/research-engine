@@ -128,9 +128,11 @@ echo "=== BUILD ISOLATED TRANSFORMERS VLM RUNTIME ==="
 if [ -f "$runtime_ready" ]; then
     if ! "$runtime/bin/python" - <<'PY'
 import torch, torchvision, transformers
+from google.protobuf import __version__ as protobuf_version
 assert torch.__version__.startswith("2.8.0"), torch.__version__
 assert torchvision.__version__.startswith("0.23.0"), torchvision.__version__
 assert transformers.__version__ == "4.55.0", transformers.__version__
+assert protobuf_version == "5.29.5", protobuf_version
 PY
     then
         echo "STALE_VLM_RUNTIME_SENTINEL=1"
@@ -145,21 +147,24 @@ if [ ! -f "$runtime_ready" ]; then
       --index-url https://download.pytorch.org/whl/cu126 \
       "torch==2.8.0" "torchvision==0.23.0"
     "$runtime/bin/python" -m pip install \
-      "transformers==4.55.0" "accelerate>=1.6,<2"
+      "transformers==4.55.0" "accelerate>=1.6,<2" "protobuf==5.29.5"
     "$runtime/bin/python" -m pip install "$wheel[doc-parser]"
 fi
 "$runtime/bin/python" - "$runtime_ready" <<'PY'
 import json, pathlib, sys
 import torch, torchvision, transformers
+from google.protobuf import __version__ as protobuf_version
 from paddleocr import PaddleOCRVL
 assert torch.__version__.startswith("2.8.0"), torch.__version__
 assert torchvision.__version__.startswith("0.23.0"), torchvision.__version__
 assert transformers.__version__ == "4.55.0", transformers.__version__
+assert protobuf_version == "5.29.5", protobuf_version
 assert torch.cuda.is_available()
 payload={
     "torch":torch.__version__,
     "torchvision":torchvision.__version__,
     "transformers":transformers.__version__,
+    "protobuf":protobuf_version,
     "cuda":True,
     "paddleocr_vl_import":"PASS",
     "trust_remote_code":"PINNED_LOCAL_MODEL_ONLY",
