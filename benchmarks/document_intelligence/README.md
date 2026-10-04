@@ -813,3 +813,31 @@ runtime-ready sentinel contract. Any prior ready environment without the exact
 protobuf dependency is invalidated and rebuilt before inference. This change
 does not alter the model, the two benchmark regions, inference count, resource
 ceilings, quality thresholds, daemon policy, or promotion boundary.
+
+### PaddleOCR-VL direct Transformers loader correction
+
+The third Lambda initialization attempt again executed zero candidate
+inference calls, but this time all required Python packages were present.
+Transformers successfully loaded the pinned custom
+`PaddleOCRVLConfig`, then PaddleX 3.7 requested
+`AutoModelForImageTextToText`. The pinned model's own `config.json`
+does not declare that auto-class; it declares `AutoModel` and
+`AutoModelForCausalLM`. Transformers 4.55.0 therefore rejected the
+PaddleX wrapper before weights were initialized.
+
+This is an interface mismatch, not another missing dependency and not a
+PaddleOCR-VL quality failure.
+
+The benchmark now bypasses only the incompatible PaddleX Transformers wrapper.
+It keeps the exact same prefetched model directory and weight checksum, but
+loads through the model repository's declared local custom-code interfaces:
+`AutoModelForCausalLM` and `AutoProcessor`, with
+`trust_remote_code=True`, `local_files_only=True`, and offline environment
+flags. No model file is modified.
+
+The two benchmark inputs and three-call budget are unchanged. Figure 6 uses the
+model's documented `Chart Recognition:` element-level prompt; Figure 3 uses
+the documented `OCR:` prompt. If those model-native tasks cannot recover the
+required visual facts/relations, that is a legitimate capability result and
+must fall through to the selected Qwen visual fallback rather than trigger
+another wrapper patch.

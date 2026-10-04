@@ -9,7 +9,7 @@
   "runner": "deploy/run-paddleocr-vl-residual-benchmark.sh",
   "helper": "benchmarks/document_intelligence/run_paddleocr_vl_residual_benchmark.py",
   "status": "BOUNDED_PADDLEOCR_VL_1_6_TARGETED_VISUAL_MEASUREMENT",
-  "objective": "Load only the already-prefetched PaddleOCR-VL-1.6 0.9B model in an isolated Transformers-backed PaddleOCR runtime, render the two prevalidated authoritative PDF figure bboxes, disable layout/orientation/unwarping modules, run exactly three targeted visual-region parses, measure resource/latency ceilings, and preserve structured outputs plus crops for human fact/relation review.",
+  "objective": "Load only the already-prefetched PaddleOCR-VL-1.6 0.9B model through the model repository's declared local Transformers AutoModelForCausalLM + AutoProcessor interface, render the two prevalidated authoritative PDF figure bboxes, run exactly three targeted visual-region generations, measure resource/latency ceilings, and preserve generation outputs plus crops for human fact/relation review.",
   "model": {
     "repo_id": "PaddlePaddle/PaddleOCR-VL-1.6",
     "revision": "c5630abae1d940eafe0697512a0325494b02ab42",
@@ -26,7 +26,7 @@
     "transformers_version": "4.55.0",
     "torch_version": "2.8.0",
     "torch_cuda_channel": "cu126",
-    "pipeline_version": "v1.6",
+    "pipeline_version": null,
     "use_layout_detection": false,
     "use_doc_orientation_classify": false,
     "use_doc_unwarping": false,
@@ -36,7 +36,15 @@
     "trust_remote_code": true,
     "trust_remote_code_scope": "PINNED_LOCAL_PADDLEOCR_VL_1_6_MODEL_ONLY",
     "runtime_rebuild_on_dependency_mismatch": true,
-    "protobuf_version": "5.29.5"
+    "protobuf_version": "5.29.5",
+    "loader": "AutoModelForCausalLM+AutoProcessor",
+    "loader_rationale": "The pinned model config declares AutoModelForCausalLM and AutoProcessor custom-code mappings. PaddleX 3.7's Transformers wrapper instead requests AutoModelForImageTextToText, which is not declared by this custom config under Transformers 4.55.0 and fails before inference.",
+    "paddleocr_wrapper_used": false,
+    "prompt_labels": {
+      "figure6_cifar_training_chart": "Chart Recognition:",
+      "figure3_network_architecture": "OCR:"
+    },
+    "local_files_only": true
   },
   "authoritative_source": {
     "case_id": "semantic-visuals-v1",
@@ -93,16 +101,16 @@
     "model_owner_count": 1,
     "candidate_inference_calls": 3,
     "sequence": [
-      "Figure 6 crop first after model initialization",
-      "Figure 3 crop with model resident",
-      "Figure 6 crop warm repeat"
+      "Figure 6 crop first with official Chart Recognition: prompt after direct model initialization",
+      "Figure 3 crop with official OCR: prompt and model resident",
+      "Figure 6 crop warm repeat with official Chart Recognition: prompt"
     ],
     "output_root": "~/adamArchives/Adam/workspace-control-tmp/paddleocr-vl-residual-benchmark-<UTC stamp>/",
     "preserve": [
       "exact rendered crops",
       "render receipt",
       "compact benchmark report",
-      "per-run raw PaddleOCR-VL JSON",
+      "per-run direct Transformers generation JSON",
       "runtime package freeze",
       "GPU/RSS telemetry"
     ]
