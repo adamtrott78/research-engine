@@ -183,10 +183,18 @@ def deterministic_worker_from_env(
     store = PostgresStore(dsn)
     queue = OrchestratorStore(store)
     planner = ResearchPlanner(queue)
+    from .document_sidecar import document_sidecar_compiler_from_env
+
+    document_sidecar = document_sidecar_compiler_from_env(
+        store=store,
+        artifact_root=artifact_root,
+        local_inference=local_inference,
+    )
     executor = DeterministicResearchExecutor(
         store=store,
         artifact_root=artifact_root,
         local_inference=local_inference,
+        document_sidecar=document_sidecar,
     )
     logical_agent_id = logical_agent_id or "deterministic:standalone"
     return AgentWorker(
