@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import resource
+import os
 import subprocess
 import threading
 import time
@@ -88,11 +88,26 @@ class GpuDeltaMonitor:
         self.baseline_used_mib = baseline_used_mib
         self.interval = interval
         self.peak_total_used_mib = baseline_used_mib
+        self.peak_tree_rss_mib = 0.0
         self.samples = 0
         self._stop = threading.Event()
         self._thread = threading.Thread(target=self._run, daemon=True)
 
     def _sample(self) -> None:
+        import psutil
+
+        root = psutil.Process(os.getpid())
+        processes = [root] + root.children(recursive=True)
+        rss_bytes = 0
+        for proc in processes:
+            try:
+                rss_bytes += proc.memory_info().rss
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+        self.peak_tree_rss_mib = max(
+            self.peak_tree_rss_mib, rss_bytes / (1024.0 * 1024.0)
+        )
+
         cp = subprocess.run(
             [
                 "nvidia-smi",
@@ -265,8 +280,7 @@ def main() -> int:
                 "runs": runs,
                 "warm_region_seconds_max": max(warm_seconds),
                 "warm_region_seconds_mean": sum(warm_seconds) / len(warm_seconds),
-                "peak_rss_mib": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-                / 1024.0,
+                "peak_tree_rss_mib": monitor.peak_tree_rss_mib,
                 "all_structured_outputs_valid": all(
                     x["structured_output_valid"] for x in runs
                 ),
@@ -280,6 +294,7 @@ def main() -> int:
         report["baseline_gpu_used_mib"] = monitor.baseline_used_mib
         report["peak_total_gpu_used_mib"] = monitor.peak_total_used_mib
         report["peak_gpu_delta_mib"] = monitor.peak_delta_mib
+        report["peak_tree_rss_mib"] = monitor.peak_tree_rss_mib
 
     ceilings = {
         "peak_vram_mib_lte": 14336.0,
@@ -293,7 +308,7 @@ def main() -> int:
         "gpu_telemetry_valid": report["gpu_monitor_samples"] > 0,
         "peak_vram": report.get("peak_gpu_delta_mib", float("inf"))
         <= ceilings["peak_vram_mib_lte"],
-        "peak_rss": report.get("peak_rss_mib", float("inf"))
+        "peak_rss": report.get("peak_tree_rss_mib", float("inf"))
         <= ceilings["peak_rss_mib_lte"],
         "model_init": report.get("model_init_seconds", float("inf"))
         <= ceilings["model_init_seconds_lte"],
@@ -319,7 +334,7 @@ def main() -> int:
                 "model_init_seconds": report.get("model_init_seconds"),
                 "warm_region_seconds_max": report.get("warm_region_seconds_max"),
                 "peak_gpu_delta_mib": report.get("peak_gpu_delta_mib"),
-                "peak_rss_mib": report.get("peak_rss_mib"),
+                "peak_tree_rss_mib": report.get("peak_tree_rss_mib"),
                 "all_structured_outputs_valid": report.get(
                     "all_structured_outputs_valid"
                 ),
