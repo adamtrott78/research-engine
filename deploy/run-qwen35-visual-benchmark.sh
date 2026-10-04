@@ -174,11 +174,20 @@ import json
 import pathlib
 import sys
 
+import torch
 import vllm
 
 assert vllm.__version__ == "0.30.0", vllm.__version__
+assert torch.cuda.is_available(), "vLLM runtime Torch cannot access CUDA"
+assert torch.cuda.device_count() == 1, torch.cuda.device_count()
+probe = torch.empty((32, 32), device="cuda:0")
+del probe
 payload = {
     "vllm": vllm.__version__,
+    "torch": torch.__version__,
+    "torch_cuda_runtime": torch.version.cuda,
+    "cuda_device_name": torch.cuda.get_device_name(0),
+    "cuda_allocation_probe": "PASS",
     "engine": "native_qwen3.5_multimodal",
 }
 pathlib.Path(sys.argv[1]).write_text(
