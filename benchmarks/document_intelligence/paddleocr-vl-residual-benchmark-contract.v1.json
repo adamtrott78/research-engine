@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "task": "research-engine-local-document-pipeline-v1",
+  "stage": "residual_escalation_and_local_semantic_fallbacks",
+  "baseline_research_engine_sha": "9019be081db373395adeffa28fe515c33e582fb3",
+  "prior_ocr_review": "benchmarks/document_intelligence/ppocrv6-human-quality-review.v1.json",
+  "source_case": "benchmarks/document_intelligence/cases/semantic-visuals-v1.json",
+  "prefetch_receipt": "benchmarks/document_intelligence/residual-model-prefetch-pass.v1.json",
+  "runner": "deploy/run-paddleocr-vl-residual-benchmark.sh",
+  "helper": "benchmarks/document_intelligence/run_paddleocr_vl_residual_benchmark.py",
+  "status": "BOUNDED_PADDLEOCR_VL_1_6_TARGETED_VISUAL_MEASUREMENT",
+  "objective": "Load only the already-prefetched PaddleOCR-VL-1.6 0.9B model in an isolated Transformers-backed PaddleOCR runtime, render the two prevalidated authoritative PDF figure bboxes, disable layout/orientation/unwarping modules, run exactly three targeted visual-region parses, measure resource/latency ceilings, and preserve structured outputs plus crops for human fact/relation review.",
+  "model": {
+    "repo_id": "PaddlePaddle/PaddleOCR-VL-1.6",
+    "revision": "c5630abae1d940eafe0697512a0325494b02ab42",
+    "model_safetensors_sha256": "85a479d506a11e724e7285d395c551be69f41dbc16b6342d3cacfb189aed71db",
+    "materialized_bytes": 1930462423,
+    "license": "Apache-2.0",
+    "local_model_root": "~/.research-engine/residual-models/paddleocr-vl-1.6/c5630abae1d940eafe0697512a0325494b02ab42"
+  },
+  "runtime": {
+    "venv": "~/.research-engine/residual-runtimes/paddleocr-vl-1.6-transformers-4.55.0",
+    "paddleocr_version": "3.7.0",
+    "paddleocr_wheel_sha256": "c0f0a81ad4112727f30c6fcf986ac0ef6a120d31ee0991a01fae0357ee32d338",
+    "engine": "transformers",
+    "transformers_version": "4.55.0",
+    "torch_version": "2.8.0",
+    "torch_cuda_channel": "cu126",
+    "pipeline_version": "v1.6",
+    "use_layout_detection": false,
+    "use_doc_orientation_classify": false,
+    "use_doc_unwarping": false,
+    "use_queues": false,
+    "network_model_downloads_during_inference": "FORBIDDEN"
+  },
+  "authoritative_source": {
+    "case_id": "semantic-visuals-v1",
+    "sha256": "1e0651b6810ecba34a3dbc5b5b0209226f889004607c1f203540a48d64e5a93a",
+    "page_count": 12,
+    "render_dpi": 300,
+    "bbox_coordinate_origin": "TOPLEFT_PDF_POINTS",
+    "targets": [
+      {
+        "id": "figure6_cifar_training_chart",
+        "figure_label": "Figure 6",
+        "page_index_zero_based": 7,
+        "pdf_bbox": [
+          99.19828033447266,
+          72.1703872680664,
+          495.0450134277344,
+          171.62620544433594
+        ],
+        "evidence_need": "Recover the labels/series/panel relationships needed to determine which plain and residual network depths are compared and how the chart distinguishes training/test error.",
+        "annotated_facts": [
+          "The figure contains three error-vs-iteration panels.",
+          "The left panel is plain networks and includes plain-20, plain-32, plain-44, and plain-56.",
+          "The middle panel is ResNets and includes ResNet-20, ResNet-32, ResNet-44, ResNet-56, and ResNet-110.",
+          "The right panel compares very deep residual networks including residual-110 and residual-1202.",
+          "Dashed curves denote training error and bold curves denote testing error."
+        ],
+        "annotation_source": "authoritative figure plus linked caption"
+      },
+      {
+        "id": "figure3_network_architecture",
+        "figure_label": "Figure 3",
+        "page_index_zero_based": 3,
+        "pdf_bbox": [
+          50.5037956237793,
+          76.09317016601562,
+          285.709716796875,
+          618.7928466796875
+        ],
+        "evidence_need": "Recover the architecture labels and shortcut relationships needed to distinguish VGG-19, the 34-layer plain network, and the 34-layer residual network.",
+        "annotated_facts": [
+          "The figure compares three architectures: VGG-19, a 34-layer plain network, and a 34-layer residual network.",
+          "The residual architecture contains shortcut connections absent from the plain counterpart.",
+          "Dotted shortcuts are used where dimensions increase.",
+          "The 34-layer plain and 34-layer residual networks each have 3.6 billion FLOPs, versus 19.6 billion FLOPs for VGG-19."
+        ],
+        "annotation_source": "authoritative figure plus linked caption"
+      }
+    ]
+  },
+  "inference_plan": {
+    "candidate_model_families": [
+      "paddleocr-vl-1.6"
+    ],
+    "model_owner_count": 1,
+    "candidate_inference_calls": 3,
+    "sequence": [
+      "Figure 6 crop first after model initialization",
+      "Figure 3 crop with model resident",
+      "Figure 6 crop warm repeat"
+    ],
+    "output_root": "~/adamArchives/Adam/workspace-control-tmp/paddleocr-vl-residual-benchmark-<UTC stamp>/",
+    "preserve": [
+      "exact rendered crops",
+      "render receipt",
+      "compact benchmark report",
+      "per-run raw PaddleOCR-VL JSON",
+      "runtime package freeze",
+      "GPU/RSS telemetry"
+    ]
+  },
+  "hard_resource_ceilings": {
+    "peak_vram_mib_lte": 14336,
+    "peak_rss_mib_lte": 24576,
+    "model_init_seconds_lte": 120,
+    "warm_region_seconds_lte": 45
+  },
+  "quality_boundary": {
+    "automatic_promotion": false,
+    "human_review_required": true,
+    "fact_precision_min": 0.95,
+    "fact_recall_min": 0.9,
+    "numeric_value_accuracy_min": 0.95,
+    "label_relation_accuracy_min": 0.9,
+    "region_provenance_coverage_min": 1,
+    "fabricated_fact_tolerance": 0,
+    "contemporaneous_codex_control_required_before_promotion": true,
+    "measurement_success_status": "MEASURED_PENDING_HUMAN_AND_CODEX_CONTROL"
+  },
+  "forbidden_actions": [
+    "start research-engine-daemon.service",
+    "enable layout detection or download PP-DocLayoutV3",
+    "invoke Qwen3.5-4B",
+    "invoke Codex during this initial local measurement gate",
+    "enable production OCR/VLM/local-semantic routing",
+    "write scientific evidence/verification/gap/checkpoint/run/human-review state"
+  ],
+  "next_on_measurement_success": "Human-review the two crop outputs against annotated facts. If local visual facts meet thresholds, run a separate contemporaneous authoritative-PDF Codex control on the same evidence needs before any promotion. If PaddleOCR-VL fails or abstains, the selected Qwen3.5-4B visual fallback gate may open."
+}
