@@ -226,6 +226,48 @@ def compare_fingerprints(
     }
 
 
+def build_integration_report(
+    *,
+    research_engine_head: str,
+    preflight: dict[str, Any],
+    sidecar: dict[str, Any],
+    workers: dict[str, Any],
+    fingerprint_comparison: dict[str, Any],
+    telemetry: dict[str, Any],
+) -> dict[str, Any]:
+    decision = (
+        "PASS"
+        if preflight.get("safe_for_idle_daemon_smoke")
+        and sidecar.get("pass")
+        and workers.get("worker_registration_pass")
+        and workers.get("quiescence", {}).get("safe_for_idle_daemon_smoke")
+        and fingerprint_comparison.get("unchanged")
+        and telemetry.get("telemetry_pass")
+        else "FAIL"
+    )
+    return {
+        "schema_version": 1,
+        "decision": decision,
+        "research_engine_head": research_engine_head,
+        "preflight": preflight,
+        "sidecar": sidecar,
+        "daemon": {
+            "daemon_pid": workers.get("daemon_pid"),
+            "workers": workers.get("workers") or [],
+            "worker_registration_pass": workers.get(
+                "worker_registration_pass"
+            ),
+            "nonhuman_work_processed": False,
+            "final_required_state": "inactive/dead PID 0",
+        },
+        "scientific_fingerprint": fingerprint_comparison,
+        "sidecar_telemetry": telemetry,
+        "semantic_calls_performed": 0,
+        "scientific_state_materialized": False,
+        "semantic_baseline": "AUTHORITATIVE_PDF_HYDRATOR",
+    }
+
+
 def write_json(path: str | Path, payload: dict[str, Any]) -> None:
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
