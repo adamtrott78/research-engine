@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import inspect
 import json
 import os
 import resource
@@ -11,6 +12,34 @@ import threading
 import time
 from pathlib import Path
 from typing import Any
+
+
+
+
+def install_transformers_causal_mask_compat() -> str:
+    from transformers import masking_utils
+
+    original = masking_utils.create_causal_mask
+    params = set(inspect.signature(original).parameters)
+    if "inputs_embeds" in params:
+        return "native_inputs_embeds"
+    if "input_embeds" not in params:
+        raise RuntimeError(
+            "Unexpected transformers create_causal_mask signature: "
+            + str(inspect.signature(original))
+        )
+
+    def compat(*args: Any, **kwargs: Any) -> Any:
+        if "inputs_embeds" in kwargs:
+            if "input_embeds" in kwargs:
+                raise TypeError(
+                    "create_causal_mask received both inputs_embeds and input_embeds"
+                )
+            kwargs["input_embeds"] = kwargs.pop("inputs_embeds")
+        return original(*args, **kwargs)
+
+    masking_utils.create_causal_mask = compat
+    return "inputs_embeds_to_input_embeds"
 
 
 class GpuProcessMonitor:
@@ -158,6 +187,9 @@ def main() -> int:
             raise RuntimeError("Torch CUDA unavailable")
         if torch.cuda.device_count() < 1:
             raise RuntimeError("Torch sees no CUDA devices")
+
+        mask_compat = install_transformers_causal_mask_compat()
+        report["causal_mask_compat"] = mask_compat
 
         started = time.perf_counter()
         processor = AutoProcessor.from_pretrained(
