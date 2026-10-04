@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "case_id": "semantic-visuals-v1",
+  "task_stage": "residual_escalation_and_local_semantic_fallbacks",
+  "governing_contract": "../residual-escalation-contract.v1.json",
+  "status": "SOURCE_SELECTED_PENDING_BOUNDED_PREFETCH_HASH_AND_REGION_ANNOTATION",
+  "source": {
+    "title": "Deep Residual Learning for Image Recognition",
+    "authors": [
+      "Kaiming He",
+      "Xiangyu Zhang",
+      "Shaoqing Ren",
+      "Jian Sun"
+    ],
+    "publication_year": 2015,
+    "repository": "arXiv",
+    "arxiv_id": "1512.03385",
+    "abstract_url": "https://arxiv.org/abs/1512.03385",
+    "pdf_url": "https://arxiv.org/pdf/1512.03385",
+    "expected_page_count_from_public_source": 12,
+    "authoritative_sha256": null,
+    "authoritative_sha256_status": "PENDING_BOUNDED_LAMBDA_PREFETCH"
+  },
+  "target_regions": [
+    {
+      "page_index_zero_based": 7,
+      "figure_label": "Figure 6",
+      "intended_residual": "UNCAPTIONED_OR_SEMANTICALLY_RICH_FIGURE_CHART",
+      "content_type": "quantitative multi-panel line chart",
+      "reason": "The chart encodes training/test error trajectories for multiple plain and residual networks. Exact/approximate plotted values and curve relationships require the visual region rather than caption text alone.",
+      "benchmark_question_plan": [
+        "Read approximate terminal test-error values for selected curves from the right panel with a human-defined numeric tolerance.",
+        "Compare the terminal testing-error ordering of residual-110 and residual-1202 using only the validated chart crop."
+      ],
+      "answer_status": "PENDING_HUMAN_REGION_ANNOTATION",
+      "crop_status": "PENDING_BOUNDED_PREFETCH"
+    },
+    {
+      "page_index_zero_based": 3,
+      "figure_label": "Figure 3",
+      "intended_residual": "UNCAPTIONED_OR_SEMANTICALLY_RICH_FIGURE_CHART",
+      "content_type": "relational network-architecture diagram",
+      "reason": "The page visually encodes parallel VGG/plain/residual architectures and shortcut topology. Some required relations are carried by arrows/solid-vs-dotted connections rather than recoverable from nearby prose alone.",
+      "benchmark_question_plan": [
+        "Identify the output-size transitions at which dotted shortcut connections occur in the 34-layer residual architecture.",
+        "Trace the relationship between the plain and residual branches at one validated stage without relying on full-page prose."
+      ],
+      "answer_status": "PENDING_HUMAN_REGION_ANNOTATION",
+      "crop_status": "PENDING_BOUNDED_PREFETCH"
+    }
+  ],
+  "annotation_requirements_before_quality_gate": [
+    "authoritative PDF SHA-256 and exact page count",
+    "validated PDF-coordinate bbox for each figure region",
+    "human-checked question/answer facts grounded only in each crop",
+    "numeric tolerances for chart-reading questions",
+    "linked caption text retained separately from crop-only visual facts",
+    "explicit labels for any fact already stated in caption/prose so it is not counted as visual-semantic recovery"
+  ],
+  "quality_scope": [
+    "PaddleOCR-VL-1.6 is the first multimodal candidate on these regions.",
+    "Qwen3.5-4B visual use is permitted only if PaddleOCR-VL-1.6 fails, abstains, or cannot meet the visual quality gate.",
+    "No general VLM is run on the rest of the document."
+  ],
+  "authority_and_transport": [
+    "Original downloaded arXiv PDF is benchmark authority after SHA-256 capture.",
+    "Public web text/screenshots are selection evidence only and are not candidate input, benchmark oracle, or production routing evidence.",
+    "PDF bytes and rendered crops remain outside Git; Git stores manifest, hashes, region metadata, and compact annotations."
+  ],
+  "model_gate": "No VLM/model download is opened by this manifest alone."
+}
