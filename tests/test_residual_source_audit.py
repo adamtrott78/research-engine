@@ -252,6 +252,7 @@ def test_real_docling_normalizer_exposes_semantic_figure_as_block(tmp_path):
     )
     assert locator["status"] == "LINKED_FIGURE"
     assert locator["linked_figures"][0]["pdf_bbox"] == [60.0, 300.0, 540.0, 640.0]
+    assert locator["caption_blocks_found"] == []
 
 
 def test_fetch_registered_sources_hashes_only_valid_pdfs(tmp_path, monkeypatch):
