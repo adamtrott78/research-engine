@@ -162,3 +162,22 @@ read-only authoritative-PDF hydration smoke test.
 The acceptance runner never starts the research daemon, never performs a
 semantic call, never spawns the heavyweight model servers, and fails closed if
 a RUNNING research run or QUEUED/RUNNING non-human job is present.
+
+
+### Derived document sidecars
+
+The production document pipeline can build a content-addressed **derived
+sidecar** after authoritative ACQUIRE. The sidecar is explicitly non-authoritative:
+the source PDF is committed first, EXTRACT/VERIFY continue to use
+`ResearchContextHydrator` over that PDF, and a sidecar failure does not fail
+ACQUIRE.
+
+When `RESEARCH_ENGINE_DOCUMENT_SIDECAR_ENABLED=1`, the deterministic worker
+caches native and standard/no-OCR paper packages by source SHA-256. Optional
+specialized routing preserves the validated cascade: formula pages use the
+shared CodeFormulaV2 owner; FAST empty table grids receive targeted TableFormer
+ACCURATE; Paddle crop fallback is used only if the ACCURATE page still has no
+non-empty table grid.
+
+Operational receipts are written to `document_sidecar_events`. Cache hits
+perform zero new specialized-model requests.
