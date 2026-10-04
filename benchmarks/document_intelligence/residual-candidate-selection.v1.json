@@ -29,12 +29,18 @@
         "execution_scope": "page image only when scan/text residual opener fires",
         "local_only": true,
         "downloads_now": false,
-        "exact_weight_checksums": "CAPTURE_AT_BOUNDED_PREFETCH_GATE",
+        "exact_weight_checksums": "PINNED_FROM_BOUNDED_PREFETCH_PASS",
         "artifact_repos": [
           "PaddlePaddle/PP-OCRv6_medium_det",
           "PaddlePaddle/PP-OCRv6_medium_rec"
         ],
-        "revision_policy": "RESOLVE_MAIN_ON_FIRST_BOUNDED_PREFETCH_THEN_PIN_EXACT_COMMITS"
+        "revision_policy": "PINNED_FROM_BOUNDED_PREFETCH_PASS",
+        "det_repo": "PaddlePaddle/PP-OCRv6_medium_det",
+        "det_pinned_revision": "8e0f56fb2ef86b461d99cfc7ac5c137738985f61",
+        "det_inference_weights_sha256": "85218d2e3d98f5a21c58b4220627be923a97aee5db3cc71f39536ab31ac53960",
+        "rec_repo": "PaddlePaddle/PP-OCRv6_medium_rec",
+        "rec_pinned_revision": "e5a92bcbc5cc1b494628e458d267778f0704fd7c",
+        "rec_inference_weights_sha256": "1b01c79a914587933f615569e75de54f2e638ebb5d3f3b3c1b38c24ede8c7319"
       },
       "source_evidence": {
         "official_docs": "https://www.paddleocr.ai/main/en/version3.x/pipeline_usage/OCR.html",
@@ -60,8 +66,9 @@
       "selection_reason": "Cheapest current purpose-built text recovery path in the already-used Paddle ecosystem; it should be tested before any VLM for scan/text residuals.",
       "license_review": {
         "software_license": "Apache-2.0",
-        "model_weight_license_status": "APACHE_2_METADATA_TO_BE_RECONFIRMED_AND_RECEIPTED_AT_BOUNDED_PREFETCH",
-        "deployment_decision": "BENCHMARK_SELECTION_ONLY"
+        "model_weight_license_status": "APACHE_2_CONFIRMED_AT_BOUNDED_PREFETCH",
+        "deployment_decision": "BENCHMARK_SELECTION_ONLY",
+        "prefetch_receipt": "benchmarks/document_intelligence/residual-model-prefetch-pass.v1.json"
       },
       "resource_policy": {
         "must_meet_contract_residual_ceiling": true,
@@ -213,7 +220,7 @@
     "no_job_tier_change": true,
     "no_daemon_lifecycle_change": true,
     "no_scientific_state_materialization": true,
-    "next_gate": "BOUNDED_MODEL_ARTIFACT_PREFETCH_LICENSE_CHECKSUM_RESOURCE_PREFLIGHT",
+    "next_gate": "PP_OCRV6_ISOLATED_RUNTIME_AND_SCAN_TEXT_MEASUREMENT",
     "source_gate_pass_receipt": "benchmarks/document_intelligence/residual-source-audit-pass.v1.json"
   }
 }
