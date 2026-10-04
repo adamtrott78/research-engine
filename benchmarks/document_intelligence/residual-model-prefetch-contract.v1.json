@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "task": "research-engine-local-document-pipeline-v1",
+  "stage": "residual_escalation_and_local_semantic_fallbacks",
+  "baseline_research_engine_sha": "d9946729f92a15fe3a6c821dc366a53a37ca0756",
+  "source_gate_receipt": "benchmarks/document_intelligence/residual-source-audit-pass.v1.json",
+  "runner": "deploy/run-residual-model-prefetch-gate.sh",
+  "helper": "benchmarks/document_intelligence/prefetch_residual_models.py",
+  "status": "BOUNDED_MODEL_ARTIFACT_PREFETCH_AND_RUNTIME_COMPATIBILITY_PREFLIGHT",
+  "objective": "Prefetch the selected residual model artifacts into a dedicated local model store, resolve/preserve exact revisions, verify Apache-2.0 metadata, hash every materialized model file, prefetch the pinned PaddleOCR package wheel, and capture host/GPU compatibility facts without loading or invoking any candidate model.",
+  "required_state": {
+    "git_branch": "main",
+    "clean_checkout": true,
+    "source_gate_decision": "PASS",
+    "source_gate_model_prefetch_ready": true,
+    "research_daemon": "inactive/dead PID 0 before, throughout, and after",
+    "output_root": "~/adamArchives/Adam/workspace-control-tmp/residual-model-prefetch-<UTC stamp>/",
+    "model_root": "~/.research-engine/residual-models",
+    "tooling_venv": "~/.research-engine/residual-prefetch-tooling/huggingface-hub-2.1.1",
+    "runtime_wheelhouse": "~/.research-engine/residual-runtime-wheelhouse",
+    "minimum_free_disk_gib_before_download": 24,
+    "candidate_model_inference_calls": 0,
+    "scientific_state_materialized": false
+  },
+  "prefetch_tooling": {
+    "package": "huggingface-hub",
+    "version": "2.1.1",
+    "package_license": "Apache-2.0",
+    "wheel_sha256": "d76fa1d8e6a59e01f012b1d88da604c099c7a0f2e26b1cc7d708f0a4283bd2a2",
+    "purpose": "Artifact transport/metadata only; this is not an inference runtime."
+  },
+  "candidate_runtime_package_prefetch": [
+    {
+      "package": "paddleocr",
+      "version": "3.7.0",
+      "wheel": "paddleocr-3.7.0-py3-none-any.whl",
+      "wheel_sha256": "c0f0a81ad4112727f30c6fcf986ac0ef6a120d31ee0991a01fae0357ee32d338",
+      "license": "Apache-2.0",
+      "install_now": false,
+      "reason": "Pin the shared PP-OCRv6/PaddleOCR-VL Python package artifact before isolated runtime construction; transitive inference dependencies are not installed by this gate."
+    }
+  ],
+  "model_artifacts": [
+    {
+      "id": "pp-ocrv6-medium-det",
+      "family": "paddleocr-pp-ocrv6-medium",
+      "repo_id": "PaddlePaddle/PP-OCRv6_medium_det",
+      "revision_mode": "RESOLVE_MAIN_ON_FIRST_BOUNDED_PREFETCH",
+      "requested_revision": "main",
+      "expected_license": "apache-2.0",
+      "maximum_materialized_gib": 0.25
+    },
+    {
+      "id": "pp-ocrv6-medium-rec",
+      "family": "paddleocr-pp-ocrv6-medium",
+      "repo_id": "PaddlePaddle/PP-OCRv6_medium_rec",
+      "revision_mode": "RESOLVE_MAIN_ON_FIRST_BOUNDED_PREFETCH",
+      "requested_revision": "main",
+      "expected_license": "apache-2.0",
+      "maximum_materialized_gib": 0.25
+    },
+    {
+      "id": "paddleocr-vl-1.6",
+      "family": "paddleocr-vl-1.6",
+      "repo_id": "PaddlePaddle/PaddleOCR-VL-1.6",
+      "revision_mode": "PINNED",
+      "requested_revision": "c5630abae1d940eafe0697512a0325494b02ab42",
+      "expected_license": "apache-2.0",
+      "maximum_materialized_gib": 3
+    },
+    {
+      "id": "qwen3.5-4b",
+      "family": "qwen3.5-4b",
+      "repo_id": "Qwen/Qwen3.5-4B",
+      "revision_mode": "PINNED",
+      "requested_revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+      "expected_license": "apache-2.0",
+      "maximum_materialized_gib": 12.5
+    }
+  ],
+  "hardware_compatibility_preflight": {
+    "source": "existing validated Docling standard_no_ocr Torch runtime plus nvidia-smi",
+    "record": [
+      "GPU names/UUIDs/VRAM",
+      "CUDA availability",
+      "Torch CUDA runtime",
+      "per-device compute capability",
+      "NVIDIA driver version",
+      "host RAM",
+      "free disk before/after"
+    ],
+    "no_candidate_model_load": true,
+    "paddleocr_vl_documented_minimums": {
+      "paddlepaddle": "compute capability >=7.0; CUDA >=11.8",
+      "vllm": "compute capability >=8.0; CUDA >=12.6",
+      "sglang": "8.0 <= compute capability <12.0; CUDA >=12.6"
+    },
+    "decision_scope": "Compatibility facts only. Exact candidate inference runtime selection/install is deferred to the subsequent residual benchmark gate."
+  },
+  "acceptance": [
+    "Source-gate compact receipt is PASS with model_prefetch_ready=true.",
+    "Exactly four model artifact repositories representing the three selected candidate families are materialized.",
+    "Pinned repositories resolve to their required commit; PP-OCRv6 detection/recognition main revisions are resolved once and recorded exactly for durable pinning after this gate.",
+    "Each artifact reports expected Apache-2.0 metadata and a complete sorted per-file SHA-256 manifest.",
+    "Each artifact can be reopened with Hugging Face local-files-only mode after download.",
+    "Materialized bytes stay below the per-artifact prefetch ceiling and at least 24 GiB free disk exists before download.",
+    "The PaddleOCR 3.7.0 wheel hash matches the pinned PyPI SHA-256.",
+    "candidate_model_inference_calls remains zero; no candidate inference runtime is installed or started; no scientific state is materialized; daemon remains inactive/dead."
+  ],
+  "forbidden_actions": [
+    "start research-engine-daemon.service",
+    "load PP-OCRv6, PaddleOCR-VL-1.6, or Qwen3.5-4B onto CPU or GPU",
+    "run candidate OCR/VLM/semantic inference",
+    "install PaddlePaddle, vLLM, SGLang, Transformers, or another candidate inference engine",
+    "enable production OCR/VLM/local-semantic routing",
+    "invoke Codex or any remote semantic model",
+    "write scientific evidence/verification/gap/checkpoint/run/human-review state"
+  ],
+  "failure_behavior": "Fail closed, preserve the visible report/partial receipt, keep the daemon stopped, and do not begin quality/resource inference benchmarks.",
+  "next_on_pass": "Durably pin resolved PP-OCRv6 revisions and artifact checksums/license receipts, then construct isolated inference runtimes and run residual-scoped quality/resource benchmarks in order: PP-OCRv6 scan/text -> PaddleOCR-VL targeted visual/structural residuals -> Qwen3.5-4B bounded semantic controls, with visual Qwen use only after PaddleOCR-VL failure/abstention."
+}
