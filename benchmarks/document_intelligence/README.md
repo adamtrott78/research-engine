@@ -570,3 +570,43 @@ Paddle fallback.
 
 The integration gate fingerprints scientific tables before and after and allows
 only derived cache, sidecar telemetry, and worker/ops telemetry to change.
+
+## Residual escalation and local semantic fallback contract
+
+The next localization stage is governed by
+`residual-escalation-contract.v1.json`. It does **not** reopen the parser
+bakeoff and does not globally enable OCR, a document VLM, embeddings/reranking,
+or a local semantic agent.
+
+The fixed ladder is:
+
+```text
+deterministic native + structure
+  -> already-validated specialized local recovery
+  -> residual-scoped OCR / multimodal / local-semantic candidate
+  -> current STANDARD Codex over authoritative PDF/page/region
+  -> human review
+```
+
+The contract defines eight residual families: textless/image-only scans,
+low-confidence text recovery, formula residuals after CodeFormulaV2, table
+residuals after FAST/ACCURATE/PP-TableMagic, semantically rich or uncaptioned
+figures/charts, layout/reading-order anomalies, semantic EXTRACT ambiguity, and
+semantic VERIFY ambiguity.
+
+Every family has an oracle-free production opener, hard quality threshold,
+page/region provenance requirements, fail-closed fall-through behavior,
+GPU/RAM/latency ceiling, exact semantic-token accounting, and a required
+contemporaneous authoritative-PDF Codex control before promotion.
+
+The minimum corpus expansion is intentionally small: three new source PDFs are
+required to add (1) mixed-quality scanned pages, (2) quantitative/relational
+visual semantics, and (3) a malformed-text-layer or reading-order anomaly.
+Formula/table residuals reuse the existing seven-paper corpus, and semantic
+EXTRACT/VERIFY ambiguity reuses preserved authoritative source artifacts plus
+calibration evidence. Large source PDFs and model weights remain outside Git.
+
+Concrete new OCR, multimodal, and local-agent models are deliberately not named
+or installed by this first contract checkpoint. Candidate selection opens only
+after the contract is durable.
+
