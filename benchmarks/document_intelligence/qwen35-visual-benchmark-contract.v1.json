@@ -121,7 +121,11 @@
       "Figure 6 explicit-evidence request warm repeat"
     ],
     "sampling": {
-      "temperature": 0,
+      "temperature": 0.7,
+      "top_p": 0.8,
+      "top_k": 20,
+      "presence_penalty": 1.5,
+      "seed": 0,
       "max_tokens": 512
     },
     "output_root": "~/adamArchives/Adam/workspace-control-tmp/qwen35-visual-benchmark-<UTC stamp>/",
@@ -132,7 +136,9 @@
       "per-run raw/parsed JSON",
       "runtime package freeze",
       "vLLM/GPU/RSS telemetry"
-    ]
+    ],
+    "thinking_mode": false,
+    "sampling_rationale": "Use Qwen3.5 documented non-thinking/instruct sampling settings for efficient direct answers, with a fixed seed so repeated benchmark inputs remain reproducible."
   },
   "hard_resource_ceilings": {
     "governing_visual_contract_peak_vram_mib_lte": 14336,
