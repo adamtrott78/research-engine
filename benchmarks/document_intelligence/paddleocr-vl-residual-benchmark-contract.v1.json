@@ -35,7 +35,8 @@
     "torchvision_version": "0.23.0",
     "trust_remote_code": true,
     "trust_remote_code_scope": "PINNED_LOCAL_PADDLEOCR_VL_1_6_MODEL_ONLY",
-    "runtime_rebuild_on_dependency_mismatch": true
+    "runtime_rebuild_on_dependency_mismatch": true,
+    "protobuf_version": "5.29.5"
   },
   "authoritative_source": {
     "case_id": "semantic-visuals-v1",

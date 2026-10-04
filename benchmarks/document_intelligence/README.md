@@ -800,3 +800,16 @@ checksum-verified PaddleOCR-VL-1.6 local model directory. A runtime-ready
 sentinel is now invalidated and the venv rebuilt when the required Torch,
 TorchVision, or Transformers versions are missing. The failed initialization
 had zero candidate inference calls and therefore contributes no quality result.
+
+### PaddleOCR-VL protobuf dependency correction
+
+The second Lambda initialization attempt again performed zero candidate
+inference calls. The rendered Figure 6 and Figure 3 crops were correct, but
+Transformers stopped during local custom-model initialization because the clean
+runtime did not contain the optional `protobuf` package.
+
+The corrected runtime pins `protobuf==5.29.5` and includes its version in the
+runtime-ready sentinel contract. Any prior ready environment without the exact
+protobuf dependency is invalidated and rebuilt before inference. This change
+does not alter the model, the two benchmark regions, inference count, resource
+ceilings, quality thresholds, daemon policy, or promotion boundary.

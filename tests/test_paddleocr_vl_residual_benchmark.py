@@ -19,6 +19,7 @@ def test_vlm_contract_is_exactly_targeted():
     assert c["model"]["model_safetensors_sha256"]=="85a479d506a11e724e7285d395c551be69f41dbc16b6342d3cacfb189aed71db"
     assert c["runtime"]["engine"]=="transformers"
     assert c["runtime"]["torchvision_version"]=="0.23.0"
+    assert c["runtime"]["protobuf_version"]=="5.29.5"
     assert c["runtime"]["trust_remote_code"] is True
     assert c["runtime"]["trust_remote_code_scope"]=="PINNED_LOCAL_PADDLEOCR_VL_1_6_MODEL_ONLY"
     assert c["runtime"]["use_layout_detection"] is False
@@ -51,6 +52,8 @@ def test_vlm_runner_is_offline_and_keeps_daemon_stopped():
     assert "TRANSFORMERS_OFFLINE=1" in text
     assert "torch==2.8.0" in text
     assert "torchvision==0.23.0" in text
+    assert "protobuf==5.29.5" in text
+    assert "from google.protobuf import __version__ as protobuf_version" in text
     assert "transformers==4.55.0" in text
     assert "STALE_VLM_RUNTIME_SENTINEL=1" in text
     assert "figure6_cifar_training_chart" in text
