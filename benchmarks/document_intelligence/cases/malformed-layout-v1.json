@@ -3,7 +3,7 @@
   "case_id": "malformed-layout-v1",
   "task_stage": "residual_escalation_and_local_semantic_fallbacks",
   "governing_contract": "../residual-escalation-contract.v1.json",
-  "status": "SOURCE_SELECTED_PENDING_BOUNDED_PREFETCH_HASH_AND_NATIVE_OPENER_AUDIT",
+  "status": "SOURCE_AUDIT_PASS_LAYOUT_TARGETS_OPEN",
   "source": {
     "title": "Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks",
     "authors": [
@@ -18,8 +18,10 @@
     "abstract_url": "https://arxiv.org/abs/1506.01497",
     "pdf_url": "https://arxiv.org/pdf/1506.01497",
     "expected_page_count_from_public_source": 14,
-    "authoritative_sha256": null,
-    "authoritative_sha256_status": "PENDING_BOUNDED_LAMBDA_PREFETCH"
+    "authoritative_sha256": "f2630182ccfabd6fc89ac20270b4daf15a0ca849298a7db1e5d124ca443051f1",
+    "authoritative_sha256_status": "PINNED_FROM_BOUNDED_LAMBDA_SOURCE_AUDIT",
+    "authoritative_page_count": 14,
+    "authoritative_byte_size": 6913803
   },
   "target_pages": [
     {
@@ -27,13 +29,25 @@
       "intended_residual": "LAYOUT_OR_READING_ORDER_ANOMALY",
       "complexity_reason": "Full-width figure/caption above two independent text columns, footnotes at both column bottoms, a wrapped code URL, and continuation across page/column boundaries create a high-value native reading-order stress page.",
       "acceptance_on_lambda": "This case is accepted only if the governing deterministic layout opener actually fires on the authoritative downloaded PDF. Required checks include duplicate-block ratio, interleaved/overlapping column order, and native-vs-structure token/order metrics.",
-      "if_opener_does_not_fire": "Reject this source as the malformed-layout case before model benchmarking; do not lower thresholds or invoke a VLM. Replace it with another source case and make that replacement durable first."
+      "if_opener_does_not_fire": "Reject this source as the malformed-layout case before model benchmarking; do not lower thresholds or invoke a VLM. Replace it with another source case and make that replacement durable first.",
+      "audit_evidence": {
+        "layout_opener_fired": true,
+        "column_switches": 8,
+        "native_standard_token_f1": 0.8344640434192672,
+        "native_standard_ordered_bigram_f1": 0.7703804347826088
+      }
     },
     {
       "page_index_zero_based": 3,
       "intended_residual": "LAYOUT_OR_READING_ORDER_ANOMALY",
       "complexity_reason": "Wide figure spans the page above dense two-column text with footnotes/equations and image labels; audit as a secondary candidate only if page 1 does not open.",
-      "acceptance_on_lambda": "Same oracle-free deterministic opener as the governing contract."
+      "acceptance_on_lambda": "Same oracle-free deterministic opener as the governing contract.",
+      "audit_evidence": {
+        "layout_opener_fired": true,
+        "column_switches": 4,
+        "native_standard_token_f1": 0.8487994808565866,
+        "native_standard_ordered_bigram_f1": 0.8148148148148149
+      }
     }
   ],
   "native_audit_requirements": [
@@ -57,5 +71,12 @@
     "Public web parse/screenshots only justify source selection; they do not establish a production layout anomaly.",
     "PDF bytes stay outside Git; Git retains source locator, later hash, opener diagnostics, and compact annotations."
   ],
-  "model_gate": "No OCR/VLM/model download or inference is opened by this manifest."
+  "model_gate": "Source audit passed with both registered layout targets opening; bounded model prefetch may proceed, but model inference remains closed until the separate prefetch/license/checksum gate passes.",
+  "bounded_source_audit": {
+    "decision": "PASS",
+    "replacement_required": false,
+    "candidate_model_downloads": 0,
+    "candidate_model_inference_calls": 0,
+    "scientific_state_materialized": false
+  }
 }

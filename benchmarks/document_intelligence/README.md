@@ -691,3 +691,33 @@ bash deploy/run-residual-source-prefetch-audit.sh
 All bulky source PDFs, parser outputs, packages, and audit reports stay under
 the visible temporary root rather than Git.
 
+## Residual source gate PASS and bounded model prefetch
+
+The completed Lambda source audit is compactly pinned in
+`residual-source-audit-pass.v1.json`. All three source families passed:
+scan/text openers are present, both semantic visual targets resolve to unique
+caption-linked PDF bboxes, and both registered malformed-layout target pages
+fire the durable layout opener. The original PDFs remain authority; the full
+high-volume audit report remains outside Git.
+
+That PASS opens only the next bounded gate:
+`residual-model-prefetch-contract.v1.json` with
+`deploy/run-residual-model-prefetch-gate.sh`.
+
+The model-prefetch gate does **not** run OCR, VLM, or semantic inference. It:
+
+- resolves and downloads the PP-OCRv6 medium detection/recognition artifacts;
+- downloads PaddleOCR-VL-1.6 and Qwen3.5-4B at their already-pinned revisions;
+- records exact resolved revisions, Apache-2.0 license metadata, per-file
+  SHA-256 manifests, materialized byte counts, and offline reopenability;
+- pins the PaddleOCR 3.7.0 wheel without installing its inference stack; and
+- records host/GPU compatibility facts using only the already-validated
+  standard Docling/Torch runtime.
+
+Candidate inference runtimes such as PaddlePaddle, vLLM, SGLang, or
+Transformers are intentionally **not** installed by this gate. After the
+prefetch receipts are durable, isolated inference runtimes and residual-scoped
+quality/resource benchmarks open in the fixed order: PP-OCRv6 scan/text,
+PaddleOCR-VL targeted document/visual residuals, then Qwen3.5-4B bounded
+semantic controls. Qwen visual use remains conditional on PaddleOCR-VL
+failure or abstention.

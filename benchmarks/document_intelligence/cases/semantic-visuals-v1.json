@@ -3,7 +3,7 @@
   "case_id": "semantic-visuals-v1",
   "task_stage": "residual_escalation_and_local_semantic_fallbacks",
   "governing_contract": "../residual-escalation-contract.v1.json",
-  "status": "SOURCE_SELECTED_PENDING_BOUNDED_PREFETCH_HASH_AND_REGION_ANNOTATION",
+  "status": "SOURCE_AUDIT_PASS_REGION_LOCATORS_READY_FOR_MODEL_PREFETCH",
   "source": {
     "title": "Deep Residual Learning for Image Recognition",
     "authors": [
@@ -18,8 +18,10 @@
     "abstract_url": "https://arxiv.org/abs/1512.03385",
     "pdf_url": "https://arxiv.org/pdf/1512.03385",
     "expected_page_count_from_public_source": 12,
-    "authoritative_sha256": null,
-    "authoritative_sha256_status": "PENDING_BOUNDED_LAMBDA_PREFETCH"
+    "authoritative_sha256": "1e0651b6810ecba34a3dbc5b5b0209226f889004607c1f203540a48d64e5a93a",
+    "authoritative_sha256_status": "PINNED_FROM_BOUNDED_LAMBDA_SOURCE_AUDIT",
+    "authoritative_page_count": 12,
+    "authoritative_byte_size": 819383
   },
   "target_regions": [
     {
@@ -33,7 +35,14 @@
         "Compare the terminal testing-error ordering of residual-110 and residual-1202 using only the validated chart crop."
       ],
       "answer_status": "PENDING_HUMAN_REGION_ANNOTATION",
-      "crop_status": "PENDING_BOUNDED_PREFETCH"
+      "crop_status": "READY_FROM_BOUNDED_SOURCE_AUDIT",
+      "pdf_bbox": [
+        99.19828033447266,
+        72.1703872680664,
+        495.0450134277344,
+        171.62620544433594
+      ],
+      "locator_status": "LINKED_FIGURE"
     },
     {
       "page_index_zero_based": 3,
@@ -46,7 +55,14 @@
         "Trace the relationship between the plain and residual branches at one validated stage without relying on full-page prose."
       ],
       "answer_status": "PENDING_HUMAN_REGION_ANNOTATION",
-      "crop_status": "PENDING_BOUNDED_PREFETCH"
+      "crop_status": "READY_FROM_BOUNDED_SOURCE_AUDIT",
+      "pdf_bbox": [
+        50.5037956237793,
+        76.09317016601562,
+        285.709716796875,
+        618.7928466796875
+      ],
+      "locator_status": "LINKED_FIGURE"
     }
   ],
   "annotation_requirements_before_quality_gate": [
@@ -67,5 +83,12 @@
     "Public web text/screenshots are selection evidence only and are not candidate input, benchmark oracle, or production routing evidence.",
     "PDF bytes and rendered crops remain outside Git; Git stores manifest, hashes, region metadata, and compact annotations."
   ],
-  "model_gate": "No VLM/model download is opened by this manifest alone."
+  "model_gate": "Source audit passed and both visual regions have unique caption-linked PDF bboxes; bounded model prefetch may proceed, but VLM inference remains closed until the separate prefetch/license/checksum gate passes.",
+  "bounded_source_audit": {
+    "decision": "PASS",
+    "region_locators_ready_for_model_prefetch": true,
+    "candidate_model_downloads": 0,
+    "candidate_model_inference_calls": 0,
+    "scientific_state_materialized": false
+  }
 }

@@ -3,7 +3,7 @@
   "case_id": "scan-mixed-quality-v1",
   "task_stage": "residual_escalation_and_local_semantic_fallbacks",
   "governing_contract": "../residual-escalation-contract.v1.json",
-  "status": "SOURCE_SELECTED_PENDING_BOUNDED_PREFETCH_HASH_AND_NATIVE_AUDIT",
+  "status": "SOURCE_AUDIT_PASS_READY_FOR_OCR_BENCHMARK_ANNOTATION",
   "source": {
     "title": "Project Vanguard Magnetic-Field Instrumentation and Measurements",
     "authors": [
@@ -21,23 +21,34 @@
     "public_distribution": true,
     "copyright_note": "Work of the US Government; NTRS metadata states Public Use Permitted.",
     "expected_page_count_from_public_source": 28,
-    "authoritative_sha256": null,
-    "authoritative_sha256_status": "PENDING_BOUNDED_LAMBDA_PREFETCH"
+    "authoritative_sha256": "3948255a723380d8844bab31c60298cee00da9334efa377f1d596b306792b6a1",
+    "authoritative_sha256_status": "PINNED_FROM_BOUNDED_LAMBDA_SOURCE_AUDIT",
+    "authoritative_page_count": 28,
+    "authoritative_byte_size": 960584
   },
   "target_pages": [
     {
-      "page_index_zero_based": 11,
+      "page_index_zero_based": 3,
       "intended_residual": "SCAN_IMAGE_ONLY_OR_TEXTLESS_PAGE",
-      "visual_reason": "Full-page degraded/dark scanned waveform figure with caption; public web extraction exposed no page-specific P11 text lines, making it a useful textless/image-dominant candidate.",
-      "acceptance_on_lambda": "Production opener must independently confirm <32 non-whitespace native characters with raster/image coverage >=0.50, or absent native text layer while visible content exists.",
-      "if_opener_does_not_fire": "Do not force OCR. Search this same report for another qualifying image-dominant page; if none qualifies, replace the source case before OCR benchmarking."
+      "selection_reason": "Bounded Lambda audit found zero native non-whitespace characters with full-page figure coverage 1.0; this is a stronger production-opener target than the original provisional page.",
+      "audit_metrics": {
+        "native_nonspace_characters": 0,
+        "figure_bbox_page_coverage": 1,
+        "opener_fired": true
+      },
+      "annotation_status": "PENDING_HUMAN_VISIBLE_CONTENT_CONFIRMATION_AND_OCR_TRANSCRIPTION"
     },
     {
-      "page_index_zero_based": 2,
+      "page_index_zero_based": 16,
       "intended_residual": "LOW_CONFIDENCE_TEXT_OR_OCR_RECOVERY",
-      "visual_reason": "Scanned title/summary page; public extraction contains obvious corruption/character substitutions despite legible visible text.",
-      "acceptance_on_lambda": "Production low-confidence opener must independently fire using native text diagnostics; web crawler text is not routing evidence.",
-      "if_opener_does_not_fire": "Search other textual scan pages in the same report; replace source only if no page fires."
+      "selection_reason": "Bounded Lambda audit found alphabetic-token ratio below the durable threshold and severe native-vs-standard token disagreement.",
+      "audit_metrics": {
+        "alphabetic_token_ratio": 0.4358974358974359,
+        "native_standard_token_f1": 0.07766990291262137,
+        "native_nonspace_characters": 340,
+        "opener_fired": true
+      },
+      "annotation_status": "PENDING_HUMAN_OCR_TRANSCRIPTION"
     }
   ],
   "benchmark_annotations_required_before_quality_gate": [
@@ -54,5 +65,26 @@
     "Web-extracted text and screenshots are source-selection evidence only, never benchmark oracle or production opener input.",
     "PDF bytes remain outside Git; Git stores this manifest and later hashes/annotations only."
   ],
-  "model_gate": "No OCR/VLM/model download is opened by this manifest."
+  "model_gate": "Source audit passed; bounded model prefetch may proceed, but OCR inference remains closed until the separate prefetch/license/checksum gate passes.",
+  "bounded_source_audit": {
+    "decision": "PASS",
+    "scan_opener_pages_zero_based": [
+      1,
+      3,
+      5,
+      27
+    ],
+    "low_confidence_opener_pages_zero_based": [
+      8,
+      9,
+      15,
+      16,
+      19,
+      22,
+      24
+    ],
+    "candidate_model_downloads": 0,
+    "candidate_model_inference_calls": 0,
+    "scientific_state_materialized": false
+  }
 }

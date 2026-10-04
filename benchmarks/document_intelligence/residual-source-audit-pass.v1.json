@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "task": "research-engine-local-document-pipeline-v1",
+  "stage": "residual_escalation_and_local_semantic_fallbacks",
+  "status": "PASS_MODEL_PREFETCH_READY",
+  "source_audit_code_baseline": "d9946729f92a15fe3a6c821dc366a53a37ca0756",
+  "uploaded_report_sha256": "ade43b862493a6b21f3684a75870861769dcf7831c7fa6dbda7026df5081eb1c",
+  "uploaded_report_bytes": 171294,
+  "authority": "DOWNLOADED_ORIGINAL_PDF",
+  "decision": "PASS",
+  "model_prefetch_ready": true,
+  "candidate_model_downloads": 0,
+  "candidate_model_inference_calls": 0,
+  "scientific_state_materialized": false,
+  "cases": {
+    "scan-mixed-quality-v1": {
+      "accepted": true,
+      "sha256": "3948255a723380d8844bab31c60298cee00da9334efa377f1d596b306792b6a1",
+      "page_count": 28,
+      "byte_size": 960584,
+      "scan_opener_pages_zero_based": [
+        1,
+        3,
+        5,
+        27
+      ],
+      "low_confidence_opener_pages_zero_based": [
+        8,
+        9,
+        15,
+        16,
+        19,
+        22,
+        24
+      ],
+      "promoted_benchmark_targets": {
+        "scan_page_index_zero_based": 3,
+        "low_confidence_page_index_zero_based": 16
+      }
+    },
+    "semantic-visuals-v1": {
+      "accepted": true,
+      "sha256": "1e0651b6810ecba34a3dbc5b5b0209226f889004607c1f203540a48d64e5a93a",
+      "page_count": 12,
+      "byte_size": 819383,
+      "region_locators_ready_for_model_prefetch": true,
+      "regions": [
+        {
+          "figure_label": "Figure 6",
+          "page_index_zero_based": 7,
+          "status": "LINKED_FIGURE",
+          "pdf_bbox": [
+            99.19828033447266,
+            72.1703872680664,
+            495.0450134277344,
+            171.62620544433594
+          ]
+        },
+        {
+          "figure_label": "Figure 3",
+          "page_index_zero_based": 3,
+          "status": "LINKED_FIGURE",
+          "pdf_bbox": [
+            50.5037956237793,
+            76.09317016601562,
+            285.709716796875,
+            618.7928466796875
+          ]
+        }
+      ]
+    },
+    "malformed-layout-v1": {
+      "accepted": true,
+      "sha256": "f2630182ccfabd6fc89ac20270b4daf15a0ca849298a7db1e5d124ca443051f1",
+      "page_count": 14,
+      "byte_size": 6913803,
+      "replacement_required": false,
+      "target_pages": [
+        {
+          "page_index_zero_based": 1,
+          "layout_opener_fired": true
+        },
+        {
+          "page_index_zero_based": 3,
+          "layout_opener_fired": true
+        }
+      ]
+    }
+  },
+  "next_gate": "BOUNDED_MODEL_PREFETCH_LICENSE_CHECKSUM_RESOURCE_PREFLIGHT",
+  "notes": [
+    "This compact receipt is derived from the completed bounded Lambda audit report; the bulky report remains outside Git.",
+    "The original downloaded PDFs remain benchmark/scientific authority.",
+    "Human ground-truth annotations required by later quality gates remain separate work and are not implied by this source-gate PASS."
+  ]
+}

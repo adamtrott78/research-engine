@@ -29,7 +29,12 @@
         "execution_scope": "page image only when scan/text residual opener fires",
         "local_only": true,
         "downloads_now": false,
-        "exact_weight_checksums": "CAPTURE_AT_BOUNDED_PREFETCH_GATE"
+        "exact_weight_checksums": "CAPTURE_AT_BOUNDED_PREFETCH_GATE",
+        "artifact_repos": [
+          "PaddlePaddle/PP-OCRv6_medium_det",
+          "PaddlePaddle/PP-OCRv6_medium_rec"
+        ],
+        "revision_policy": "RESOLVE_MAIN_ON_FIRST_BOUNDED_PREFETCH_THEN_PIN_EXACT_COMMITS"
       },
       "source_evidence": {
         "official_docs": "https://www.paddleocr.ai/main/en/version3.x/pipeline_usage/OCR.html",
@@ -55,7 +60,7 @@
       "selection_reason": "Cheapest current purpose-built text recovery path in the already-used Paddle ecosystem; it should be tested before any VLM for scan/text residuals.",
       "license_review": {
         "software_license": "Apache-2.0",
-        "model_weight_license_status": "REQUIRE_EXACT_WEIGHT_METADATA_REVIEW_BEFORE_DOWNLOAD",
+        "model_weight_license_status": "APACHE_2_METADATA_TO_BE_RECONFIRMED_AND_RECEIPTED_AT_BOUNDED_PREFETCH",
         "deployment_decision": "BENCHMARK_SELECTION_ONLY"
       },
       "resource_policy": {
@@ -208,6 +213,7 @@
     "no_job_tier_change": true,
     "no_daemon_lifecycle_change": true,
     "no_scientific_state_materialization": true,
-    "next_gate": "MISSING_SOURCE_CASE_MANIFESTS_PLUS_BOUNDED_RUNTIME_PREFETCH_AND_LICENSE_RECEIPTS"
+    "next_gate": "BOUNDED_MODEL_ARTIFACT_PREFETCH_LICENSE_CHECKSUM_RESOURCE_PREFLIGHT",
+    "source_gate_pass_receipt": "benchmarks/document_intelligence/residual-source-audit-pass.v1.json"
   }
 }
