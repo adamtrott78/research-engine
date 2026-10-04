@@ -591,20 +591,26 @@ def document_sidecar_compiler_from_env(
     )
 
 
-def select_smoke_artifact(store) -> str:
+def select_smoke_artifact(
+    store,
+    compiler: DocumentSidecarCompiler | None = None,
+) -> str:
     with store.connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id
+                SELECT id,sha256
                 FROM source_artifacts
                 WHERE lower(coalesce(media_type,''))='application/pdf'
                    OR lower(coalesce(format,''))='pdf'
                 ORDER BY id
-                LIMIT 1
                 """
             )
-            row = cur.fetchone()
-    if row is None:
+            rows = cur.fetchall()
+    if not rows:
         raise ValueError("no PDF source artifact is available for sidecar smoke")
-    return str(row[0])
+    if compiler is not None:
+        for artifact_id, sha256 in rows:
+            if not (compiler.cache_path(str(sha256)) / "receipt.json").is_file():
+                return str(artifact_id)
+    return str(rows[0][0])
