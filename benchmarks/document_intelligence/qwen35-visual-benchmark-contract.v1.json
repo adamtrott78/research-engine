@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "task": "research-engine-local-document-pipeline-v1",
+  "stage": "residual_escalation_and_local_semantic_fallbacks",
+  "baseline_research_engine_sha": "7a26e648ec409c96a3f9b7c8620f566658700894",
+  "prior_visual_review": "benchmarks/document_intelligence/paddleocr-vl-human-quality-review.v1.json",
+  "source_case": "benchmarks/document_intelligence/cases/semantic-visuals-v1.json",
+  "prefetch_receipt": "benchmarks/document_intelligence/residual-model-prefetch-pass.v1.json",
+  "runner": "deploy/run-qwen35-visual-benchmark.sh",
+  "helper": "benchmarks/document_intelligence/run_qwen35_visual_benchmark.py",
+  "status": "BOUNDED_QWEN3_5_4B_TARGETED_VISUAL_FALLBACK_MEASUREMENT",
+  "objective": "Evaluate the already-prefetched Qwen3.5-4B as the general local visual-semantic fallback after PaddleOCR-VL semantic failure, using the exact same validated Figure 6/Figure 3 regions but explicit evidence questions and structured outputs that forbid curve-value estimation or unsupported facts.",
+  "model": {
+    "repo_id": "Qwen/Qwen3.5-4B",
+    "revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+    "license": "Apache-2.0",
+    "local_model_root": "~/.research-engine/residual-models/qwen3.5-4b/851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+    "primary_weights": [
+      {
+        "path": "model.safetensors-00001-of-00002.safetensors",
+        "sha256": "26a93f066e1916adb13453dae5a0c707c0fbc71299ed98779571a907b8e74c61"
+      },
+      {
+        "path": "model.safetensors-00002-of-00002.safetensors",
+        "sha256": "cb544bd9bfae93dc59b0f22b292f5933573854a7f9b97835c67060d7d910e188"
+      }
+    ],
+    "official_runtime_evidence": {
+      "model_card": "https://huggingface.co/Qwen/Qwen3.5-4B",
+      "pinned_config": "https://huggingface.co/Qwen/Qwen3.5-4B/blob/851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a/config.json",
+      "architecture": "Qwen3_5ForConditionalGeneration",
+      "modality": "image-text-to-text",
+      "documented_local_runtimes": [
+        "Transformers",
+        "vLLM",
+        "SGLang"
+      ]
+    }
+  },
+  "runtime": {
+    "engine": "vLLM",
+    "vllm_version": "0.30.0",
+    "runtime_path": "~/.research-engine/residual-runtimes/qwen3.5-4b-vllm-0.30.0",
+    "tensor_parallel_size": 1,
+    "dtype": "bfloat16",
+    "max_model_len": 8192,
+    "max_num_seqs": 1,
+    "gpu_memory_utilization": 0.65,
+    "limit_mm_per_prompt": {
+      "image": 1
+    },
+    "trust_remote_code": false,
+    "model_files_local_only": true,
+    "network_model_downloads_during_inference": "FORBIDDEN",
+    "selection_reason": "Current vLLM natively supports Qwen3.5 hybrid multimodal models and is an official serving path for the pinned model."
+  },
+  "authoritative_source": {
+    "case_id": "semantic-visuals-v1",
+    "sha256": "1e0651b6810ecba34a3dbc5b5b0209226f889004607c1f203540a48d64e5a93a",
+    "page_count": 12,
+    "render_dpi": 300,
+    "bbox_coordinate_origin": "TOPLEFT_PDF_POINTS",
+    "targets": [
+      {
+        "id": "figure6_cifar_training_chart",
+        "page_index_zero_based": 7,
+        "pdf_bbox": [
+          99.19828033447266,
+          72.1703872680664,
+          495.0450134277344,
+          171.62620544433594
+        ],
+        "caption_context_facts": [
+          "The figure is CIFAR-10 training.",
+          "Dashed curves are training error and bold curves are testing error.",
+          "The left panel is plain networks; the middle panel is ResNets; the right panel is ResNets with 110 and 1202 layers.",
+          "Plain-110 is not displayed because its error is above 60 percent."
+        ],
+        "scored_visual_facts": [
+          "There are three panels.",
+          "Left panel visible models are plain-20, plain-32, plain-44, and plain-56.",
+          "Middle panel visible models are ResNet-20, ResNet-32, ResNet-44, ResNet-56, and ResNet-110.",
+          "Right panel visible models are residual-110 and residual-1202.",
+          "No exact curve-point values should be asserted unless printed explicitly as text."
+        ]
+      },
+      {
+        "id": "figure3_network_architecture",
+        "page_index_zero_based": 3,
+        "pdf_bbox": [
+          50.5037956237793,
+          76.09317016601562,
+          285.709716796875,
+          618.7928466796875
+        ],
+        "caption_context_facts": [
+          "The columns are VGG-19, a 34-layer plain network, and a 34-layer residual network.",
+          "The caption states 19.6 billion FLOPs for VGG-19 and 3.6 billion FLOPs for each 34-layer network.",
+          "The caption states that dotted shortcuts increase dimensions."
+        ],
+        "scored_visual_facts": [
+          "Shortcut connections are visibly present in the 34-layer residual column and absent from the 34-layer plain column.",
+          "Solid shortcut arcs connect same-dimension residual blocks.",
+          "Dotted shortcut arcs occur at stage transitions where dimensions increase.",
+          "The main residual stages visibly use channel widths 64, 128, 256, and 512."
+        ]
+      }
+    ]
+  },
+  "inference_plan": {
+    "candidate_model_families": [
+      "qwen3.5-4b"
+    ],
+    "model_owner_count": 1,
+    "candidate_inference_calls": 3,
+    "sequence": [
+      "Figure 6 explicit-evidence request first/cold",
+      "Figure 3 explicit-evidence request warm",
+      "Figure 6 explicit-evidence request warm repeat"
+    ],
+    "sampling": {
+      "temperature": 0,
+      "max_tokens": 512
+    },
+    "output_root": "~/adamArchives/Adam/workspace-control-tmp/qwen35-visual-benchmark-<UTC stamp>/",
+    "preserve": [
+      "exact rendered crops",
+      "render receipt",
+      "compact benchmark report",
+      "per-run raw/parsed JSON",
+      "runtime package freeze",
+      "vLLM/GPU/RSS telemetry"
+    ]
+  },
+  "hard_resource_ceilings": {
+    "governing_visual_contract_peak_vram_mib_lte": 14336,
+    "peak_rss_mib_lte": 24576,
+    "cold_load_seconds_lte": 120,
+    "warm_region_seconds_lte": 45
+  },
+  "quality_boundary": {
+    "automatic_promotion": false,
+    "human_review_required": true,
+    "fact_precision_min": 0.95,
+    "fact_recall_min": 0.9,
+    "numeric_value_accuracy_min": 0.95,
+    "label_relation_accuracy_min": 0.9,
+    "region_provenance_coverage_min": 1,
+    "fabricated_fact_tolerance": 0,
+    "structured_json_required": true,
+    "contemporaneous_codex_control_required_before_promotion": true,
+    "note": "Resource ceilings remain the current governing contract. Exceptional quality may justify a later explicit policy reconsideration, but this benchmark does not silently relax them."
+  },
+  "forbidden_actions": [
+    "start research-engine-daemon.service",
+    "run Qwen on pages or regions beyond the two registered visual targets",
+    "invoke Codex during this initial local measurement",
+    "enable production local-semantic or VLM routing",
+    "write scientific evidence/verification/gap/checkpoint/run/human-review state",
+    "download alternate Qwen weights or quantizations during the quality gate"
+  ],
+  "next_on_quality_success": "Open a separate contemporaneous authoritative-PDF Codex visual control and then a bounded Qwen local EXTRACT/VERIFY calibration; do not change production routing directly from this visual benchmark."
+}
