@@ -71,6 +71,8 @@ def test_qwen_helper_forbids_numeric_curve_estimation():
 def test_qwen_runner_keeps_daemon_stopped_and_model_offline():
     text = (ROOT / "deploy" / "run-qwen35-visual-benchmark.sh").read_text()
     assert "vllm==0.30.0" in text
+    assert 'assert torch.cuda.is_available()' in text
+    assert '"cuda_allocation_probe": "PASS"' in text
     assert "HF_HUB_OFFLINE=1" in text
     assert "TRANSFORMERS_OFFLINE=1" in text
     assert "SELECTED_GPU_HAS_ACTIVE_COMPUTE_PROCESS" in text
