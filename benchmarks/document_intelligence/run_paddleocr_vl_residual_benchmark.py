@@ -146,6 +146,7 @@ def main()->int:
         pipeline=PaddleOCRVL(
             pipeline_version="v1.6",
             engine="transformers",
+            engine_config={"trust_remote_code": True},
             vl_rec_model_dir=str(args.model_dir),
             use_layout_detection=False,
             use_doc_orientation_classify=False,
