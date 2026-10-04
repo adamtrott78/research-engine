@@ -146,6 +146,7 @@ nvidia-smi \
     --format=csv,noheader,nounits
 echo "GPU_INVENTORY_END"
 structure_gpu="$(select_structure_gpu)" || fail "NO_USABLE_STRUCTURE_GPU" 42
+[[ "$structure_gpu" =~ ^[0-9]+$ ]] || fail "INVALID_STRUCTURE_GPU_INDEX:$structure_gpu" 43
 echo "SELECTED_STRUCTURE_GPU_INDEX=$structure_gpu"
 require_stopped
 
