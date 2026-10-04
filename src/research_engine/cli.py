@@ -670,7 +670,10 @@ def main() -> None:
                 local_inference=broker,
                 require_enabled=True,
             )
-            artifact_id = args.artifact_id or select_smoke_artifact(store)
+            artifact_id = args.artifact_id or select_smoke_artifact(
+                store,
+                compiler,
+            )
             first = compiler.compile_artifact(artifact_id)
             second = compiler.compile_artifact(artifact_id)
             result = {
