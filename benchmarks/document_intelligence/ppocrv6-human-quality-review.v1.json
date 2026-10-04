@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "task": "research-engine-local-document-pipeline-v1",
+  "stage": "residual_escalation_and_local_semantic_fallbacks",
+  "benchmark_contract": "benchmarks/document_intelligence/ppocrv6-residual-benchmark-contract.v1.json",
+  "research_engine_baseline": "9019be081db373395adeffa28fe515c33e582fb3",
+  "status": "MEASURED_NOT_PROMOTED",
+  "uploaded_report": {
+    "decision": "MEASURED_PENDING_HUMAN_QUALITY",
+    "candidate_inference_calls": 3,
+    "failure": null,
+    "paddle_version": "3.2.0",
+    "model_init_seconds": 0.7756724039791152,
+    "peak_process_vram_mib": 1818,
+    "peak_rss_mib": 1443.69140625,
+    "warm_page_seconds_max": 0.3322868350078352,
+    "warm_page_seconds_mean": 0.23797637000097893,
+    "all_resource_checks_passed": true
+  },
+  "human_review": {
+    "reviewer": "chatgpt_with_uploaded_authoritative_rendered_pages",
+    "reviewed_at_utc": "2026-10-04",
+    "scan_textless": {
+      "page_index_zero_based": 3,
+      "visible_content_assessment": "NEAR_BLANK_SCAN_PAGE_WITH_SPECKLE_NO_MEANINGFUL_TEXT_TO_RECOVER",
+      "ppocr_output_lines": 0,
+      "candidate_behavior": "CORRECT_ABSTENTION_FOR_THIS_PAGE",
+      "benchmark_target_validity": "INVALID_FOR_OCR_RECOVERY_QUALITY",
+      "promotion_evidence": "NONE",
+      "rationale": "The page is visually almost blank. Zero OCR output is appropriate, but it cannot demonstrate recovery quality for a content-bearing image-only scan.",
+      "required_action": "REPLACE_SCAN_IMAGE_ONLY_BENCHMARK_SOURCE_OR_TARGET_WITH_CONTENT_BEARING_IMAGE_ONLY_PAGE"
+    },
+    "low_confidence_text": {
+      "page_index_zero_based": 16,
+      "visible_content_assessment": "CONTENT_BEARING_SCANNED_CHART_WITH_AXIS_LABELS_DATES_ORBIT_WEEK_VALUES_AND_CAPTION",
+      "ppocr_output_lines": 51,
+      "mean_rec_score": 0.9763420913733688,
+      "min_rec_score": 0.6365213990211487,
+      "quality_decision": "FAIL_PROMOTION_THRESHOLD",
+      "observed_strengths": [
+        "Correctly recovered most axis tick labels, dates, ORBIT/WEEK, ORBIT TRANSITION, the x-axis label, units, geographic caption, and Figure 4 continuation caption.",
+        "Output is fast, bounded, and includes OCR boxes/scores."
+      ],
+      "observed_errors": [
+        "Vertical y-axis text HEIGHT (KM) was truncated to HEI (KM).",
+        "Several small orbit-week digits at the right margin were missed or detached from their dates.",
+        "Multiple adjacent orbit-week digits were fused into the token 222 instead of preserving separate values/row association.",
+        "One right-margin value was emitted as -8- rather than a clean numeric row value.",
+        "The braced 12-13-14 OCT label was imperfectly transcribed and row structure was not preserved."
+      ],
+      "governing_quality_gate": {
+        "benchmark_text_token_f1_min": 0.95,
+        "benchmark_ordered_bigram_f1_min": 0.9,
+        "improvement_over_native_token_f1_min": 0.1,
+        "page_provenance_coverage_min": 1,
+        "regression_on_healthy_text_pages_allowed": false
+      },
+      "rationale": "The candidate materially improves the unusable native/structure text layer, but visible omissions/fusions prevent claiming the hard >=0.95 token-F1 and >=0.90 ordered-bigram promotion thresholds without a reference transcription. This gate therefore fails closed.",
+      "promotion_evidence": "INSUFFICIENT",
+      "next_local_options": [
+        "text-layer/OCR reconciliation",
+        "targeted orientation-aware OCR variant if justified",
+        "fall through to the next eligible multimodal tier for visual/chart semantics"
+      ]
+    }
+  },
+  "overall_decision": "PP_OCRV6_RESOURCE_PASS_QUALITY_NOT_PROMOTED",
+  "production_change": false,
+  "semantic_baseline_change": false,
+  "scientific_state_materialized": false,
+  "next_gate": "PADDLEOCR_VL_1_6_TARGETED_VISUAL_REGION_BENCHMARK",
+  "notes": [
+    "PP-OCRv6 remains useful as measured evidence and may be revisited with reconciliation/configuration changes.",
+    "The invalid scan target is a source-selection defect, not a model failure.",
+    "The specialized OCR rung has been exercised before opening the document VLM rung."
+  ]
+}

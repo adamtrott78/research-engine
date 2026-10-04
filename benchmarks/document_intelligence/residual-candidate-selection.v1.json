@@ -76,6 +76,18 @@
         "target_peak_rss_mib_lte": 16384,
         "target_cold_load_seconds_lte": 60,
         "target_warm_page_seconds_lte": 10
+      },
+      "benchmark_status": {
+        "runtime_measurement": "PASS",
+        "human_quality": "NOT_PROMOTED",
+        "resource_receipt": {
+          "model_init_seconds": 0.7756724039791152,
+          "peak_process_vram_mib": 1818,
+          "peak_rss_mib": 1443.69140625,
+          "warm_page_seconds_max": 0.3322868350078352
+        },
+        "review": "benchmarks/document_intelligence/ppocrv6-human-quality-review.v1.json",
+        "reason": "Resource/latency gates passed, but the content-bearing low-confidence chart did not justify the hard OCR quality thresholds and the scan/textless target proved visually blank rather than a valid recovery case."
       }
     },
     {
@@ -128,6 +140,12 @@
         "target_peak_rss_mib_lte": 24576,
         "target_cold_load_seconds_lte": 120,
         "target_warm_region_seconds_lte": 45
+      },
+      "benchmark_status": {
+        "status": "OPEN_TARGETED_VISUAL_MEASUREMENT",
+        "source_case": "benchmarks/document_intelligence/cases/semantic-visuals-v1.json",
+        "contract": "benchmarks/document_intelligence/paddleocr-vl-residual-benchmark-contract.v1.json",
+        "scope": "Only the two prevalidated Figure 6 / Figure 3 PDF regions; no whole-page or whole-document VLM pass."
       }
     },
     {
@@ -220,7 +238,7 @@
     "no_job_tier_change": true,
     "no_daemon_lifecycle_change": true,
     "no_scientific_state_materialization": true,
-    "next_gate": "PP_OCRV6_ISOLATED_RUNTIME_AND_SCAN_TEXT_MEASUREMENT",
+    "next_gate": "PADDLEOCR_VL_1_6_TARGETED_VISUAL_REGION_BENCHMARK",
     "source_gate_pass_receipt": "benchmarks/document_intelligence/residual-source-audit-pass.v1.json"
   }
 }

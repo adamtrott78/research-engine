@@ -746,3 +746,41 @@ and compact OCR report must be reviewed against visible authoritative page
 content before PP-OCRv6 can suppress a higher tier for scan/text residuals.
 No VLM, Qwen, Codex, production routing, or scientific-state mutation is
 allowed in this gate.
+
+## PP-OCRv6 measured outcome and PaddleOCR-VL visual gate
+
+The bounded PP-OCRv6 Lambda run passed every runtime/resource ceiling but did
+not earn production promotion.
+
+The model initialized in under one second, remained below 2 GiB process VRAM
+and 1.5 GiB peak RSS, and kept the worst warm page below 0.34 seconds. Human
+review nevertheless found two independent benchmark-quality issues:
+
+- the selected image-only/textless NASA page was visually almost blank, so a
+  correct zero-text OCR abstention does not demonstrate recovery quality for a
+  content-bearing scanned page; that scan benchmark target must be replaced;
+- the low-confidence chart was recovered substantially better than its native
+  text layer, but small right-margin labels were missed/fused and the vertical
+  HEIGHT label was truncated, so the hard residual quality thresholds cannot
+  be claimed.
+
+The compact fail-closed review is retained in
+`ppocrv6-human-quality-review.v1.json`. PP-OCRv6 remains measured evidence,
+not a promoted production recovery path.
+
+That result opens the next already-selected rung only for visual semantics:
+`paddleocr-vl-residual-benchmark-contract.v1.json` with
+`deploy/run-paddleocr-vl-residual-benchmark.sh`.
+
+The PaddleOCR-VL gate uses the already-prefetched PaddleOCR-VL-1.6 revision
+`c5630abae1d940eafe0697512a0325494b02ab42`. It renders only the two
+caption-linked figure bboxes accepted by the residual source audit, disables
+layout detection, document orientation, and unwarping, and runs the VLM with
+the Transformers engine against local model files. No PP-DocLayoutV3,
+Qwen3.5-4B, Codex, whole-document VLM parsing, daemon start, production route
+change, or scientific-state mutation is allowed.
+
+A successful local VLM resource run remains
+`MEASURED_PENDING_HUMAN_AND_CODEX_CONTROL`. Human annotated-fact review must
+pass first; only then may the required contemporaneous authoritative-PDF Codex
+control open before any promotion decision.
