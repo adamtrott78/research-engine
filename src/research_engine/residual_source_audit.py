@@ -12,7 +12,7 @@ from pypdf import PdfReader
 
 from .document_benchmark import _multiset_f1, _text_tokens, sha256_file
 from .document_docling import normalize_docling_document
-from .document_package import PaperPackage
+from .document_package import BlockKind, PaperPackage
 
 
 REQUIRED_CASES = (
@@ -260,6 +260,23 @@ def _rect_union_area(rects: list[tuple[float, float, float, float]]) -> float:
     return area
 
 
+def _figure_blocks(package: PaperPackage, page_number: int) -> list[Any]:
+    return [
+        block
+        for block in _page_blocks(package, page_number)
+        if block.kind == BlockKind.FIGURE
+    ]
+
+
+def _derivation_parameters(block: Any) -> dict[str, Any]:
+    merged: dict[str, Any] = {}
+    for step in getattr(block, "derivation", ()) or ():
+        parameters = getattr(step, "parameters", None)
+        if isinstance(parameters, dict):
+            merged.update(parameters)
+    return merged
+
+
 def _figure_coverage(
     *,
     native: PaperPackage,
@@ -271,6 +288,20 @@ def _figure_coverage(
     rects: list[tuple[float, float, float, float]] = []
     seen: set[tuple[float, float, float, float]] = set()
     for package in (native, standard):
+        # The current Docling normalizer retains pictures as FIGURE blocks.
+        # FigureAsset materialization is deferred, so block provenance is the
+        # production representation used by this audit.
+        for block in _figure_blocks(package, page_number):
+            bbox = block.source_region.pdf_bbox
+            if bbox is None:
+                continue
+            clipped = _clip_rect(tuple(float(v) for v in bbox), width, height)
+            if clipped is not None and clipped not in seen:
+                seen.add(clipped)
+                rects.append(clipped)
+
+        # Preserve compatibility with future package writers that materialize
+        # FigureAsset records in addition to FIGURE blocks.
         for figure in package.figures:
             if int(figure.source_region.page_number) != int(page_number):
                 continue
@@ -383,6 +414,9 @@ def _page_metrics(
         for collection in (package.figures, package.tables, package.equations)
         for asset in collection
         if int(asset.source_region.page_number) == int(page_number)
+    ) + sum(
+        len(_figure_blocks(package, page_number))
+        for package in (native, standard)
     )
     columns = _column_order_diagnostics(native, page_number, width)
     token_f1 = _multiset_f1(native_tokens, standard_tokens)
@@ -473,15 +507,44 @@ def _semantic_region_locator(
 ) -> dict[str, Any]:
     page_number = int(target["page_index_zero_based"]) + 1
     label = str(target["figure_label"])
+    needle = label.lower()
     block_by_id = {block.id: block for block in standard.blocks}
     linked: list[dict[str, Any]] = []
+
+    # Current normalized Docling packages retain picture provenance and
+    # caption linkage on FIGURE blocks through derivation parameters.
+    for block in _figure_blocks(standard, page_number):
+        parameters = _derivation_parameters(block)
+        caption_text = str(parameters.get("caption_text") or "").strip()
+        if needle not in caption_text.lower():
+            continue
+        caption_refs = [
+            str(value)
+            for value in (parameters.get("caption_refs") or [])
+            if isinstance(value, str)
+        ]
+        linked.append(
+            {
+                "figure_block_id": block.id,
+                "caption_refs": caption_refs,
+                "caption_excerpt": caption_text[:240],
+                "pdf_bbox": (
+                    list(block.source_region.pdf_bbox)
+                    if block.source_region.pdf_bbox is not None
+                    else None
+                ),
+            }
+        )
+
+    # Future package writers may materialize FigureAsset records. Support them
+    # without making them a requirement for the current source audit.
     for figure in standard.figures:
         if int(figure.source_region.page_number) != page_number:
             continue
         if not figure.caption_block_id:
             continue
         caption = block_by_id.get(figure.caption_block_id)
-        if caption is None or label.lower() not in caption.markdown.lower():
+        if caption is None or needle not in caption.markdown.lower():
             continue
         linked.append(
             {
@@ -497,8 +560,10 @@ def _semantic_region_locator(
         )
 
     captions = _caption_blocks(standard, page_number, label)
-    status = "LINKED_FIGURE" if len(linked) == 1 and linked[0]["pdf_bbox"] else (
-        "AMBIGUOUS_LINKED_FIGURES" if linked else "CAPTION_ONLY_OR_UNLOCATED"
+    status = (
+        "LINKED_FIGURE"
+        if len(linked) == 1 and linked[0]["pdf_bbox"]
+        else ("AMBIGUOUS_LINKED_FIGURES" if linked else "CAPTION_ONLY_OR_UNLOCATED")
     )
     return {
         "page_number": page_number,
