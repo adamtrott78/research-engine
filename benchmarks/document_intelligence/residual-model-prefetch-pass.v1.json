@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "task": "research-engine-local-document-pipeline-v1",
+  "stage": "residual_escalation_and_local_semantic_fallbacks",
+  "status": "PASS_READY_FOR_PP_OCRV6_RUNTIME_BENCHMARK",
+  "source_gate_receipt": "benchmarks/document_intelligence/residual-source-audit-pass.v1.json",
+  "report_sha256": "a2f68c2b50a4fe416f825e369f9d85887ae295611540f5c06200c509807e3ca3",
+  "report_bytes": 10055,
+  "decision": "PASS",
+  "candidate_model_inference_calls": 0,
+  "scientific_state_materialized": false,
+  "disk_free_bytes_before": 181727625216,
+  "disk_free_bytes_after": 170314207232,
+  "model_root": "/home/atrott/adamArchives/Adam/.research-engine/residual-models",
+  "artifacts": [
+    {
+      "id": "pp-ocrv6-medium-det",
+      "family": "paddleocr-pp-ocrv6-medium",
+      "repo_id": "PaddlePaddle/PP-OCRv6_medium_det",
+      "resolved_revision": "8e0f56fb2ef86b461d99cfc7ac5c137738985f61",
+      "license": "apache-2.0",
+      "materialized_bytes": 62298334,
+      "file_count": 5,
+      "offline_reopen": true,
+      "primary_weight": {
+        "path": "inference.pdiparams",
+        "bytes": 61960476,
+        "sha256": "85218d2e3d98f5a21c58b4220627be923a97aee5db3cc71f39536ab31ac53960"
+      }
+    },
+    {
+      "id": "pp-ocrv6-medium-rec",
+      "family": "paddleocr-pp-ocrv6-medium",
+      "repo_id": "PaddlePaddle/PP-OCRv6_medium_rec",
+      "resolved_revision": "e5a92bcbc5cc1b494628e458d267778f0704fd7c",
+      "license": "apache-2.0",
+      "materialized_bytes": 76862530,
+      "file_count": 5,
+      "offline_reopen": true,
+      "primary_weight": {
+        "path": "inference.pdiparams",
+        "bytes": 76465087,
+        "sha256": "1b01c79a914587933f615569e75de54f2e638ebb5d3f3b3c1b38c24ede8c7319"
+      }
+    },
+    {
+      "id": "paddleocr-vl-1.6",
+      "family": "paddleocr-vl-1.6",
+      "repo_id": "PaddlePaddle/PaddleOCR-VL-1.6",
+      "resolved_revision": "c5630abae1d940eafe0697512a0325494b02ab42",
+      "license": "apache-2.0",
+      "materialized_bytes": 1930462423,
+      "file_count": 20,
+      "offline_reopen": true,
+      "primary_weight": {
+        "path": "model.safetensors",
+        "bytes": 1917255968,
+        "sha256": "85a479d506a11e724e7285d395c551be69f41dbc16b6342d3cacfb189aed71db"
+      }
+    },
+    {
+      "id": "qwen3.5-4b",
+      "family": "qwen3.5-4b",
+      "repo_id": "Qwen/Qwen3.5-4B",
+      "resolved_revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+      "license": "apache-2.0",
+      "materialized_bytes": 9342907469,
+      "file_count": 14,
+      "offline_reopen": true,
+      "primary_weights": [
+        {
+          "path": "model.safetensors-00001-of-00002.safetensors",
+          "bytes": 5329398688,
+          "sha256": "26a93f066e1916adb13453dae5a0c707c0fbc71299ed98779571a907b8e74c61"
+        },
+        {
+          "path": "model.safetensors-00002-of-00002.safetensors",
+          "bytes": 3990429408,
+          "sha256": "cb544bd9bfae93dc59b0f22b292f5933573854a7f9b97835c67060d7d910e188"
+        }
+      ]
+    }
+  ],
+  "next_gate": "PP_OCRV6_ISOLATED_RUNTIME_AND_SCAN_TEXT_MEASUREMENT",
+  "notes": [
+    "Full per-file SHA-256 manifest remains in the visible Lambda model-prefetch report.",
+    "All four artifact repositories reopened in local-files-only mode.",
+    "This receipt does not claim inference quality or runtime compatibility; candidate inference had not yet occurred."
+  ]
+}
