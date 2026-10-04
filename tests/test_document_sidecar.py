@@ -98,6 +98,10 @@ def test_sidecar_cache_miss_then_hit_is_content_addressed(tmp_path: Path):
         "COMPLETED",
         "CACHE_HIT",
     ]
+    cache_event = compiler.events[1]["local_inference_summary"]
+    assert cache_event["cache_hit"] is True
+    assert cache_event["formula_requests"] == 0
+    assert cache_event["table_requests"] == 0
 
 
 def test_sidecar_rejects_non_authoritative_source_path(tmp_path: Path):
