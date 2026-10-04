@@ -38,11 +38,13 @@ class DeterministicResearchExecutor:
         artifact_root: str | Path,
         arxiv_provider: Any | None = None,
         local_inference: Any | None = None,
+        document_sidecar: Any | None = None,
     ):
         self.store = store
         self.artifact_store = ContentAddressedArtifactStore(artifact_root)
         self.arxiv_provider = arxiv_provider or ArxivProvider(self.artifact_store)
         self.local_inference = local_inference
+        self.document_sidecar = document_sidecar
 
     def execute(self, job: ResearchJob) -> dict[str, Any]:
         if job.executor_tier != ExecutorTier.DETERMINISTIC:
@@ -218,7 +220,7 @@ class DeterministicResearchExecutor:
                 )
             conn.commit()
 
-        return {
+        result = {
             "item_id": work_id,
             "provider": "arxiv",
             "arxiv_id": acquired.arxiv_id,
@@ -231,6 +233,21 @@ class DeterministicResearchExecutor:
             "media_type": acquired.media_type,
             "artifact_path": str(acquired.receipt.path),
         }
+        if self.document_sidecar is not None:
+            try:
+                sidecar = self.document_sidecar.compile(
+                    source_artifact_id=artifact_id,
+                    source_sha256=acquired.receipt.sha256,
+                    source_pdf=acquired.receipt.path,
+                )
+                result["_document_sidecar"] = sidecar
+            except Exception as exc:
+                result["_document_sidecar"] = {
+                    "status": "FAILED_DERIVED_SIDECAR",
+                    "authority": "AUTHORITATIVE_PDF_UNCHANGED",
+                    "error": f"{type(exc).__name__}: {exc}",
+                }
+        return result
 
     def _checkpoint(self, job: ResearchJob) -> dict[str, Any]:
         verify_ids = list(job.payload.get("verified_job_ids") or [])

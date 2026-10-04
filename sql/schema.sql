@@ -358,6 +358,32 @@ CREATE TABLE IF NOT EXISTS research_job_attempts (
 CREATE INDEX IF NOT EXISTS research_job_attempts_job_idx
     ON research_job_attempts(job_id, attempt_no);
 
+CREATE TABLE IF NOT EXISTS document_sidecar_events (
+    id BIGSERIAL PRIMARY KEY,
+    source_artifact_id TEXT NOT NULL REFERENCES source_artifacts(id) ON DELETE CASCADE,
+    source_sha256 TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (
+        status IN ('COMPLETED','CACHE_HIT','FAILED_DERIVED_SIDECAR')
+    ),
+    cache_path TEXT,
+    compiler_version TEXT NOT NULL,
+    native_status TEXT,
+    standard_status TEXT,
+    formula_pages INTEGER NOT NULL DEFAULT 0 CHECK (formula_pages >= 0),
+    fast_empty_tables INTEGER NOT NULL DEFAULT 0 CHECK (fast_empty_tables >= 0),
+    accurate_pages INTEGER NOT NULL DEFAULT 0 CHECK (accurate_pages >= 0),
+    paddle_fallbacks INTEGER NOT NULL DEFAULT 0 CHECK (paddle_fallbacks >= 0),
+    wall_time_ms BIGINT NOT NULL DEFAULT 0 CHECK (wall_time_ms >= 0),
+    routing_summary JSONB NOT NULL DEFAULT '{}'::jsonb,
+    local_inference_summary JSONB NOT NULL DEFAULT '{}'::jsonb,
+    error_detail TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS document_sidecar_events_artifact_idx
+    ON document_sidecar_events(source_artifact_id, created_at);
+CREATE INDEX IF NOT EXISTS document_sidecar_events_status_idx
+    ON document_sidecar_events(status, created_at);
+
 CREATE TABLE IF NOT EXISTS research_usage_events (
     id BIGSERIAL PRIMARY KEY,
     run_id TEXT NOT NULL REFERENCES research_runs(id) ON DELETE CASCADE,

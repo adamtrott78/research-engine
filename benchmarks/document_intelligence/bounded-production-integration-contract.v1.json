@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "stage": "bounded_production_integration",
+  "baseline_research_engine_sha": "a878f74f7d3c669374b12d2a903b56483b3770d7",
+  "objective": "Integrate the validated local document pipeline as a derived, cacheable, rollback-capable production support path while preserving authoritative-PDF semantic authority.",
+  "feature_gates": {
+    "document_sidecar_enabled": "RESEARCH_ENGINE_DOCUMENT_SIDECAR_ENABLED=1",
+    "specialized_local_models": "RESEARCH_ENGINE_DOCUMENT_SIDECAR_SPECIALIZED_ENABLED=1",
+    "sidecar_timeout_seconds": 900,
+    "structure_gpu_index": 1,
+    "formula_gpu_index": 0,
+    "table_gpu_index": 1
+  },
+  "authority_invariants": [
+    "ACQUIRE commits authoritative source bytes and database identity before any sidecar compile.",
+    "Sidecar failure is fail-open for ACQUIRE and is reported as FAILED_DERIVED_SIDECAR.",
+    "Sidecar receipts declare DERIVED_SIDECAR_ONLY.",
+    "EXTRACT and VERIFY remain STANDARD semantic jobs using authoritative-PDF ResearchContextHydrator.",
+    "Paper-package sidecars never silently replace semantic hydration."
+  ],
+  "cache_contract": {
+    "identity": "authoritative source SHA-256",
+    "default_root": "~/.research-engine/document-sidecars/sha256/<aa>/<bb>/<sha256>",
+    "atomic_build": true,
+    "smoke_requirement": "one uncached preserved PDF must produce COMPLETED followed by CACHE_HIT"
+  },
+  "routing_contract": [
+    "Docling native provides lexical/order/provenance package.",
+    "Docling standard_no_ocr provides structure/table FAST package.",
+    "Formula pages detected by standard structure may use the shared CodeFormulaV2 broker.",
+    "FAST empty table grids escalate to targeted TableFormer ACCURATE.",
+    "Paddle table crop is allowed only when the targeted ACCURATE page still has no non-empty table grid.",
+    "No OCR or general document VLM is introduced."
+  ],
+  "telemetry": {
+    "table": "document_sidecar_events",
+    "allowed_statuses": [
+      "COMPLETED",
+      "CACHE_HIT",
+      "FAILED_DERIVED_SIDECAR"
+    ],
+    "records": [
+      "source artifact and SHA",
+      "cache path",
+      "native/standard status",
+      "formula page count",
+      "FAST empty table count",
+      "ACCURATE page count",
+      "Paddle fallback count",
+      "wall time",
+      "routing summary",
+      "local inference summary",
+      "error detail"
+    ]
+  },
+  "bounded_daemon_gate": [
+    "PostgreSQL must have no RUNNING research run and no QUEUED/RUNNING non-HUMAN job before daemon start.",
+    "Scientific tables are fingerprinted before sidecar smoke/daemon start and after daemon stop.",
+    "Daemon starts only for a finite idle health interval.",
+    "Exactly one DETERMINISTIC, CHEAP, STANDARD, and STRONG worker associated with the daemon MainPID must register ACTIVE.",
+    "No formula/table model-server subprocess may exist during the idle daemon interval.",
+    "Daemon is stopped unconditionally by trap and must end inactive/dead PID 0.",
+    "Scientific table fingerprints must remain identical.",
+    "Only derived cache files, document_sidecar_events, and worker/ops telemetry may change."
+  ],
+  "pass_condition": "Sidecar miss->hit, telemetry, idle daemon worker registration, cleanup, and scientific fingerprint invariance all pass.",
+  "sustained_research": "FORBIDDEN_UNTIL_STAGE_VALIDATED"
+}

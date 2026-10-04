@@ -213,6 +213,40 @@ def main() -> None:
     paper_ab_posthoc = sub.add_parser("paper-package-ab-posthoc")
     paper_ab_posthoc.add_argument("run_id")
 
+    sidecar_smoke = sub.add_parser("document-sidecar-smoke")
+    sidecar_smoke.add_argument("--artifact-id")
+
+    bounded_preflight = sub.add_parser("bounded-integration-preflight")
+
+    bounded_fingerprint = sub.add_parser("bounded-integration-fingerprint")
+
+    bounded_workers = sub.add_parser("bounded-integration-workers")
+    bounded_workers.add_argument("process_id", type=int)
+
+    bounded_validate_sidecar = sub.add_parser(
+        "bounded-integration-validate-sidecar"
+    )
+    bounded_validate_sidecar.add_argument("smoke_json")
+
+    bounded_telemetry = sub.add_parser("bounded-integration-sidecar-telemetry")
+    bounded_telemetry_group = bounded_telemetry.add_mutually_exclusive_group(
+        required=True
+    )
+    bounded_telemetry_group.add_argument("--artifact-id")
+    bounded_telemetry_group.add_argument("--smoke-json")
+
+    bounded_compare = sub.add_parser("bounded-integration-compare-fingerprints")
+    bounded_compare.add_argument("before_json")
+    bounded_compare.add_argument("after_json")
+
+    bounded_report = sub.add_parser("bounded-integration-build-report")
+    bounded_report.add_argument("preflight_json")
+    bounded_report.add_argument("sidecar_validation_json")
+    bounded_report.add_argument("workers_json")
+    bounded_report.add_argument("fingerprint_comparison_json")
+    bounded_report.add_argument("telemetry_json")
+    bounded_report.add_argument("--head", required=True)
+
     budget_status = sub.add_parser("budget-status")
     budget_status.add_argument("run_id")
 
@@ -649,6 +683,114 @@ def main() -> None:
         from .paper_package_ab import posthoc_from_env
 
         result = posthoc_from_env().run(run_id=args.run_id)
+        print(json.dumps(result, default=str))
+    elif args.cmd == "document-sidecar-smoke":
+        from .document_sidecar import (
+            document_sidecar_compiler_from_env,
+            select_smoke_artifact,
+        )
+        from .local_inference import local_inference_service_from_env
+        from .postgres import PostgresStore
+
+        store = PostgresStore(os.environ["RESEARCH_ENGINE_DATABASE_URL"])
+        broker = local_inference_service_from_env(require_enabled=True)
+        try:
+            compiler = document_sidecar_compiler_from_env(
+                store=store,
+                artifact_root=os.environ["RESEARCH_ENGINE_ARTIFACT_ROOT"],
+                local_inference=broker,
+                require_enabled=True,
+            )
+            artifact_id = args.artifact_id or select_smoke_artifact(
+                store,
+                compiler,
+            )
+            first = compiler.compile_artifact(artifact_id)
+            second = compiler.compile_artifact(artifact_id)
+            result = {
+                "artifact_id": artifact_id,
+                "first": first,
+                "second": second,
+                "cache_miss_then_hit": (
+                    first.get("status") == "COMPLETED"
+                    and second.get("status") == "CACHE_HIT"
+                ),
+                "broker_final_health": broker.health(),
+            }
+            print(json.dumps(result, default=str))
+        finally:
+            broker.close()
+    elif args.cmd.startswith("bounded-integration-"):
+        from .bounded_integration import (
+            BoundedProductionIntegrationInspector,
+            build_integration_report,
+            compare_fingerprints,
+            validate_sidecar_smoke,
+        )
+        from .postgres import PostgresStore
+
+        store = PostgresStore(os.environ["RESEARCH_ENGINE_DATABASE_URL"])
+        inspector = BoundedProductionIntegrationInspector(store)
+        if args.cmd == "bounded-integration-preflight":
+            result = inspector.quiescence()
+            if not result["safe_for_idle_daemon_smoke"]:
+                raise SystemExit("BOUNDED_INTEGRATION_NOT_QUIESCENT")
+        elif args.cmd == "bounded-integration-fingerprint":
+            result = inspector.scientific_fingerprint()
+        elif args.cmd == "bounded-integration-workers":
+            result = inspector.workers_for_process(args.process_id)
+            if not result["worker_registration_pass"]:
+                raise SystemExit("DAEMON_WORKER_REGISTRATION_MISMATCH")
+            if not result["quiescence"]["safe_for_idle_daemon_smoke"]:
+                raise SystemExit("NONHUMAN_WORK_APPEARED_DURING_DAEMON_SMOKE")
+        elif args.cmd == "bounded-integration-validate-sidecar":
+            payload = json.loads(
+                Path(args.smoke_json).read_text(encoding="utf-8")
+            )
+            result = validate_sidecar_smoke(payload)
+            if not result["pass"]:
+                raise SystemExit("SIDECAR_SMOKE_VALIDATION_FAILED")
+        elif args.cmd == "bounded-integration-sidecar-telemetry":
+            artifact_id = args.artifact_id
+            if args.smoke_json:
+                smoke = json.loads(
+                    Path(args.smoke_json).read_text(encoding="utf-8")
+                )
+                artifact_id = str(smoke["artifact_id"])
+            result = inspector.sidecar_telemetry(str(artifact_id))
+            if not result["telemetry_pass"]:
+                raise SystemExit("SIDECAR_TELEMETRY_VALIDATION_FAILED")
+        elif args.cmd == "bounded-integration-compare-fingerprints":
+            before = json.loads(
+                Path(args.before_json).read_text(encoding="utf-8")
+            )
+            after = json.loads(
+                Path(args.after_json).read_text(encoding="utf-8")
+            )
+            result = compare_fingerprints(before, after)
+            if not result["unchanged"]:
+                raise SystemExit(
+                    "SCIENTIFIC_STATE_CHANGED:"
+                    + ",".join(result["changed_tables"])
+                )
+        elif args.cmd == "bounded-integration-build-report":
+            load = lambda path: json.loads(
+                Path(path).read_text(encoding="utf-8")
+            )
+            result = build_integration_report(
+                research_engine_head=args.head,
+                preflight=load(args.preflight_json),
+                sidecar=load(args.sidecar_validation_json),
+                workers=load(args.workers_json),
+                fingerprint_comparison=load(
+                    args.fingerprint_comparison_json
+                ),
+                telemetry=load(args.telemetry_json),
+            )
+            if result["decision"] != "PASS":
+                raise SystemExit("BOUNDED_INTEGRATION_REPORT_FAILED")
+        else:
+            raise RuntimeError(f"unsupported bounded integration command: {args.cmd}")
         print(json.dumps(result, default=str))
     elif args.cmd == "budget-status":
         from .daemon import daemon_from_env

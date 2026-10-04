@@ -482,3 +482,29 @@ Its runtime smoke checks are bounded and read-only: small GPU allocations,
 zero-spawn broker construction, one existing authoritative-PDF hydration, and
 read-only operational reporting. Human-facing results are written beneath
 visible `~/adamArchives/Adam/workspace-control-tmp/`.
+
+
+## Bounded production integration
+
+After Lambda production acceptance passes, synchronize the production env again
+so the document-sidecar feature gate is present:
+
+```bash
+bash deploy/configure-production-local-inference.sh
+```
+
+Then run the finite integration gate:
+
+```bash
+bash deploy/run-bounded-production-integration.sh
+```
+
+The gate requires a quiescent non-human queue, fingerprints scientific tables,
+builds one uncached preserved PDF sidecar and immediately proves a cache hit,
+checks sidecar telemetry, starts the production daemon for a short idle
+registration interval, verifies exactly one worker for each configured tier,
+stops the daemon unconditionally, and requires the scientific fingerprint to be
+unchanged.
+
+The sidecar is a derived cache only. The gate does not submit a research run and
+does not change EXTRACT/VERIFY away from authoritative-PDF semantic hydration.
