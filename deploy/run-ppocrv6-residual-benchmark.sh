@@ -168,6 +168,7 @@ echo
 echo "=== RUN EXACTLY THREE BOUNDED OCR INFERENCES ==="
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
+export PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
 export PADDLEX_HOME="$output_root/paddlex-home"
 export XDG_CACHE_HOME="$output_root/xdg-cache"
 mkdir -p "$PADDLEX_HOME" "$XDG_CACHE_HOME"
