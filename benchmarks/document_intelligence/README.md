@@ -656,3 +656,38 @@ governing opener, it is replaced before any layout model inference.
 Large PDFs, rendered crops, and future model weights stay outside Git. These
 manifests retain only stable source locators and compact benchmark metadata.
 
+## Bounded residual source prefetch/audit
+
+The three registered residual source cases are validated by
+`residual-source-audit-contract.v1.json` and
+`deploy/run-residual-source-prefetch-audit.sh` **before** any newly selected
+OCR/VLM/local-semantic weights are installed.
+
+This gate downloads only the three registered PDFs into the visible
+`~/adamArchives/Adam/workspace-control-tmp/` tree, records SHA-256/page counts,
+then runs the already-installed Docling native and `standard_no_ocr` paths.
+The structure pass is forced offline against the existing validated model
+cache.
+
+The deterministic audit evaluates the durable scan/text/layout openers and
+locates the two registered semantic-visual figure regions through
+caption-linked PDF provenance. It performs zero candidate-model downloads,
+zero candidate-model inference calls, zero semantic calls, and no scientific
+state materialization.
+
+The gate is fail-closed. In particular, `malformed-layout-v1` is rejected and
+must be replaced if neither registered target page actually fires the layout
+opener; thresholds are not relaxed to preserve the chosen source. Model
+prefetch remains closed unless both semantic visual targets resolve to unique
+caption-linked figure bboxes as well.
+
+Run only from the clean canonical `main` checkout with the research daemon
+stopped:
+
+```bash
+bash deploy/run-residual-source-prefetch-audit.sh
+```
+
+All bulky source PDFs, parser outputs, packages, and audit reports stay under
+the visible temporary root rather than Git.
+
