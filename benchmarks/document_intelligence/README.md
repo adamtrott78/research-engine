@@ -721,3 +721,28 @@ quality/resource benchmarks open in the fixed order: PP-OCRv6 scan/text,
 PaddleOCR-VL targeted document/visual residuals, then Qwen3.5-4B bounded
 semantic controls. Qwen visual use remains conditional on PaddleOCR-VL
 failure or abstention.
+
+## PP-OCRv6 bounded residual benchmark
+
+After the model-prefetch gate passes, the first candidate inference gate is
+`ppocrv6-residual-benchmark-contract.v1.json`, executed by
+`deploy/run-ppocrv6-residual-benchmark.sh`.
+
+The gate constructs one isolated PaddlePaddle/PaddleOCR runtime, verifies the
+prefetched PP-OCRv6 medium detection and recognition weight checksums, renders
+only the two promoted pages from the authoritative NASA scan PDF, and runs
+exactly three OCR calls: one first/cold page, one warm second target, and one
+warm repeat.
+
+The benchmark uses only local PP-OCRv6 model paths and disables document
+orientation, document unwarping, and textline-orientation modules. It records
+model initialization time, warm-page latency, process GPU memory, peak RSS,
+recognized lines/scores/boxes, exact page provenance, and an isolated runtime
+package freeze.
+
+This gate is measurement-only. Resource success produces
+`MEASURED_PENDING_HUMAN_QUALITY`, not promotion. The two rendered page PNGs
+and compact OCR report must be reviewed against visible authoritative page
+content before PP-OCRv6 can suppress a higher tier for scan/text residuals.
+No VLM, Qwen, Codex, production routing, or scientific-state mutation is
+allowed in this gate.
