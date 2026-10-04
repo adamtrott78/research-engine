@@ -861,3 +861,23 @@ fails closed if neither expected spelling is present, and otherwise translates
 only `inputs_embeds` to `input_embeds`. No model file, model weight,
 Transformers package, prompt, benchmark region, inference count, quality
 threshold, or production behavior is changed.
+
+### PaddleOCR-VL generation bound correction
+
+The first causal-mask-compatible direct-model run reached actual VLM generation
+but remained inside the first call for more than five minutes. This is not a
+setup/dependency stall: the model had already passed local processor/model
+preflight and entered generation.
+
+The harness had allowed `max_new_tokens=2048` while explicitly using
+`use_cache=False`. PaddleOCR-VL-1.6's own generation configuration also
+declares `use_cache=false`, and its documented direct-Transformers example
+uses a 512-token generation cap. The bounded benchmark now matches that
+documented 512-token cap instead of permitting four times as much no-cache
+decoding.
+
+Each call now emits a flushed `VLM_CALL_START` event before generation and a
+`VLM_CALL_COMPLETE` event with elapsed seconds afterward so long-running
+generation is never silent. Model files, weights, prompts, crops, inference
+count, quality thresholds, resource ceilings, and production boundaries remain
+unchanged.
