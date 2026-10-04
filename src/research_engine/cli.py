@@ -213,6 +213,9 @@ def main() -> None:
     paper_ab_posthoc = sub.add_parser("paper-package-ab-posthoc")
     paper_ab_posthoc.add_argument("run_id")
 
+    sidecar_smoke = sub.add_parser("document-sidecar-smoke")
+    sidecar_smoke.add_argument("--artifact-id")
+
     budget_status = sub.add_parser("budget-status")
     budget_status.add_argument("run_id")
 
@@ -650,6 +653,39 @@ def main() -> None:
 
         result = posthoc_from_env().run(run_id=args.run_id)
         print(json.dumps(result, default=str))
+    elif args.cmd == "document-sidecar-smoke":
+        from .document_sidecar import (
+            document_sidecar_compiler_from_env,
+            select_smoke_artifact,
+        )
+        from .local_inference import local_inference_service_from_env
+        from .postgres import PostgresStore
+
+        store = PostgresStore(os.environ["RESEARCH_ENGINE_DATABASE_URL"])
+        broker = local_inference_service_from_env(require_enabled=True)
+        try:
+            compiler = document_sidecar_compiler_from_env(
+                store=store,
+                artifact_root=os.environ["RESEARCH_ENGINE_ARTIFACT_ROOT"],
+                local_inference=broker,
+                require_enabled=True,
+            )
+            artifact_id = args.artifact_id or select_smoke_artifact(store)
+            first = compiler.compile_artifact(artifact_id)
+            second = compiler.compile_artifact(artifact_id)
+            result = {
+                "artifact_id": artifact_id,
+                "first": first,
+                "second": second,
+                "cache_miss_then_hit": (
+                    first.get("status") == "COMPLETED"
+                    and second.get("status") == "CACHE_HIT"
+                ),
+                "broker_final_health": broker.health(),
+            }
+            print(json.dumps(result, default=str))
+        finally:
+            broker.close()
     elif args.cmd == "budget-status":
         from .daemon import daemon_from_env
 
