@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "task": "research-engine-local-document-pipeline-v1",
+  "stage": "residual_escalation_and_local_semantic_fallbacks",
+  "baseline_research_engine_sha": "17aaa3182821fed8aacea2f710184b3c1f3ec2a3",
+  "runner": "deploy/run-residual-source-prefetch-audit.sh",
+  "status": "BOUNDED_SOURCE_AUDIT_ONLY",
+  "objective": "Download and hash exactly the three registered residual benchmark PDFs, normalize them with already-installed Docling native and standard_no_ocr runtimes, and evaluate deterministic scan/text/layout openers plus semantic-figure region locators before any newly selected model family is installed or invoked.",
+  "required_state": {
+    "git_branch": "main",
+    "clean_checkout": true,
+    "research_daemon": "inactive/dead PID 0 before, throughout, and after",
+    "output_root": "~/adamArchives/Adam/workspace-control-tmp/residual-source-prefetch-audit-<UTC stamp>/",
+    "native_runtime": "~/adamArchives/Adam/.document-runtimes/docling-native",
+    "standard_runtime": "~/.research-engine/document-runtimes/docling-standard-no-ocr",
+    "standard_model_cache": "~/.research-engine/document-models/docling-standard-no-ocr-2.131.0",
+    "network_use": "SOURCE_PDF_DOWNLOADS_ONLY",
+    "new_candidate_model_downloads": 0,
+    "new_candidate_model_inference_calls": 0,
+    "scientific_state_materialized": false
+  },
+  "source_cases": [
+    "scan-mixed-quality-v1",
+    "semantic-visuals-v1",
+    "malformed-layout-v1"
+  ],
+  "allowed_inference": [
+    "Docling native model-free PDF parse",
+    "Docling standard_no_ocr using the already-installed validated layout/TableFormer cache only"
+  ],
+  "forbidden_actions": [
+    "start research-engine-daemon.service",
+    "install or download any newly selected OCR/VLM/local-semantic model or runtime",
+    "enable global OCR or general document VLM routing",
+    "invoke Codex or any semantic model",
+    "write evidence, verification, gap, checkpoint, research-run, or human-review scientific state",
+    "relax residual opener thresholds merely to keep a selected source case"
+  ],
+  "fetch_acceptance": [
+    "Each source response begins with PDF magic and is saved under the visible audit output root.",
+    "SHA-256, byte size, and exact PDF page count are recorded.",
+    "Public-source expected page count must match the downloaded PDF; mismatch fails closed.",
+    "Public web parses/screenshots are not benchmark authority and are not used by production openers."
+  ],
+  "deterministic_audit_acceptance": {
+    "scan_mixed_quality_v1": [
+      "At least one page fires SCAN_IMAGE_ONLY_OR_TEXTLESS_PAGE.",
+      "At least one page fires LOW_CONFIDENCE_TEXT_OR_OCR_RECOVERY.",
+      "All opener evidence comes from the downloaded authoritative PDF plus normalized native/standard outputs."
+    ],
+    "semantic_visuals_v1": [
+      "Both registered target pages exist.",
+      "Both target figure labels are found in standard_no_ocr caption blocks.",
+      "Before model prefetch is opened, each target must resolve to exactly one caption-linked figure asset with a PDF bbox."
+    ],
+    "malformed_layout_v1": [
+      "At least one registered target page fires LAYOUT_OR_READING_ORDER_ANOMALY under the durable opener thresholds.",
+      "If neither target opens, decision is REJECT and the source case must be replaced before any layout-model inference."
+    ]
+  },
+  "opener_thresholds": {
+    "scan_native_nonspace_characters_lt": 32,
+    "scan_figure_bbox_page_coverage_gte": 0.5,
+    "low_confidence_replacement_control_ratio_gt": 0.01,
+    "low_confidence_alphabetic_token_ratio_lt": 0.45,
+    "low_confidence_native_standard_token_f1_lt": 0.8,
+    "layout_duplicate_block_ratio_gt": 0.2,
+    "layout_max_text_block_overlap_fraction_gte": 0.5,
+    "layout_native_standard_token_f1_gte": 0.85,
+    "layout_native_standard_ordered_bigram_f1_lt": 0.7,
+    "layout_interleaved_column_switches_gte": 3
+  },
+  "pass_condition": "All three registered cases are accepted, semantic visual region locators are ready, new candidate model downloads/inference remain zero, scientific state remains untouched, and the daemon remains inactive/dead.",
+  "failure_behavior": "Stop at the first hard runtime/download failure; for a completed deterministic audit with a residual rejection, preserve the visible audit report, return nonzero, leave the daemon stopped, and revise/replace only the failed source case before proceeding.",
+  "next_on_pass": "Durably record authoritative source hashes/opener results, then open a separate bounded runtime/model prefetch gate for the already-selected candidates. This source-audit runner itself never downloads those weights."
+}
