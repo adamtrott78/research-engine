@@ -52,8 +52,10 @@ def test_qwen_helper_forbids_numeric_curve_estimation():
     assert "gpu_memory_utilization=0.65" in text
     assert 'limit_mm_per_prompt={"image": 1}' in text
     assert "AutoModel" not in text
-    for forbidden in ["openai", "codex", "requests.get", "http://", "https://"]:
+    for forbidden in ["openai", "requests.get", "http://", "https://"]:
         assert forbidden not in text.lower()
+    for forbidden in ["OPENAI_API_KEY", "responses.create(", "chat.completions", "api.openai.com"]:
+        assert forbidden not in text
 
 
 def test_qwen_runner_keeps_daemon_stopped_and_model_offline():
