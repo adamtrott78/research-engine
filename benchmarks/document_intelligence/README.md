@@ -555,3 +555,18 @@ CDLA-Permissive-2.0. The current production scope is internal inference from a
 local cache; research-engine does not redistribute the weights. Any future
 redistribution must preserve the applicable sharing obligation and should
 trigger a fresh review.
+
+
+## Bounded production integration contract
+
+`bounded-production-integration-contract.v1.json` defines the production
+sidecar/cache and finite daemon-lifecycle acceptance boundary.
+
+The cache is keyed by authoritative source SHA-256 and emits
+`document_sidecar_events` telemetry. The routing path is native lexical
+package + standard/no-OCR structure, then only validated targeted residuals:
+CodeFormulaV2 formula pages and FAST-empty table pages through ACCURATE before
+Paddle fallback.
+
+The integration gate fingerprints scientific tables before and after and allows
+only derived cache, sidecar telemetry, and worker/ops telemetry to change.
