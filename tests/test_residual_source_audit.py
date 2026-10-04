@@ -170,6 +170,29 @@ def test_semantic_region_locator_uses_normalized_figure_block_linkage():
     assert locator["linked_figures"][0]["pdf_bbox"] == [60, 300, 540, 640]
 
 
+def test_semantic_region_locator_accepts_figure_linkage_without_caption_block():
+    figure = _block(
+        "",
+        (60, 300, 540, 640),
+        block_id="fig-6",
+        kind=BlockKind.FIGURE,
+        parameters={
+            "caption_text": "Figure 6. Training error curves.",
+            "caption_refs": ["#/texts/296"],
+        },
+    )
+    standard = _package(blocks=[figure])
+
+    locator = audit._semantic_region_locator(
+        standard=standard,
+        target={"page_index_zero_based": 0, "figure_label": "Figure 6"},
+    )
+
+    assert locator["caption_blocks_found"] == []
+    assert locator["status"] == "LINKED_FIGURE"
+    assert locator["linked_figures"][0]["pdf_bbox"] == [60, 300, 540, 640]
+
+
 def test_real_docling_normalizer_exposes_semantic_figure_as_block(tmp_path):
     source = tmp_path / "source.pdf"
     writer = PdfWriter()

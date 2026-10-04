@@ -683,13 +683,11 @@ def audit_registered_sources(
                 0 <= int(target["page_index_zero_based"]) < page_count
                 for target in manifest["target_regions"]
             )
-            captions_present = all(
-                bool(locator["caption_blocks_found"]) for locator in locators
-            )
-            accepted = valid_pages and captions_present
-            ready = accepted and all(
+            linked_regions_ready = all(
                 locator["status"] == "LINKED_FIGURE" for locator in locators
             )
+            accepted = valid_pages and linked_regions_ready
+            ready = accepted
             row.update(
                 {
                     "accepted": accepted,
