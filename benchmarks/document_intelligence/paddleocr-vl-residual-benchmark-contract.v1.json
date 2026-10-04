@@ -44,7 +44,16 @@
       "figure6_cifar_training_chart": "Chart Recognition:",
       "figure3_network_architecture": "OCR:"
     },
-    "local_files_only": true
+    "local_files_only": true,
+    "causal_mask_compat": {
+      "required_for_transformers_4_55_0": true,
+      "upstream_signature": "create_causal_mask(config, input_embeds, attention_mask, cache_position, past_key_values, ...)",
+      "pinned_model_callsite_keyword": "inputs_embeds",
+      "action": "IN_MEMORY_KEYWORD_ALIAS_INPUTS_EMBEDS_TO_INPUT_EMBEDS",
+      "modifies_model_files": false,
+      "fail_closed_on_unexpected_signature": true,
+      "rationale": "The pinned PaddleOCR-VL-1.6 custom model calls transformers.masking_utils.create_causal_mask with inputs_embeds, while Transformers 4.55.0 exposes the singular input_embeds parameter. The shim is installed before the custom modeling module loads and only aliases that keyword."
+    }
   },
   "authoritative_source": {
     "case_id": "semantic-visuals-v1",

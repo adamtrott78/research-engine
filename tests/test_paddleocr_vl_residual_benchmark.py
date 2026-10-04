@@ -44,6 +44,9 @@ def test_vlm_helper_only_uses_pinned_model_declared_transformers_interface():
     assert '"Chart Recognition:"' in text
     assert '"OCR:"' in text
     assert "GpuProcessMonitor" in text
+    assert "install_transformers_causal_mask_compat" in text
+    assert 'kwargs["input_embeds"] = kwargs.pop("inputs_embeds")' in text
+    assert "masking_utils.create_causal_mask = compat" in text
     assert "PaddleOCRVL(" not in text
     assert "AutoModelForImageTextToText" not in text
     for forbidden in ["Qwen", "openai", "codex", "PP-DocLayoutV3"]:
