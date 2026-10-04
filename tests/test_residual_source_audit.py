@@ -328,6 +328,7 @@ def test_source_audit_runner_is_bounded_and_uses_existing_runtimes_only():
     assert 'echo "STRUCTURE_GPU_PROBE_FREE_MIB=$free_mib" >&2' in script
     assert "file=sys.stderr" in script
     assert 'structure_gpu="$(select_structure_gpu)"' in script
+    assert '[[ "$structure_gpu" =~ ^[0-9]+$ ]]' in script
 
     forbidden = [
         "pip install paddleocr",
