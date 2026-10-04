@@ -1,0 +1,452 @@
+{
+  "schema_version": 1,
+  "task": "research-engine-local-document-pipeline-v1",
+  "stage": "residual_escalation_and_local_semantic_fallbacks",
+  "baseline_research_engine_sha": "0e5b1464c5307b9b1824618b6e5cff0f13485146",
+  "status": "CONTRACT_ONLY_NO_NEW_MODEL_ENABLEMENT",
+  "purpose": "Define residual-gated escalation, benchmark, promotion, provenance, resource, and semantic-control requirements before selecting or enabling new OCR, multimodal VLM, or local semantic-agent runtimes.",
+  "authority_invariants": [
+    "The original content-addressed PDF remains scientific authority at every tier.",
+    "Every local recovery result is derived evidence and must retain source PDF SHA-256 plus exact page and, when region-scoped, PDF bbox provenance.",
+    "A lower-cost tier may suppress a higher-cost tier only after the residual-specific promotion gate passes; otherwise execution falls through.",
+    "Failure, timeout, backpressure, missing provenance, low confidence, or disagreement never silently becomes scientific evidence.",
+    "EXTRACT and VERIFY remain STANDARD Codex jobs over authoritative-PDF context until a residual-specific semantic fallback is promoted by contemporaneous controls.",
+    "Existing validated specialized paths are preserved: CodeFormulaV2 for targeted formula pages and TableFormer FAST -> targeted ACCURATE -> PP-TableMagic for persistent empty-grid tables.",
+    "The broad parser bakeoff remains closed.",
+    "OCR, general document VLM, embeddings/reranking, and local semantic agents remain globally disabled until separately promoted.",
+    "Mathpix or human transcription may be benchmark references but never production authority."
+  ],
+  "escalation_ladder": [
+    {
+      "tier": 0,
+      "id": "DETERMINISTIC_NATIVE_STRUCTURE",
+      "role": "Docling native lexical/order/provenance substrate plus standard_no_ocr structure overlay and deterministic quality signals.",
+      "cost_class": "LOCAL_DETERMINISTIC_OR_ALREADY_VALIDATED_STRUCTURE"
+    },
+    {
+      "tier": 1,
+      "id": "VALIDATED_SPECIALIZED_LOCAL",
+      "role": "Residual-specific already-promoted local components such as CodeFormulaV2 and the table FAST/ACCURATE/PP-TableMagic cascade.",
+      "cost_class": "SPECIALIZED_LOCAL_MODEL"
+    },
+    {
+      "tier": 2,
+      "id": "TARGETED_LOCAL_RECOVERY",
+      "role": "Residual-scoped OCR, multimodal VLM, layout recovery, or local semantic candidate opened only by the taxonomy below.",
+      "cost_class": "NEW_LOCAL_MODEL_BENCHMARK_REQUIRED"
+    },
+    {
+      "tier": 3,
+      "id": "REMOTE_CODEX_AUTHORITATIVE_PDF",
+      "role": "Current Codex semantic baseline using the authoritative PDF/page/region context.",
+      "cost_class": "REMOTE_SEMANTIC_ALLOWANCE"
+    },
+    {
+      "tier": 4,
+      "id": "HUMAN_REVIEW",
+      "role": "Final authority for unresolved evidence-critical ambiguity, benchmark annotation, or explicit human gates.",
+      "cost_class": "HUMAN"
+    }
+  ],
+  "global_resource_envelope": {
+    "validated_host_reference": {
+      "gpus": "2 x NVIDIA RTX A4500",
+      "per_gpu_memory_mib": 20470,
+      "host_memory_gib_approx": 251.54,
+      "existing_peak_formula_gpu_mib": 1605,
+      "existing_peak_table_gpu_mib": 2784,
+      "existing_peak_host_used_gib_approx": 8.07
+    },
+    "new_model_owner_limits": {
+      "max_single_owner_peak_vram_mib": 16384,
+      "max_single_owner_peak_rss_mib": 32768,
+      "max_cold_model_load_seconds": 120,
+      "max_pending_per_family": 8,
+      "duplicate_model_owners_per_family": 1,
+      "remote_api_fallback_allowed": false,
+      "model_downloads_during_promotion_gate": false
+    },
+    "scheduling": [
+      "A new heavy model must fit on one GPU with at least ~20% nominal VRAM headroom.",
+      "A new owner may not co-reside with another heavy owner on the same GPU if measured combined peaks exceed the per-GPU ceiling.",
+      "Queues are bounded; backpressure and timeout fall through rather than spawning duplicate owners.",
+      "All human-facing benchmark outputs are written under ~/adamArchives/Adam/workspace-control-tmp/.",
+      "research-engine-daemon.service remains inactive/dead unless a later bounded gate explicitly owns its lifecycle."
+    ]
+  },
+  "semantic_accounting_contract": {
+    "exact_usage_fields": [
+      "input_tokens",
+      "cached_input_tokens",
+      "output_tokens",
+      "reasoning_output_tokens",
+      "wall_time_ms",
+      "local_gpu_peak_mib",
+      "local_rss_peak_mib",
+      "local_cold_load_ms",
+      "local_warm_latency_ms"
+    ],
+    "allowance_observation": "Record ChatGPT/Codex plan-allowance movement only as a separate censored empirical observation; never infer exact allowance savings from token counts.",
+    "suppression_measure": "For any candidate intended to suppress Codex, report eligible cases, candidate-pass cases, contemporaneous Codex-control calls, projected remote calls avoided, and exact token deltas.",
+    "promotion_principle": "Quality/provenance is a hard gate. Resource or token savings cannot compensate for lower scientific quality."
+  },
+  "residual_families": [
+    {
+      "id": "SCAN_IMAGE_ONLY_OR_TEXTLESS_PAGE",
+      "opener": {
+        "production_signal": "After model-free/native extraction, page has <32 non-whitespace characters and raster/image coverage is >=0.50 of page area, or the text layer is absent while visible page content exists.",
+        "oracle_forbidden_in_routing": true
+      },
+      "cheapest_eligible_local_recovery": "TARGETED_PAGE_OCR",
+      "quality_gate": {
+        "benchmark_text_token_f1_min": 0.95,
+        "benchmark_ordered_bigram_f1_min": 0.9,
+        "page_provenance_coverage_min": 1,
+        "hallucinated_text_tolerance": 0,
+        "requirement": "Candidate must materialize page text with page/bbox provenance or abstain."
+      },
+      "provenance": [
+        "source_pdf_sha256",
+        "page_number",
+        "OCR token/line bboxes in PDF or deterministically reversible image coordinates",
+        "renderer DPI/config and model/runtime lineage"
+      ],
+      "fallthrough": "OCR failure, timeout, missing bboxes, or quality below threshold -> authoritative PDF Codex control; unresolved evidence-critical content -> HUMAN_REVIEW.",
+      "resource_ceiling": {
+        "peak_vram_mib": 8192,
+        "peak_rss_mib": 16384,
+        "cold_load_seconds": 60,
+        "warm_page_seconds": 10
+      },
+      "semantic_control": "For promotion, run at least one downstream evidence task per benchmark scan case against candidate-recovered context and a contemporaneous STANDARD Codex authoritative-PDF control; candidate must not change grounded answer/evidence outcome.",
+      "candidate_family_after_contract": "LOCAL_OCR_WITH_LAYOUT_AND_CONFIDENCE"
+    },
+    {
+      "id": "LOW_CONFIDENCE_TEXT_OR_OCR_RECOVERY",
+      "opener": {
+        "production_signal": "Native text exists but deterministic lexical sanity fails: replacement/control-character ratio >0.01, alphabetic-token ratio <0.45 on a visibly textual page, or native-vs-standard same-page normalized token F1 <0.80 after excluding structure-only labels.",
+        "oracle_forbidden_in_routing": true
+      },
+      "cheapest_eligible_local_recovery": "TARGETED_PAGE_OCR_OR_TEXT_LAYER_RECONCILIATION",
+      "quality_gate": {
+        "benchmark_text_token_f1_min": 0.95,
+        "benchmark_ordered_bigram_f1_min": 0.9,
+        "improvement_over_native_token_f1_min": 0.1,
+        "page_provenance_coverage_min": 1,
+        "regression_on_healthy_text_pages_allowed": false
+      },
+      "provenance": [
+        "source_pdf_sha256",
+        "page_number",
+        "native diagnostic that opened escalation",
+        "candidate token/line bboxes",
+        "model/runtime lineage"
+      ],
+      "fallthrough": "No material improvement or provenance loss -> retain native/structure result and fall through to authoritative-PDF Codex when semantics are required.",
+      "resource_ceiling": {
+        "peak_vram_mib": 8192,
+        "peak_rss_mib": 16384,
+        "cold_load_seconds": 60,
+        "warm_page_seconds": 10
+      },
+      "semantic_control": "Contemporaneous authoritative-PDF Codex control must agree on downstream evidence/verification outcome on every promotion case used to justify semantic suppression.",
+      "candidate_family_after_contract": "LOCAL_OCR_WITH_TEXT_LAYER_RECONCILIATION"
+    },
+    {
+      "id": "FORMULA_RESIDUAL_AFTER_CODEFORMULAV2",
+      "opener": {
+        "production_signal": "A standard_no_ocr formula region opens CodeFormulaV2; escalation remains only when the CodeFormula request fails, returns empty output, fails deterministic LaTeX sanity/balance checks, or cannot preserve region provenance.",
+        "oracle_forbidden_in_routing": true
+      },
+      "cheapest_eligible_local_recovery": "TARGETED_MULTIMODAL_FORMULA_REGION_CANDIDATE",
+      "quality_gate": {
+        "benchmark_weighted_matched_content_f1_min": 0.85,
+        "benchmark_reference_coverage_at_f1_0_5_min": 0.9,
+        "all_residual_targets_materialized_or_explicitly_abstained": true,
+        "no_regression_on_existing_codeformulav2_pass_set": true,
+        "region_provenance_coverage_min": 1
+      },
+      "provenance": [
+        "source_pdf_sha256",
+        "page_number",
+        "formula PDF bbox",
+        "CodeFormula failure diagnostic",
+        "candidate lineage"
+      ],
+      "fallthrough": "Candidate abstention/failure/disagreement -> authoritative PDF/page-region Codex; unresolved formula used as evidence -> HUMAN_REVIEW.",
+      "resource_ceiling": {
+        "peak_vram_mib": 12288,
+        "peak_rss_mib": 24576,
+        "cold_load_seconds": 120,
+        "warm_region_seconds": 30
+      },
+      "semantic_control": "Promotion requires contemporaneous Codex interpretation of the same authoritative PDF formula regions on the residual set; scientific conclusions must agree even if LaTeX surface forms differ.",
+      "candidate_family_after_contract": "LOCAL_MULTIMODAL_REGION_MODEL"
+    },
+    {
+      "id": "TABLE_RESIDUAL_AFTER_FAST_ACCURATE_PADDLE",
+      "opener": {
+        "production_signal": "TableFormer FAST is unusable, targeted ACCURATE still has no non-empty grid, and PP-TableMagic either fails to materialize or yields an intrinsically unusable grid (<1 row, <1 column, or <0.35 nonempty-cell ratio).",
+        "oracle_forbidden_in_routing": true
+      },
+      "cheapest_eligible_local_recovery": "TARGETED_MULTIMODAL_TABLE_REGION_CANDIDATE",
+      "quality_gate": {
+        "benchmark_weighted_content_f1_min": 0.8,
+        "benchmark_weighted_aligned_cell_f1_min": 0.75,
+        "residual_target_materialization_rate_min": 1,
+        "region_provenance_coverage_min": 1,
+        "healthy_table_regression_allowed": false
+      },
+      "provenance": [
+        "source_pdf_sha256",
+        "page_number",
+        "validated table PDF bbox",
+        "FAST/ACCURATE/Paddle diagnostics",
+        "candidate lineage"
+      ],
+      "fallthrough": "No usable grid or quality/provenance failure -> authoritative PDF region Codex; evidence-critical unresolved table -> HUMAN_REVIEW.",
+      "resource_ceiling": {
+        "peak_vram_mib": 12288,
+        "peak_rss_mib": 24576,
+        "cold_load_seconds": 120,
+        "warm_region_seconds": 30
+      },
+      "semantic_control": "Promotion requires contemporaneous STANDARD Codex answers over the same authoritative table regions for benchmark questions whose answers depend on cell relationships; local candidate must agree on grounded values/relationships.",
+      "candidate_family_after_contract": "LOCAL_MULTIMODAL_REGION_MODEL"
+    },
+    {
+      "id": "UNCAPTIONED_OR_SEMANTICALLY_RICH_FIGURE_CHART",
+      "opener": {
+        "production_signal": "A downstream evidence request requires information from a figure/chart/diagram whose extracted caption is absent or does not contain the needed quantitative/relational content; no visual-semantic pass is opened merely because a picture exists.",
+        "oracle_forbidden_in_routing": true
+      },
+      "cheapest_eligible_local_recovery": "TARGETED_MULTIMODAL_FIGURE_REGION_CANDIDATE",
+      "quality_gate": {
+        "annotated_fact_precision_min": 0.95,
+        "annotated_fact_recall_min": 0.9,
+        "numeric_value_exact_or_tolerance_accuracy_min": 0.95,
+        "label_relation_accuracy_min": 0.9,
+        "region_provenance_coverage_min": 1,
+        "fabricated_fact_tolerance": 0
+      },
+      "provenance": [
+        "source_pdf_sha256",
+        "page_number",
+        "figure/chart PDF bbox",
+        "linked caption block when present",
+        "question/evidence need that opened visual semantics",
+        "candidate lineage"
+      ],
+      "fallthrough": "Low confidence, unsupported visual type, disagreement, or missing provenance -> authoritative PDF/figure Codex; unresolved evidence-critical visual -> HUMAN_REVIEW.",
+      "resource_ceiling": {
+        "peak_vram_mib": 14336,
+        "peak_rss_mib": 24576,
+        "cold_load_seconds": 120,
+        "warm_region_seconds": 45
+      },
+      "semantic_control": "Each promotion region requires contemporaneous Codex vision/authoritative-PDF control using the same evidence question and source region; local facts and final grounded answer must agree.",
+      "candidate_family_after_contract": "LOCAL_MULTIMODAL_CHART_DIAGRAM_MODEL"
+    },
+    {
+      "id": "LAYOUT_OR_READING_ORDER_ANOMALY",
+      "opener": {
+        "production_signal": "Lexical content is substantially present but deterministic layout diagnostics fail, including duplicate-block ratio >0.20, overlapping/interleaved column order, or native-vs-structure same-page lexical F1 >=0.85 with ordered-bigram F1 <0.70.",
+        "oracle_forbidden_in_routing": true
+      },
+      "cheapest_eligible_local_recovery": "TARGETED_LAYOUT_RECONSTRUCTION_WITHOUT_WHOLE_DOCUMENT_REPARSE",
+      "quality_gate": {
+        "benchmark_ordered_bigram_f1_min": 0.9,
+        "benchmark_text_token_f1_min": 0.93,
+        "max_token_f1_regression_vs_native": 0.02,
+        "page_and_block_provenance_coverage_min": 1
+      },
+      "provenance": [
+        "source_pdf_sha256",
+        "page_number",
+        "original native blocks",
+        "layout diagnostic flags",
+        "candidate block bboxes/order and lineage"
+      ],
+      "fallthrough": "If corrected order cannot be established without losing lexical content/provenance, retain authoritative page and use Codex for evidence-critical interpretation.",
+      "resource_ceiling": {
+        "peak_vram_mib": 8192,
+        "peak_rss_mib": 16384,
+        "cold_load_seconds": 60,
+        "warm_page_seconds": 20
+      },
+      "semantic_control": "For promotion, contemporaneous Codex controls on the authoritative PDF must agree with downstream EXTRACT questions whose answer changes if reading order is wrong.",
+      "candidate_family_after_contract": "LOCAL_LAYOUT_OR_OCR_STRUCTURE_RECOVERY"
+    },
+    {
+      "id": "SEMANTIC_EXTRACT_AMBIGUITY",
+      "opener": {
+        "production_signal": "Deterministic/specialized recovery has complete provenance but cannot uniquely select evidence, or a bounded EXTRACT case is known to be model-variant under current controls. Candidate scope must be bounded to <=4 authoritative pages and require no external-web freshness.",
+        "oracle_forbidden_in_routing": true
+      },
+      "cheapest_eligible_local_recovery": "LOCAL_SEMANTIC_EXTRACT_CANDIDATE",
+      "quality_gate": {
+        "evidence_quote_coverage_at_f1_0_5_min": 0.95,
+        "evidence_precision_at_f1_0_5_min": 0.95,
+        "page_agreement_on_passing_matches_min": 0.95,
+        "evidence_type_agreement_min": 0.95,
+        "fabricated_or_unlocatable_evidence_tolerance": 0,
+        "provenance_coverage_min": 1,
+        "eligible_remote_call_avoidance_fraction_min": 0.5,
+        "projected_remote_input_token_reduction_fraction_min": 0.3
+      },
+      "provenance": [
+        "source_pdf_sha256",
+        "bounded authoritative page set",
+        "exact evidence quote",
+        "page locator and optional bbox",
+        "candidate model/prompt/schema lineage"
+      ],
+      "fallthrough": "Any failed quote/page/provenance gate, confidence failure, or candidate/control disagreement -> current STANDARD Codex authoritative-PDF EXTRACT; unresolved conflict -> HUMAN_REVIEW.",
+      "resource_ceiling": {
+        "peak_vram_mib": 16384,
+        "peak_rss_mib": 32768,
+        "cold_load_seconds": 120,
+        "warm_job_seconds": 60
+      },
+      "semantic_control": "Promotion is based on contemporaneous candidate-vs-STANDARD-Codex controls over the exact same authoritative PDF pages and request, not historical output alone.",
+      "candidate_family_after_contract": "LOCAL_TEXT_REASONING_MODEL_WITH_SCHEMA_AND_CITATION_OUTPUT"
+    },
+    {
+      "id": "SEMANTIC_VERIFY_AMBIGUITY",
+      "opener": {
+        "production_signal": "VERIFY has a valid radius-0 cited authoritative page but deterministic checks cannot resolve support/contradiction, and all lower document-recovery tiers have either passed or explicitly abstained.",
+        "oracle_forbidden_in_routing": true
+      },
+      "cheapest_eligible_local_recovery": "LOCAL_SEMANTIC_VERIFY_CANDIDATE_RADIUS_0",
+      "quality_gate": {
+        "verified_decision_agreement_min": 1,
+        "accepted_evidence_ids_exact_agreement_min": 1,
+        "provenance_coverage_min": 1,
+        "fabricated_or_unlocatable_evidence_tolerance": 0,
+        "eligible_remote_call_avoidance_fraction_min": 0.5,
+        "projected_remote_input_token_reduction_fraction_min": 0.3
+      },
+      "provenance": [
+        "source_pdf_sha256",
+        "exact cited page",
+        "evidence id and quote",
+        "local verification rationale constrained to cited page",
+        "candidate model/prompt/schema lineage"
+      ],
+      "fallthrough": "Any decision/evidence-set mismatch, missing page, low confidence, or unsupported modality -> current STANDARD Codex radius-0 VERIFY; unresolved conflict -> HUMAN_REVIEW.",
+      "resource_ceiling": {
+        "peak_vram_mib": 16384,
+        "peak_rss_mib": 32768,
+        "cold_load_seconds": 120,
+        "warm_job_seconds": 45
+      },
+      "semantic_control": "Every promotion case requires contemporaneous STANDARD Codex radius-0 verification on the same evidence/page; the local candidate must match verified decision and accepted evidence-id set exactly.",
+      "candidate_family_after_contract": "LOCAL_TEXT_REASONING_MODEL_WITH_SCHEMA_AND_CITATION_OUTPUT"
+    }
+  ],
+  "benchmark_control_policy": {
+    "sampling": [
+      "Use residual-triggering cases only; do not re-run healthy born-digital pages merely to increase sample size.",
+      "Retain the seven-paper/73-page born-digital seed for non-regression checks of already-promoted structure/formula/table behavior.",
+      "Use preserved EXTRACT/VERIFY calibration events as selection evidence, but promotion quality is judged against contemporaneous controls."
+    ],
+    "contemporaneous_codex_control": [
+      "Use the production semantic backend/model tier current at benchmark time.",
+      "Hydrate the original authoritative PDF/page/region, not candidate Markdown as the control context.",
+      "Use the same evidence question/request and compare structured result fields plus exact usage telemetry.",
+      "Do not materialize benchmark candidate/control results into scientific evidence state."
+    ],
+    "fail_closed": "A candidate that cannot complete its benchmark without provenance loss, runtime instability, or an authoritative control is not promotable."
+  },
+  "minimum_additional_benchmark_cases": [
+    {
+      "case_id": "scan-mixed-quality-v1",
+      "new_source_required": true,
+      "minimum_content": "One small scientific PDF containing at least one clean image-only/textless page and one degraded or low-confidence scanned textual page.",
+      "exercises": [
+        "SCAN_IMAGE_ONLY_OR_TEXTLESS_PAGE",
+        "LOW_CONFIDENCE_TEXT_OR_OCR_RECOVERY"
+      ],
+      "required_annotations": [
+        "source PDF SHA-256",
+        "page numbers",
+        "human-checked transcription or Mathpix reference",
+        "text-region bboxes where feasible"
+      ]
+    },
+    {
+      "case_id": "semantic-visuals-v1",
+      "new_source_required": true,
+      "minimum_content": "One scientific PDF with at least one quantitative chart whose answerable facts are not fully stated in the caption and at least one diagram/figure whose semantics require visual relationships.",
+      "exercises": [
+        "UNCAPTIONED_OR_SEMANTICALLY_RICH_FIGURE_CHART"
+      ],
+      "required_annotations": [
+        "source PDF SHA-256",
+        "figure/chart page+bbox",
+        "question/answer facts with numeric tolerance where applicable",
+        "linked caption text when present"
+      ]
+    },
+    {
+      "case_id": "malformed-layout-v1",
+      "new_source_required": true,
+      "minimum_content": "One born-digital or hybrid PDF with a malformed/garbled text layer or demonstrable multi-column reading-order anomaly while the visible page remains legible.",
+      "exercises": [
+        "LAYOUT_OR_READING_ORDER_ANOMALY",
+        "LOW_CONFIDENCE_TEXT_OR_OCR_RECOVERY"
+      ],
+      "required_annotations": [
+        "source PDF SHA-256",
+        "affected pages",
+        "human-checked reading order",
+        "native/structure diagnostic snapshot"
+      ]
+    },
+    {
+      "case_id": "existing-formula-table-residuals",
+      "new_source_required": false,
+      "minimum_content": "Reuse the existing seven-paper corpus and only any formula/table targets that remain after the already-promoted specialized paths.",
+      "exercises": [
+        "FORMULA_RESIDUAL_AFTER_CODEFORMULAV2",
+        "TABLE_RESIDUAL_AFTER_FAST_ACCURATE_PADDLE"
+      ]
+    },
+    {
+      "case_id": "preserved-semantic-ambiguity-set",
+      "new_source_required": false,
+      "minimum_content": "Select bounded EXTRACT/VERIFY jobs from preserved calibration evidence where current controls showed model variance or evidence ambiguity; no new PDF is required if authoritative source artifacts remain available.",
+      "exercises": [
+        "SEMANTIC_EXTRACT_AMBIGUITY",
+        "SEMANTIC_VERIFY_AMBIGUITY"
+      ]
+    }
+  ],
+  "candidate_selection_gate": {
+    "status": "CLOSED_UNTIL_THIS_CONTRACT_IS_DURABLE",
+    "concrete_models_named_here": false,
+    "families_to_consider_after_checkpoint": [
+      "local OCR with layout/confidence and page/bbox output",
+      "local multimodal region model for charts/diagrams and only exhausted formula/table residuals",
+      "local text reasoning model with structured citation/quote output that fits one RTX A4500"
+    ],
+    "exclusions": [
+      "no broad whole-document parser bakeoff",
+      "no global OCR",
+      "no VLM on every page",
+      "no embeddings/reranking work in this stage unless a separate measured residual opens it",
+      "no remote OCR/VLM API fallback",
+      "no model/runtime installation before contract durability"
+    ]
+  },
+  "promotion_sequence": [
+    "Durably merge this contract and CI lock.",
+    "Acquire/materialize only the three missing source cases above and record their hashes/annotations; keep bulky PDFs outside Git.",
+    "Select concrete candidate models within the three allowed families and perform license/runtime review before downloads.",
+    "Run deterministic opener diagnostics first; invoke candidates only on opened pages/regions/jobs.",
+    "Record quality, provenance, resource, latency, exact semantic-token telemetry, and contemporaneous Codex controls.",
+    "Promote only residual families that pass every hard gate; otherwise retain fall-through to Codex/human.",
+    "Update localization-matrix.v2 or create the next measured version and CI-lock any production change.",
+    "Run a separate bounded Lambda integration gate before sustained research is reconsidered."
+  ]
+}
