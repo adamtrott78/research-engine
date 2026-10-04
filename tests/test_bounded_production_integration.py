@@ -98,7 +98,7 @@ def test_production_env_manages_sidecar_feature_gate_and_timeout():
     for text in (example, configure):
         assert "RESEARCH_ENGINE_DOCUMENT_SIDECAR_ENABLED=1" in text
         assert "RESEARCH_ENGINE_DOCUMENT_SIDECAR_SPECIALIZED_ENABLED=1" in text
-        assert "RESEARCH_ENGINE_DOCUMENT_STRUCTURE_GPU_INDEX=0" in text
+        assert "RESEARCH_ENGINE_DOCUMENT_STRUCTURE_GPU_INDEX=1" in text
         assert "RESEARCH_ENGINE_DOCUMENT_SIDECAR_TIMEOUT_SECONDS=900" in text
 
 
