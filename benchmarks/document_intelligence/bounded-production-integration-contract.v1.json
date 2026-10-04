@@ -7,7 +7,7 @@
     "document_sidecar_enabled": "RESEARCH_ENGINE_DOCUMENT_SIDECAR_ENABLED=1",
     "specialized_local_models": "RESEARCH_ENGINE_DOCUMENT_SIDECAR_SPECIALIZED_ENABLED=1",
     "sidecar_timeout_seconds": 900,
-    "structure_gpu_index": 0,
+    "structure_gpu_index": 1,
     "formula_gpu_index": 0,
     "table_gpu_index": 1
   },
