@@ -147,6 +147,16 @@ class DocumentSidecarCompiler:
         return PaperPackage.model_validate_json(path.read_text(encoding="utf-8"))
 
     @staticmethod
+    def _single_runtime_json(output_dir: Path) -> Path:
+        candidates = sorted(output_dir.glob("*.json"))
+        if len(candidates) != 1:
+            raise RuntimeError(
+                f"expected exactly one runtime JSON in {output_dir}, "
+                f"found {len(candidates)}: {[path.name for path in candidates]}"
+            )
+        return candidates[0]
+
+    @staticmethod
     def _empty_fast_tables(
         package: PaperPackage,
         package_root: Path,
@@ -260,7 +270,7 @@ class DocumentSidecarCompiler:
         )
 
         native_package = normalize_docling_document(
-            docling_json_path=raw_native / "source.json",
+            docling_json_path=self._single_runtime_json(raw_native),
             source_pdf_path=source_pdf,
             source_artifact_id=source_artifact_id,
             source_pdf_sha256=source_sha256,
@@ -269,7 +279,7 @@ class DocumentSidecarCompiler:
             docling_mode="native",
         )
         standard_package = normalize_docling_document(
-            docling_json_path=raw_standard / "source.json",
+            docling_json_path=self._single_runtime_json(raw_standard),
             source_pdf_path=source_pdf,
             source_artifact_id=source_artifact_id,
             source_pdf_sha256=source_sha256,
@@ -340,7 +350,7 @@ class DocumentSidecarCompiler:
                     ),
                 )
                 accurate_nonempty = self._accurate_has_nonempty_table(
-                    output_dir / "source.json"
+                    self._single_runtime_json(output_dir)
                 )
                 accurate_results.append(
                     {
