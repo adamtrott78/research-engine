@@ -433,9 +433,16 @@ class DocumentSidecarCompiler:
                 cache_path=final,
                 wall_time_ms=wall_ms,
                 routing_summary=receipt.get("routing_summary") or {},
-                local_inference_summary=(
-                    receipt.get("local_inference_summary") or {}
-                ),
+                local_inference_summary={
+                    "cache_hit": True,
+                    "formula_requests": 0,
+                    "table_requests": 0,
+                    "broker_current": (
+                        self.local_inference.health()
+                        if self.local_inference is not None
+                        else {"enabled": False}
+                    ),
+                },
             )
             return {
                 **receipt,
