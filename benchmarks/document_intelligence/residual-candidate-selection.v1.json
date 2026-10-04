@@ -1,0 +1,213 @@
+{
+  "schema_version": 1,
+  "task": "research-engine-local-document-pipeline-v1",
+  "stage": "residual_escalation_and_local_semantic_fallbacks",
+  "baseline_research_engine_sha": "9d2e56513f134e4dbb83970402ff9feccccc9fb3",
+  "governing_contract": "benchmarks/document_intelligence/residual-escalation-contract.v1.json",
+  "status": "SELECTED_FOR_BENCHMARK_NOT_INSTALLED",
+  "selected_at": "2026-10-03",
+  "selection_principles": [
+    "Choose the smallest credible local component for each newly opened residual family.",
+    "Prefer document-specialized recovery before a general multimodal/semantic model.",
+    "Do not replace or re-benchmark already-promoted CodeFormulaV2 or FAST -> ACCURATE -> PP-TableMagic paths.",
+    "A selected candidate has no production authority; it must pass the governing residual-specific quality, provenance, resource, latency, and contemporaneous-Codex controls.",
+    "No candidate is globally enabled and no weights/runtime are downloaded by this selection checkpoint.",
+    "A single general candidate may cover both bounded text semantics and visual fallback only if each role passes its own independent residual gate."
+  ],
+  "candidates": [
+    {
+      "id": "paddleocr-pp-ocrv6-medium",
+      "role": "PRIMARY_TARGETED_OCR_LAYOUT_RECOVERY",
+      "priority": 1,
+      "provider": "PaddlePaddle",
+      "component": "PaddleOCR General OCR pipeline",
+      "model_name": "PP-OCRv6_medium",
+      "runtime_selection": {
+        "package": "paddleocr",
+        "intended_version": "3.7.0",
+        "pipeline": "PP-OCRv6",
+        "execution_scope": "page image only when scan/text residual opener fires",
+        "local_only": true,
+        "downloads_now": false,
+        "exact_weight_checksums": "CAPTURE_AT_BOUNDED_PREFETCH_GATE"
+      },
+      "source_evidence": {
+        "official_docs": "https://www.paddleocr.ai/main/en/version3.x/pipeline_usage/OCR.html",
+        "official_repository": "https://github.com/PaddlePaddle/PaddleOCR",
+        "observed_current_docs": [
+          "PP-OCRv6_medium is the default general OCR model released with PaddleOCR 3.7.",
+          "The general OCR pipeline exposes detection and recognition modules suitable for page-scoped recovery.",
+          "PaddleOCR project code is Apache-2.0."
+        ]
+      },
+      "residual_eligibility": [
+        "SCAN_IMAGE_ONLY_OR_TEXTLESS_PAGE",
+        "LOW_CONFIDENCE_TEXT_OR_OCR_RECOVERY",
+        "LAYOUT_OR_READING_ORDER_ANOMALY"
+      ],
+      "forbidden_uses": [
+        "healthy born-digital pages",
+        "whole-corpus OCR rerun",
+        "semantic EXTRACT or VERIFY replacement",
+        "formula pages already handled successfully by CodeFormulaV2",
+        "tables already recovered by the promoted table cascade"
+      ],
+      "selection_reason": "Cheapest current purpose-built text recovery path in the already-used Paddle ecosystem; it should be tested before any VLM for scan/text residuals.",
+      "license_review": {
+        "software_license": "Apache-2.0",
+        "model_weight_license_status": "REQUIRE_EXACT_WEIGHT_METADATA_REVIEW_BEFORE_DOWNLOAD",
+        "deployment_decision": "BENCHMARK_SELECTION_ONLY"
+      },
+      "resource_policy": {
+        "must_meet_contract_residual_ceiling": true,
+        "target_peak_vram_mib_lte": 8192,
+        "target_peak_rss_mib_lte": 16384,
+        "target_cold_load_seconds_lte": 60,
+        "target_warm_page_seconds_lte": 10
+      }
+    },
+    {
+      "id": "paddleocr-vl-1.6",
+      "role": "PRIMARY_DOCUMENT_REGION_MULTIMODAL_RECOVERY",
+      "priority": 2,
+      "provider": "PaddlePaddle",
+      "model_repo": "PaddlePaddle/PaddleOCR-VL-1.6",
+      "pinned_revision": "c5630abae1d940eafe0697512a0325494b02ab42",
+      "runtime_selection": {
+        "preferred_api": "PaddleOCRVL(pipeline_version='v1.6')",
+        "source_artifact_size_gb": 1.93,
+        "execution_scope": "validated page/region crop only after specialized recovery is exhausted or visual semantics are explicitly required",
+        "local_only": true,
+        "downloads_now": false
+      },
+      "source_evidence": {
+        "official_model_card": "https://huggingface.co/PaddlePaddle/PaddleOCR-VL-1.6",
+        "pinned_commit": "https://huggingface.co/PaddlePaddle/PaddleOCR-VL-1.6/commit/c5630abae1d940eafe0697512a0325494b02ab42",
+        "official_docs": "https://www.paddleocr.ai/latest/version3.x/pipeline_usage/PaddleOCR-VL.html",
+        "observed_current_metadata": [
+          "Apache-2.0 model metadata.",
+          "Image-text model explicitly tagged for OCR, document parsing, layout, tables, formulas, and charts.",
+          "Official local PaddleOCR usage emits JSON/Markdown derived output.",
+          "Repository artifact set is approximately 1.93 GB."
+        ]
+      },
+      "residual_eligibility": [
+        "UNCAPTIONED_OR_SEMANTICALLY_RICH_FIGURE_CHART",
+        "FORMULA_RESIDUAL_AFTER_CODEFORMULAV2",
+        "TABLE_RESIDUAL_AFTER_FAST_ACCURATE_PADDLE",
+        "LAYOUT_OR_READING_ORDER_ANOMALY"
+      ],
+      "forbidden_uses": [
+        "every-page VLM parsing",
+        "replacement of healthy native/standard structure",
+        "replacement of CodeFormulaV2 when CodeFormulaV2 passes",
+        "replacement of FAST/ACCURATE/Paddle when that cascade produces a usable grid",
+        "semantic EXTRACT or VERIFY suppression without a separate semantic gate"
+      ],
+      "selection_reason": "Document-specialized, materially smaller than general VLMs, and directly covers chart/table/formula/layout visual residuals; therefore it is the first multimodal candidate before a general foundation model.",
+      "license_review": {
+        "model_license": "Apache-2.0",
+        "deployment_decision": "PASS_FOR_BOUNDED_BENCHMARK_SUBJECT_TO_RUNTIME_DEPENDENCY_REVIEW",
+        "redistribution": "Retain license/attribution obligations if weights are ever redistributed; current intended scope is internal local inference."
+      },
+      "resource_policy": {
+        "must_meet_contract_residual_ceiling": true,
+        "target_peak_vram_mib_lte": 14336,
+        "target_peak_rss_mib_lte": 24576,
+        "target_cold_load_seconds_lte": 120,
+        "target_warm_region_seconds_lte": 45
+      }
+    },
+    {
+      "id": "qwen3.5-4b",
+      "role": "PRIMARY_BOUNDED_LOCAL_SEMANTIC_AND_GENERAL_VISUAL_FALLBACK",
+      "priority": 3,
+      "provider": "Qwen",
+      "model_repo": "Qwen/Qwen3.5-4B",
+      "pinned_revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+      "runtime_selection": {
+        "preferred_servers": [
+          "vLLM",
+          "SGLang"
+        ],
+        "source_artifact_size_gb": 9.34,
+        "execution_scope": "text-only bounded <=4 authoritative pages for EXTRACT; radius-0 cited page for VERIFY; validated figure crop only if PaddleOCR-VL-1.6 fails/abstains",
+        "local_only": true,
+        "downloads_now": false
+      },
+      "source_evidence": {
+        "official_model_card": "https://huggingface.co/Qwen/Qwen3.5-4B",
+        "pinned_commit": "https://huggingface.co/Qwen/Qwen3.5-4B/commit/851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+        "observed_current_metadata": [
+          "Apache-2.0 model metadata.",
+          "Post-trained 4B causal language model with vision encoder.",
+          "Native multimodal model with 262144-token context reported by the model card.",
+          "Official model card documents Transformers, vLLM, and SGLang local serving.",
+          "Repository artifact set is approximately 9.34 GB."
+        ]
+      },
+      "residual_eligibility": [
+        "SEMANTIC_EXTRACT_AMBIGUITY",
+        "SEMANTIC_VERIFY_AMBIGUITY",
+        "UNCAPTIONED_OR_SEMANTICALLY_RICH_FIGURE_CHART"
+      ],
+      "visual_fallback_condition": "Open visual use only after PaddleOCR-VL-1.6 fails, abstains, or cannot meet the visual residual quality gate.",
+      "semantic_constraints": [
+        "EXTRACT input is bounded to <=4 authoritative PDF pages and no external-web freshness dependency.",
+        "VERIFY input is the exact radius-0 cited authoritative page.",
+        "Candidate output must use a constrained structured schema with exact quotes/page locators; fabricated or unlocatable evidence tolerance is zero.",
+        "Candidate disagreement or low confidence always falls through to current STANDARD Codex and then human review.",
+        "Model's reported long context is not permission to hydrate whole documents; the governing residual contract's bounded context remains mandatory."
+      ],
+      "selection_reason": "Small current post-trained model with both language reasoning and vision, allowing one benchmark owner to test bounded local semantics and serve only as the general visual fallback if the much smaller document VLM cannot resolve a region.",
+      "license_review": {
+        "model_license": "Apache-2.0",
+        "deployment_decision": "PASS_FOR_BOUNDED_BENCHMARK_SUBJECT_TO_RUNTIME_AND_MEMORY_REVIEW",
+        "redistribution": "Retain Apache-2.0 obligations if redistributed; current intended scope is internal local inference."
+      },
+      "resource_policy": {
+        "disk_size_is_not_vram_evidence": true,
+        "must_measure_peak_vram": true,
+        "must_meet_contract_residual_ceiling": true,
+        "peak_vram_mib_lte": 16384,
+        "peak_rss_mib_lte": 32768,
+        "cold_load_seconds_lte": 120,
+        "extract_warm_job_seconds_lte": 60,
+        "verify_warm_job_seconds_lte": 45
+      }
+    }
+  ],
+  "runtime_sequence": [
+    "Do not download or install any selected model until the three missing source-case manifests are durable.",
+    "When source cases are ready, first open only PP-OCRv6_medium against scan/text residuals.",
+    "Open PaddleOCR-VL-1.6 only on figure/chart or exhausted formula/table/layout residuals that satisfy its opener.",
+    "Open Qwen3.5-4B semantic benchmarking only on preserved/bounded semantic ambiguity cases with contemporaneous STANDARD Codex controls.",
+    "Use Qwen3.5-4B for visual semantics only when PaddleOCR-VL-1.6 fails or abstains; do not run both by default.",
+    "Each model family must have one owner, bounded queues, exact model/runtime lineage, and no download during the actual quality gate."
+  ],
+  "rejected_or_deferred_alternatives": [
+    {
+      "candidate": "Qwen/Qwen3-VL-8B-Instruct-FP8",
+      "decision": "DEFER",
+      "reason": "Official FP8 artifact is about 10.6 GB and Apache-2.0, but the selected Qwen3.5-4B already supplies a smaller/current general multimodal fallback plus text semantics; adding an independent 8B VLM before measured failure would violate the minimum-candidate objective."
+    },
+    {
+      "candidate": "Qwen/Qwen3-8B-AWQ",
+      "decision": "DEFER",
+      "reason": "The 4-bit AWQ model is compact and Apache-2.0, but Qwen3.5-4B is newer, natively multimodal, and selected to cover both bounded semantics and conditional visual fallback. Reopen only if Qwen3.5-4B fails semantic quality while satisfying resource gates."
+    },
+    {
+      "candidate": "global embeddings/reranking",
+      "decision": "OUT_OF_SCOPE",
+      "reason": "No measured residual in this stage requires it; the governing contract explicitly keeps embeddings/reranking deferred."
+    }
+  ],
+  "promotion_boundary": {
+    "no_production_change_from_selection": true,
+    "no_localization_matrix_change_yet": true,
+    "no_job_tier_change": true,
+    "no_daemon_lifecycle_change": true,
+    "no_scientific_state_materialization": true,
+    "next_gate": "MISSING_SOURCE_CASE_MANIFESTS_PLUS_BOUNDED_RUNTIME_PREFETCH_AND_LICENSE_RECEIPTS"
+  }
+}

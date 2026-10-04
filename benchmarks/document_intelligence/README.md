@@ -610,3 +610,25 @@ Concrete new OCR, multimodal, and local-agent models are deliberately not named
 or installed by this first contract checkpoint. Candidate selection opens only
 after the contract is durable.
 
+## Residual fallback candidate selection
+
+After `residual-escalation-contract.v1.json` became durable, the initial
+benchmark-only candidate set was reduced to three primary families in
+`residual-candidate-selection.v1.json`:
+
+- `PP-OCRv6_medium` for page-scoped scan/text and layout recovery;
+- `PaddleOCR-VL-1.6` for document-specific figure/chart and exhausted
+  formula/table/layout regions;
+- `Qwen3.5-4B` for bounded local semantic EXTRACT/VERIFY experiments and,
+  only if the smaller document VLM fails or abstains, general visual fallback.
+
+Selection is not promotion. No weights/runtime are downloaded by the selection
+checkpoint, no production route or job tier changes, and the research daemon
+lifecycle remains unchanged. The three missing source-case manifests must be
+durable before bounded runtime prefetch begins.
+
+The candidate sequence is intentionally asymmetric: purpose-built OCR is tried
+before a VLM; the compact document VLM is tried before the general multimodal
+model; and the general model is never run on every page. Already-promoted
+CodeFormulaV2 and FAST -> ACCURATE -> PP-TableMagic paths remain unchanged.
+
