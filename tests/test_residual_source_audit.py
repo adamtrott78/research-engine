@@ -324,6 +324,11 @@ def test_source_audit_runner_is_bounded_and_uses_existing_runtimes_only():
     assert "docling_native.py" in script
     assert "docling_standard_no_ocr.py" in script
 
+    assert 'echo "STRUCTURE_GPU_PROBE_INDEX=$index" >&2' in script
+    assert 'echo "STRUCTURE_GPU_PROBE_FREE_MIB=$free_mib" >&2' in script
+    assert "file=sys.stderr" in script
+    assert 'structure_gpu="$(select_structure_gpu)"' in script
+
     forbidden = [
         "pip install paddleocr",
         "pip install vllm",
