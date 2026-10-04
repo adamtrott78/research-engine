@@ -718,6 +718,19 @@ def main() -> None:
                 "broker_final_health": broker.health(),
             }
             print(json.dumps(result, default=str))
+        except Exception as exc:
+            print(
+                json.dumps(
+                    {
+                        "decision": "FAIL",
+                        "error_type": type(exc).__name__,
+                        "error": str(exc),
+                        "broker_health": broker.health(),
+                    },
+                    default=str,
+                )
+            )
+            raise
         finally:
             broker.close()
     elif args.cmd.startswith("bounded-integration-"):

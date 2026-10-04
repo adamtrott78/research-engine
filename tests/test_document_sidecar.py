@@ -162,3 +162,41 @@ def test_schema_contains_document_sidecar_telemetry():
     assert "FAILED_DERIVED_SIDECAR" in schema
     assert "routing_summary JSONB" in schema
     assert "local_inference_summary JSONB" in schema
+
+
+
+def test_sidecar_discovers_hash_named_docling_runtime_json(tmp_path: Path):
+    output = tmp_path / "raw" / "native"
+    output.mkdir(parents=True)
+    runtime_json = output / (
+        "054aaba60e8b6cc4dfc5a35dab9f1adc6584bb9ef6ea68b2b9ced1cb71d52f22.json"
+    )
+    runtime_json.write_text("{}\n", encoding="utf-8")
+
+    assert DocumentSidecarCompiler._single_runtime_json(output) == runtime_json
+
+
+def test_sidecar_runtime_json_discovery_fails_closed_on_ambiguous_outputs(
+    tmp_path: Path,
+):
+    output = tmp_path / "raw"
+    output.mkdir()
+    (output / "a.json").write_text("{}\n", encoding="utf-8")
+    (output / "b.json").write_text("{}\n", encoding="utf-8")
+
+    try:
+        DocumentSidecarCompiler._single_runtime_json(output)
+    except RuntimeError as exc:
+        assert "expected exactly one runtime JSON" in str(exc)
+        assert "a.json" in str(exc)
+        assert "b.json" in str(exc)
+    else:
+        raise AssertionError("ambiguous runtime outputs must fail closed")
+
+
+def test_sidecar_does_not_hardcode_source_json_runtime_name():
+    source = inspect.getsource(DocumentSidecarCompiler._build_sidecar)
+    assert '"source.json"' not in source
+    assert "_single_runtime_json(raw_native)" in source
+    assert "_single_runtime_json(raw_standard)" in source
+    assert "_single_runtime_json(output_dir)" in source
