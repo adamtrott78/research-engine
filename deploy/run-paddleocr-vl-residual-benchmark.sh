@@ -10,7 +10,6 @@ stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 output_root="$visible_tmp_root/paddleocr-vl-residual-benchmark-$stamp"
 runtime="$state/residual-runtimes/paddleocr-vl-1.6-transformers-4.55.0"
 runtime_ready="$runtime/.workspace-control-ready.json"
-wheelhouse="$state/residual-runtime-wheelhouse"
 model="$state/residual-models/paddleocr-vl-1.6/c5630abae1d940eafe0697512a0325494b02ab42"
 standard_runtime="$state/document-runtimes/docling-standard-no-ocr"
 expected_source_sha="1e0651b6810ecba34a3dbc5b5b0209226f889004607c1f203540a48d64e5a93a"
@@ -51,10 +50,6 @@ echo "=== VERIFY PREFETCHED VLM ==="
 [ -f "$model/model.safetensors" ] || fail "VLM_MODEL_NOT_FOUND" 40
 [ "$(sha256sum "$model/model.safetensors" | awk '{print $1}')" = "$expected_model_sha" ] \
     || fail "VLM_MODEL_SHA_MISMATCH" 41
-wheel="$(find "$wheelhouse" -maxdepth 1 -type f -name 'paddleocr-3.7.0-*.whl' -print)"
-[ "$(printf '%s\n' "$wheel" | sed '/^$/d' | wc -l)" -eq 1 ] || fail "EXPECTED_ONE_PADDLEOCR_WHEEL" 42
-[ "$(sha256sum "$wheel" | awk '{print $1}')" = "c0f0a81ad4112727f30c6fcf986ac0ef6a120d31ee0991a01fae0357ee32d338" ] \
-    || fail "PADDLEOCR_WHEEL_SHA_MISMATCH" 43
 require_stopped
 
 echo
@@ -148,25 +143,40 @@ if [ ! -f "$runtime_ready" ]; then
       "torch==2.8.0" "torchvision==0.23.0"
     "$runtime/bin/python" -m pip install \
       "transformers==4.55.0" "accelerate>=1.6,<2" "protobuf==5.29.5"
-    "$runtime/bin/python" -m pip install "$wheel[doc-parser]"
 fi
-"$runtime/bin/python" - "$runtime_ready" <<'PY'
+"$runtime/bin/python" - "$runtime_ready" "$model" <<'PY'
 import json, pathlib, sys
 import torch, torchvision, transformers
 from google.protobuf import __version__ as protobuf_version
-from paddleocr import PaddleOCRVL
+from transformers import AutoConfig, AutoProcessor
 assert torch.__version__.startswith("2.8.0"), torch.__version__
 assert torchvision.__version__.startswith("0.23.0"), torchvision.__version__
 assert transformers.__version__ == "4.55.0", transformers.__version__
 assert protobuf_version == "5.29.5", protobuf_version
 assert torch.cuda.is_available()
+model_dir=sys.argv[2]
+config=AutoConfig.from_pretrained(
+    model_dir,
+    trust_remote_code=True,
+    local_files_only=True,
+)
+auto_map=getattr(config,"auto_map",{}) or {}
+assert auto_map.get("AutoModelForCausalLM") == "modeling_paddleocr_vl.PaddleOCRVLForConditionalGeneration", auto_map
+processor=AutoProcessor.from_pretrained(
+    model_dir,
+    trust_remote_code=True,
+    local_files_only=True,
+)
+assert processor.__class__.__name__ == "PaddleOCRVLProcessor", processor.__class__.__name__
 payload={
     "torch":torch.__version__,
     "torchvision":torchvision.__version__,
     "transformers":transformers.__version__,
     "protobuf":protobuf_version,
     "cuda":True,
-    "paddleocr_vl_import":"PASS",
+    "loader":"AutoModelForCausalLM+AutoProcessor",
+    "declared_auto_model_for_causal_lm":auto_map["AutoModelForCausalLM"],
+    "processor_class":processor.__class__.__name__,
     "trust_remote_code":"PINNED_LOCAL_MODEL_ONLY",
 }
 pathlib.Path(sys.argv[1]).write_text(json.dumps(payload,indent=2,sort_keys=True)+"\n",encoding="utf-8")
@@ -176,13 +186,11 @@ PY
 require_stopped
 
 echo
-echo "=== RUN EXACTLY THREE TARGETED VLM INFERENCES ==="
+echo "=== RUN EXACTLY THREE TARGETED VLM INFERENCES VIA DECLARED TRANSFORMERS INTERFACE ==="
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
-export PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
-export PADDLEX_HOME="$output_root/paddlex-home"
 export XDG_CACHE_HOME="$output_root/xdg-cache"
-mkdir -p "$PADDLEX_HOME" "$XDG_CACHE_HOME"
+mkdir -p "$XDG_CACHE_HOME"
 
 "$runtime/bin/python" "$helper" \
   --model-dir "$model" \
@@ -192,10 +200,6 @@ mkdir -p "$PADDLEX_HOME" "$XDG_CACHE_HOME"
   --output-dir "$output_root" \
   --output "$report"
 require_stopped
-
-if find "$PADDLEX_HOME" -type f -size +1M -print -quit | grep -q .; then
-    fail "UNEXPECTED_LARGE_PADDLEX_MODEL_CACHE" 48
-fi
 
 echo
 echo "=== FINAL VLM SAFETY CHECK ==="
