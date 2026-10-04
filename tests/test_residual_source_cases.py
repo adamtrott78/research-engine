@@ -72,11 +72,8 @@ def test_scan_case_has_distinct_textless_and_low_confidence_targets():
         "SCAN_IMAGE_ONLY_OR_TEXTLESS_PAGE",
         "LOW_CONFIDENCE_TEXT_OR_OCR_RECOVERY",
     }
-    assert any(
-        "Production opener must independently confirm"
-        in page["acceptance_on_lambda"]
-        for page in data["target_pages"]
-    )
+    assert all(page["audit_metrics"]["opener_fired"] is True for page in data["target_pages"])
+    assert {page["page_index_zero_based"] for page in data["target_pages"]} == {3, 16}
 
 
 def test_semantic_visual_case_has_chart_and_relational_diagram():
