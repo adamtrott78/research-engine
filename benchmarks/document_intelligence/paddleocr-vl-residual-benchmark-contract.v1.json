@@ -53,6 +53,12 @@
       "modifies_model_files": false,
       "fail_closed_on_unexpected_signature": true,
       "rationale": "The pinned PaddleOCR-VL-1.6 custom model calls transformers.masking_utils.create_causal_mask with inputs_embeds, while Transformers 4.55.0 exposes the singular input_embeds parameter. The shim is installed before the custom modeling module loads and only aliases that keyword."
+    },
+    "generation": {
+      "max_new_tokens": 512,
+      "do_sample": false,
+      "use_cache": false,
+      "rationale": "Match the official PaddleOCR-VL-1.6 direct-Transformers example's 512-token generation bound while preserving the model's own generation_config use_cache=false. The prior 2048-token harness cap created unnecessarily long no-cache decoding."
     }
   },
   "authoritative_source": {
@@ -122,6 +128,10 @@
       "per-run direct Transformers generation JSON",
       "runtime package freeze",
       "GPU/RSS telemetry"
+    ],
+    "progress_events": [
+      "VLM_CALL_START",
+      "VLM_CALL_COMPLETE"
     ]
   },
   "hard_resource_ceilings": {
