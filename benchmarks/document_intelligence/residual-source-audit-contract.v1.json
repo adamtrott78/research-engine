@@ -50,8 +50,8 @@
     ],
     "semantic_visuals_v1": [
       "Both registered target pages exist.",
-      "Both target figure labels are found in standard_no_ocr caption blocks.",
-      "Before model prefetch is opened, each target must resolve to exactly one caption-linked figure asset with a PDF bbox."
+      "Each target figure label is found in normalized standard_no_ocr figure-caption linkage; a separately materialized caption block is not required.",
+      "Before model prefetch is opened, each target must resolve to exactly one caption-linked figure region with a PDF bbox."
     ],
     "malformed_layout_v1": [
       "At least one registered target page fires LAYOUT_OR_READING_ORDER_ANOMALY under the durable opener thresholds.",
