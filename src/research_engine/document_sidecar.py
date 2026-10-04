@@ -33,6 +33,7 @@ class DocumentSidecarCompiler:
         local_inference=None,
         specialized_enabled: bool = True,
         structure_gpu_index: int = 0,
+        command_timeout_seconds: float = 900.0,
         command_runner: Callable[..., subprocess.CompletedProcess] | None = None,
     ):
         self.store = store
@@ -45,6 +46,9 @@ class DocumentSidecarCompiler:
         self.local_inference = local_inference
         self.specialized_enabled = bool(specialized_enabled)
         self.structure_gpu_index = int(structure_gpu_index)
+        self.command_timeout_seconds = float(command_timeout_seconds)
+        if self.command_timeout_seconds <= 0:
+            raise ValueError("command_timeout_seconds must be positive")
         self.command_runner = command_runner or subprocess.run
 
     def cache_path(self, sha256: str) -> Path:
@@ -124,6 +128,7 @@ class DocumentSidecarCompiler:
             text=True,
             capture_output=True,
             check=False,
+            timeout=self.command_timeout_seconds,
         )
         stdout_path.parent.mkdir(parents=True, exist_ok=True)
         stdout_path.write_text(
@@ -587,6 +592,9 @@ def document_sidecar_compiler_from_env(
         specialized_enabled=specialized == "1",
         structure_gpu_index=int(
             os.getenv("RESEARCH_ENGINE_DOCUMENT_STRUCTURE_GPU_INDEX", "0")
+        ),
+        command_timeout_seconds=float(
+            os.getenv("RESEARCH_ENGINE_DOCUMENT_SIDECAR_TIMEOUT_SECONDS", "900")
         ),
     )
 
