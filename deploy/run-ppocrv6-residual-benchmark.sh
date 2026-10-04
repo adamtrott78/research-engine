@@ -9,6 +9,7 @@ visible_tmp_root="${WORKSPACE_CONTROL_TMP_ROOT:-$adam/workspace-control-tmp}"
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 output_root="$visible_tmp_root/ppocrv6-residual-benchmark-$stamp"
 runtime="$state/residual-runtimes/ppocrv6-medium-paddle-3.2.0"
+runtime_ready="$runtime/.workspace-control-ready.json"
 wheelhouse="$state/residual-runtime-wheelhouse"
 models="$state/residual-models"
 standard_runtime="$state/document-runtimes/docling-standard-no-ocr"
@@ -134,7 +135,8 @@ require_stopped
 
 echo
 echo "=== BUILD ISOLATED PP-OCRV6 RUNTIME ==="
-if [ ! -x "$runtime/bin/python" ]; then
+if [ ! -f "$runtime_ready" ]; then
+    rm -rf "$runtime"
     python3 -m venv "$runtime"
     "$runtime/bin/python" -m pip install --upgrade pip
     "$runtime/bin/python" -m pip install \
@@ -142,12 +144,19 @@ if [ ! -x "$runtime/bin/python" ]; then
         -i https://www.paddlepaddle.org.cn/packages/stable/cu118/
     "$runtime/bin/python" -m pip install "$wheel"
 fi
-"$runtime/bin/python" - <<'PY'
+"$runtime/bin/python" - "$runtime_ready" <<'PY'
+import json, pathlib, sys
 import paddle
 import paddleocr
 assert paddle.__version__ == "3.2.0", paddle.__version__
 assert paddle.is_compiled_with_cuda()
 assert paddle.device.cuda.device_count() >= 1
+payload={
+    "paddle_version":paddle.__version__,
+    "paddleocr_import":"PASS",
+    "cuda_compiled":True,
+}
+pathlib.Path(sys.argv[1]).write_text(json.dumps(payload,indent=2,sort_keys=True)+"\n",encoding="utf-8")
 print("PADDLE_VERSION="+paddle.__version__)
 print("PADDLEOCR_IMPORT=PASS")
 print("CUDA_DEVICE_COUNT="+str(paddle.device.cuda.device_count()))
