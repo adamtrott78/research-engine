@@ -308,7 +308,7 @@ class DocumentSidecarCompiler:
                 )
                 formula_results.append(
                     self.local_inference.formula_page(
-                        source_pdf=source_pdf,
+                        source_pdf=source_link,
                         page_number=page_number,
                         output_dir=output_dir,
                     )
