@@ -784,3 +784,19 @@ A successful local VLM resource run remains
 `MEASURED_PENDING_HUMAN_AND_CODEX_CONTROL`. Human annotated-fact review must
 pass first; only then may the required contemporaneous authoritative-PDF Codex
 control open before any promotion decision.
+
+### PaddleOCR-VL runtime dependency correction
+
+The first Lambda initialization attempt reached the pinned local
+PaddleOCR-VL-1.6 model but performed zero inference calls because its custom
+Transformers model code imports `torchvision`, which was absent from the
+initial isolated runtime. The model also requested explicit approval to execute
+its pinned custom code.
+
+The corrected runtime pins `torch==2.8.0` with matching
+`torchvision==0.23.0` from the CUDA 12.6 PyTorch wheel index and passes
+`engine_config={"trust_remote_code": True}` only for the already-prefetched,
+checksum-verified PaddleOCR-VL-1.6 local model directory. A runtime-ready
+sentinel is now invalidated and the venv rebuilt when the required Torch,
+TorchVision, or Transformers versions are missing. The failed initialization
+had zero candidate inference calls and therefore contributes no quality result.
