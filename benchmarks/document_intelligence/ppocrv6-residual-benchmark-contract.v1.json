@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "task": "research-engine-local-document-pipeline-v1",
+  "stage": "residual_escalation_and_local_semantic_fallbacks",
+  "baseline_research_engine_sha": "320bfd037ce51dee63dc1ec4bb0e7d5d984d2c5c",
+  "prefetch_receipt": "benchmarks/document_intelligence/residual-model-prefetch-pass.v1.json",
+  "source_case": "benchmarks/document_intelligence/cases/scan-mixed-quality-v1.json",
+  "runner": "deploy/run-ppocrv6-residual-benchmark.sh",
+  "helper": "benchmarks/document_intelligence/run_ppocrv6_residual_benchmark.py",
+  "status": "BOUNDED_PP_OCRV6_RUNTIME_AND_MEASUREMENT",
+  "objective": "Construct one isolated PP-OCRv6 runtime, render only the two promoted scan/text benchmark pages from the authoritative pinned NASA PDF, run the prefetched PP-OCRv6 medium detection/recognition pair from local paths, measure cold/warm latency plus GPU/RSS ceilings, and preserve compact OCR outputs/page images for human quality review before any promotion.",
+  "runtime": {
+    "venv": "~/.research-engine/residual-runtimes/ppocrv6-medium-paddle-3.2.0",
+    "paddlepaddle_package": "paddlepaddle-gpu",
+    "paddlepaddle_version": "3.2.0",
+    "paddlepaddle_cuda_channel": "cu118",
+    "paddleocr_package": "paddleocr",
+    "paddleocr_version": "3.7.0",
+    "paddleocr_wheel_sha256": "c0f0a81ad4112727f30c6fcf986ac0ef6a120d31ee0991a01fae0357ee32d338",
+    "inference_engine": "paddle_static",
+    "disable_modules": [
+      "document orientation classification",
+      "document unwarping",
+      "textline orientation"
+    ],
+    "network_during_inference": "FORBIDDEN_MODEL_DOWNLOADS",
+    "runtime_freeze_required": true
+  },
+  "models": {
+    "detection": {
+      "repo_id": "PaddlePaddle/PP-OCRv6_medium_det",
+      "revision": "8e0f56fb2ef86b461d99cfc7ac5c137738985f61",
+      "inference_pdiparams_sha256": "85218d2e3d98f5a21c58b4220627be923a97aee5db3cc71f39536ab31ac53960"
+    },
+    "recognition": {
+      "repo_id": "PaddlePaddle/PP-OCRv6_medium_rec",
+      "revision": "e5a92bcbc5cc1b494628e458d267778f0704fd7c",
+      "inference_pdiparams_sha256": "1b01c79a914587933f615569e75de54f2e638ebb5d3f3b3c1b38c24ede8c7319"
+    }
+  },
+  "authoritative_source": {
+    "case_id": "scan-mixed-quality-v1",
+    "sha256": "3948255a723380d8844bab31c60298cee00da9334efa377f1d596b306792b6a1",
+    "page_count": 28,
+    "render_dpi": 200,
+    "targets": [
+      {
+        "id": "scan_textless",
+        "page_index_zero_based": 3,
+        "residual": "SCAN_IMAGE_ONLY_OR_TEXTLESS_PAGE",
+        "opener_evidence": {
+          "native_nonspace_characters": 0,
+          "figure_bbox_page_coverage": 1,
+          "opener_fired": true
+        }
+      },
+      {
+        "id": "low_confidence_text",
+        "page_index_zero_based": 16,
+        "residual": "LOW_CONFIDENCE_TEXT_OR_OCR_RECOVERY",
+        "opener_evidence": {
+          "alphabetic_token_ratio": 0.4358974358974359,
+          "native_standard_token_f1": 0.07766990291262137,
+          "native_standard_ordered_bigram_f1": 0.0396039603960396,
+          "native_nonspace_characters": 340,
+          "opener_fired": true
+        }
+      }
+    ]
+  },
+  "inference_plan": {
+    "candidate_model_families": [
+      "paddleocr-pp-ocrv6-medium"
+    ],
+    "model_owner_count": 1,
+    "candidate_inference_calls": 3,
+    "sequence": [
+      "target scan_textless once as first/cold inference",
+      "target low_confidence_text once with models already resident",
+      "target scan_textless a second time as warm-repeat measurement"
+    ],
+    "output_root": "~/adamArchives/Adam/workspace-control-tmp/ppocrv6-residual-benchmark-<UTC stamp>/",
+    "preserve": [
+      "rendered target PNGs",
+      "compact OCR JSON",
+      "runtime package freeze",
+      "hardware/GPU selection facts",
+      "resource and latency report"
+    ]
+  },
+  "hard_resource_ceilings": {
+    "peak_vram_mib_lte": 8192,
+    "peak_rss_mib_lte": 16384,
+    "model_init_seconds_lte": 60,
+    "warm_page_seconds_lte": 10
+  },
+  "quality_boundary": {
+    "automatic_promotion": false,
+    "human_review_required": true,
+    "human_review_materials": [
+      "two authoritative rendered page PNGs",
+      "recognized text with scores and boxes",
+      "native/structure opener evidence"
+    ],
+    "required_before_promotion": [
+      "human-visible-content confirmation for scan page",
+      "human-checked transcription/coverage assessment for both targets",
+      "no hallucinated text or high-confidence fabricated lines",
+      "provenance remains exact page-level",
+      "resource ceilings pass"
+    ],
+    "measurement_success_status": "MEASURED_PENDING_HUMAN_QUALITY"
+  },
+  "forbidden_actions": [
+    "start research-engine-daemon.service",
+    "run OCR on any page other than the two promoted targets except the single warm repeat of the scan target",
+    "download or invoke PaddleOCR-VL-1.6 or Qwen3.5-4B",
+    "invoke Codex or any remote semantic model",
+    "enable production OCR/VLM/local-semantic routing",
+    "write scientific evidence/verification/gap/checkpoint/run/human-review state"
+  ],
+  "next_on_measurement_success": "Return ppocrv6-benchmark-report.json plus the two rendered PNGs for human quality review. Do not promote PP-OCRv6 or open production routing from resource/latency measurements alone."
+}
