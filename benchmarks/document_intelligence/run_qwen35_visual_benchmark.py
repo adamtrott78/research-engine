@@ -177,7 +177,12 @@ def run_call(
     ]
     print(json.dumps({"event": "QWEN_CALL_START", "label": label}, sort_keys=True), flush=True)
     started = time.perf_counter()
-    outputs = llm.chat(messages, sampling_params=sampling, use_tqdm=False)
+    outputs = llm.chat(
+        messages,
+        sampling_params=sampling,
+        use_tqdm=False,
+        chat_template_kwargs={"enable_thinking": False},
+    )
     seconds = time.perf_counter() - started
     generated = outputs[0].outputs[0]
     text = generated.text
@@ -252,7 +257,14 @@ def main() -> int:
             mm_processor_cache_gb=0.25,
         )
         init_seconds = time.perf_counter() - started
-        sampling = SamplingParams(temperature=0.0, max_tokens=512)
+        sampling = SamplingParams(
+            temperature=0.7,
+            top_p=0.8,
+            top_k=20,
+            presence_penalty=1.5,
+            seed=0,
+            max_tokens=512,
+        )
 
         runs = []
         for label, image, prompt, warm in [
