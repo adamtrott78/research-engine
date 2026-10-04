@@ -881,3 +881,36 @@ Each call now emits a flushed `VLM_CALL_START` event before generation and a
 generation is never silent. Model files, weights, prompts, crops, inference
 count, quality thresholds, resource ceilings, and production boundaries remain
 unchanged.
+
+## Completed PaddleOCR-VL result and Qwen3.5-4B visual fallback
+
+The final bounded PaddleOCR-VL-1.6 direct-model run completed all three
+inference calls but did not promote. It exceeded the visual residual VRAM and
+latency ceilings. More importantly, Figure 6 recovered the visible model-name
+inventory but fabricated unsupported numeric table values and collapsed panel
+relations, while Figure 3 recovered many labels but failed to preserve shortcut
+topology. The compact result is retained in
+`paddleocr-vl-human-quality-review.v1.json`.
+
+That fail-closed result opens the previously selected general visual fallback:
+`qwen35-visual-benchmark-contract.v1.json`, executed by
+`deploy/run-qwen35-visual-benchmark.sh`.
+
+The Qwen gate uses the already-prefetched Qwen3.5-4B revision
+`851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a` through vLLM 0.30.0. It
+uses one image per prompt, one sequence, an 8192-token model window, and 65%
+GPU-memory utilization on an otherwise idle selected GPU.
+
+Unlike the Paddle element-recognition prompts, Qwen receives explicit evidence
+questions plus bounded caption facts. Figure 6 must recover the three
+panel/model relationships while leaving all unprinted curve-value estimates
+empty. Figure 3 must recover architecture columns and shortcut relationships.
+Every call must return structured JSON. Unsupported facts must be null/empty,
+and fabricated facts remain a hard failure.
+
+This first Qwen visual gate invokes no Codex control. Human quality review comes
+first. Only if Qwen meets the local visual quality gate may the separate
+contemporaneous authoritative-PDF Codex control open. A successful visual result
+also opens the bounded Qwen local EXTRACT/VERIFY calibration needed to measure
+how much routine remote semantic throughput can be suppressed.
+
