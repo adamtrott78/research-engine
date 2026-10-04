@@ -841,3 +841,23 @@ the documented `OCR:` prompt. If those model-native tasks cannot recover the
 required visual facts/relations, that is a legitimate capability result and
 must fall through to the selected Qwen visual fallback rather than trigger
 another wrapper patch.
+
+### PaddleOCR-VL causal-mask keyword compatibility
+
+The fourth Lambda attempt loaded substantially farther into the direct
+Transformers path and allocated roughly 2.34 GiB of process VRAM, but still
+executed zero candidate inference calls. The failure was:
+
+`TypeError: create_causal_mask() got an unexpected keyword argument 'inputs_embeds'`.
+
+This is a known API mismatch between the pinned PaddleOCR-VL-1.6 custom model
+code and Transformers 4.55.0. The model calls
+`transformers.masking_utils.create_causal_mask(..., inputs_embeds=...)`, while
+Transformers 4.55.0 exposes the singular parameter `input_embeds`.
+
+The benchmark now installs a narrow in-memory compatibility alias before the
+custom modeling module loads. It inspects the installed function signature,
+fails closed if neither expected spelling is present, and otherwise translates
+only `inputs_embeds` to `input_embeds`. No model file, model weight,
+Transformers package, prompt, benchmark region, inference count, quality
+threshold, or production behavior is changed.
