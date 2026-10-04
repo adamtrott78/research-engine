@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "task": "research-engine-local-document-pipeline-v1",
+  "stage": "residual_escalation_and_local_semantic_fallbacks",
+  "benchmark_contract": "benchmarks/document_intelligence/paddleocr-vl-residual-benchmark-contract.v1.json",
+  "research_engine_baseline": "7a26e648ec409c96a3f9b7c8620f566658700894",
+  "status": "RESOURCE_FAIL_SEMANTIC_QUALITY_NOT_PROMOTED",
+  "measurement": {
+    "candidate_inference_calls": 3,
+    "failure": null,
+    "loader": "AutoModelForCausalLM+AutoProcessor",
+    "model_init_seconds": 1.4238369059967226,
+    "peak_process_vram_mib": 19956,
+    "peak_rss_mib": 2802.21484375,
+    "warm_region_seconds_max": 108.51913859699562,
+    "warm_region_seconds_mean": 90.75782314450043
+  },
+  "human_review": {
+    "figure6": {
+      "strengths": [
+        "Recovered visible model-name inventory across all three panels.",
+        "Repeated Figure 6 output was deterministic at the 512-token bound."
+      ],
+      "failures": [
+        "Collapsed the three-panel relations into a synthetic table.",
+        "Fabricated many exact numeric chart values not present as authoritative table data.",
+        "Did not preserve plotted-curves versus explicitly printed numeric labels."
+      ],
+      "fabricated_fact_tolerance_pass": false
+    },
+    "figure3": {
+      "strengths": [
+        "Recovered many visible convolution-layer labels and the VGG-19 heading."
+      ],
+      "failures": [
+        "Flattened/conflated architecture columns.",
+        "Did not recover the residual-shortcut relation.",
+        "Did not recover the dotted-shortcut dimension-increase relation.",
+        "Hit the 512-token generation cap."
+      ]
+    }
+  },
+  "overall_decision": "PERCEPTION_USEFUL_SEMANTIC_NOT_PROMOTED",
+  "production_change": false,
+  "semantic_baseline_change": false,
+  "scientific_state_materialized": false,
+  "next_gate": "QWEN3_5_4B_TARGETED_VISUAL_FALLBACK_BENCHMARK"
+}
