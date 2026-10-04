@@ -44,6 +44,9 @@ def test_vlm_helper_only_uses_pinned_model_declared_transformers_interface():
     assert '"Chart Recognition:"' in text
     assert '"OCR:"' in text
     assert "GpuProcessMonitor" in text
+    assert "max_new_tokens=512" in text
+    assert '"VLM_CALL_START"' in text
+    assert '"VLM_CALL_COMPLETE"' in text
     assert "install_transformers_causal_mask_compat" in text
     assert 'kwargs["input_embeds"] = kwargs.pop("inputs_embeds")' in text
     assert "masking_utils.create_causal_mask = compat" in text

@@ -124,15 +124,40 @@ def run_generate(
     ).to("cuda:0")
     input_len = inputs["input_ids"].shape[-1]
 
+    print(
+        json.dumps(
+            {
+                "event": "VLM_CALL_START",
+                "image": str(image_path),
+                "prompt_label": prompt_label,
+                "max_new_tokens": 512,
+                "use_cache": False,
+            },
+            sort_keys=True,
+        ),
+        flush=True,
+    )
     started = time.perf_counter()
     with torch.inference_mode():
         generated = model.generate(
             **inputs,
-            max_new_tokens=2048,
+            max_new_tokens=512,
             do_sample=False,
             use_cache=False,
         )
     seconds = time.perf_counter() - started
+    print(
+        json.dumps(
+            {
+                "event": "VLM_CALL_COMPLETE",
+                "image": str(image_path),
+                "prompt_label": prompt_label,
+                "seconds": seconds,
+            },
+            sort_keys=True,
+        ),
+        flush=True,
+    )
 
     generated_only = generated[:, input_len:]
     decoded = processor.batch_decode(
