@@ -52,7 +52,9 @@
     "trust_remote_code": false,
     "model_files_local_only": true,
     "network_model_downloads_during_inference": "FORBIDDEN",
-    "selection_reason": "Current vLLM natively supports Qwen3.5 hybrid multimodal models and is an official serving path for the pinned model."
+    "selection_reason": "Current vLLM natively supports Qwen3.5 hybrid multimodal models and is an official serving path for the pinned model.",
+    "enforce_eager": false,
+    "execution_mode": "DEFAULT_HYBRID_CUDA_GRAPH_FOR_SERVING_PERFORMANCE"
   },
   "authoritative_source": {
     "case_id": "semantic-visuals-v1",
