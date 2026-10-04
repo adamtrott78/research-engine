@@ -598,7 +598,7 @@ def document_sidecar_compiler_from_env(
         local_inference=local_inference,
         specialized_enabled=specialized == "1",
         structure_gpu_index=int(
-            os.getenv("RESEARCH_ENGINE_DOCUMENT_STRUCTURE_GPU_INDEX", "0")
+            os.getenv("RESEARCH_ENGINE_DOCUMENT_STRUCTURE_GPU_INDEX", "1")
         ),
         command_timeout_seconds=float(
             os.getenv("RESEARCH_ENGINE_DOCUMENT_SIDECAR_TIMEOUT_SECONDS", "900")
