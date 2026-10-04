@@ -235,6 +235,14 @@ def main() -> None:
     bounded_compare.add_argument("before_json")
     bounded_compare.add_argument("after_json")
 
+    bounded_report = sub.add_parser("bounded-integration-build-report")
+    bounded_report.add_argument("preflight_json")
+    bounded_report.add_argument("sidecar_validation_json")
+    bounded_report.add_argument("workers_json")
+    bounded_report.add_argument("fingerprint_comparison_json")
+    bounded_report.add_argument("telemetry_json")
+    bounded_report.add_argument("--head", required=True)
+
     budget_status = sub.add_parser("budget-status")
     budget_status.add_argument("run_id")
 
@@ -711,6 +719,7 @@ def main() -> None:
     elif args.cmd.startswith("bounded-integration-"):
         from .bounded_integration import (
             BoundedProductionIntegrationInspector,
+            build_integration_report,
             compare_fingerprints,
             validate_sidecar_smoke,
         )
@@ -754,6 +763,22 @@ def main() -> None:
                     "SCIENTIFIC_STATE_CHANGED:"
                     + ",".join(result["changed_tables"])
                 )
+        elif args.cmd == "bounded-integration-build-report":
+            load = lambda path: json.loads(
+                Path(path).read_text(encoding="utf-8")
+            )
+            result = build_integration_report(
+                research_engine_head=args.head,
+                preflight=load(args.preflight_json),
+                sidecar=load(args.sidecar_validation_json),
+                workers=load(args.workers_json),
+                fingerprint_comparison=load(
+                    args.fingerprint_comparison_json
+                ),
+                telemetry=load(args.telemetry_json),
+            )
+            if result["decision"] != "PASS":
+                raise SystemExit("BOUNDED_INTEGRATION_REPORT_FAILED")
         else:
             raise RuntimeError(f"unsupported bounded integration command: {args.cmd}")
         print(json.dumps(result, default=str))
