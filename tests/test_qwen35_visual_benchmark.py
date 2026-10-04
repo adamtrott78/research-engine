@@ -28,6 +28,7 @@ def test_qwen_visual_contract_is_targeted_and_fail_closed():
     assert contract["runtime"]["engine"] == "vLLM"
     assert contract["runtime"]["vllm_version"] == "0.30.0"
     assert contract["runtime"]["gpu_memory_utilization"] == 0.65
+    assert contract["runtime"]["enforce_eager"] is False
     assert contract["inference_plan"]["candidate_inference_calls"] == 3
     assert contract["quality_boundary"]["fabricated_fact_tolerance"] == 0
     assert contract["quality_boundary"]["automatic_promotion"] is False
@@ -50,6 +51,7 @@ def test_qwen_helper_forbids_numeric_curve_estimation():
     assert "QWEN_CALL_START" in text
     assert "QWEN_CALL_COMPLETE" in text
     assert "gpu_memory_utilization=0.65" in text
+    assert "enforce_eager=True" not in text
     assert 'limit_mm_per_prompt={"image": 1}' in text
     assert "AutoModel" not in text
     for forbidden in ["openai", "requests.get", "http://", "https://"]:
