@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "task": "research-engine-local-document-pipeline-v1",
+  "stage": "residual_escalation_and_local_semantic_fallbacks",
+  "operation": "QWEN35_GROUNDED_CANDIDATE_EXTRACT_CALIBRATION",
+  "status": "READY_AFTER_CI",
+  "scientific_hypothesis": "Qwen3.5-4B can safely perform semantic EXTRACT when provenance-bearing candidates are created first by deterministic/specialized document extractors and Qwen is prohibited from generating source quotes or page locators.",
+  "authority": "ORIGINAL_CONTENT_ADDRESSED_PDF",
+  "candidate_layers": [
+    "AUTHORITATIVE_PDF_TEXT exact spans",
+    "Docling native/standard structural blocks",
+    "Docling equation/table assets",
+    "CodeFormulaV2 formula-enrichment outputs when sidecar routing naturally produces them",
+    "TableFormer ACCURATE grids when sidecar routing naturally produces them"
+  ],
+  "sidecar_policy": {
+    "ensure_for_scientific_gate": true,
+    "production_compiler_reused": true,
+    "content_addressed_by_source_sha": true,
+    "authority_remains_pdf": true
+  },
+  "qwen_output_contract": {
+    "qwen_may_return": [
+      "candidate_id",
+      "type",
+      "normalized_form",
+      "confidence"
+    ],
+    "qwen_may_not_return": [
+      "raw_source_form",
+      "page_number",
+      "pdf_bbox",
+      "source_sha256"
+    ],
+    "max_selections": 12,
+    "provenance_resolved_by_system_from_candidate_id": true
+  },
+  "call_budget": {
+    "c3_synthetic_canary": 1,
+    "c4_grounded_extract_scientific": 1,
+    "one_model_boot": true,
+    "c3_and_c4_share_live_engine": true
+  },
+  "control": {
+    "qwen_context": "grounded candidate set",
+    "codex_context": "same bounded authoritative PDF pages/request",
+    "model_tier": "STANDARD",
+    "thresholds": {
+      "historical_coverage_at_f1_0_5_min": 0.95,
+      "replay_precision_at_f1_0_5_min": 0.95,
+      "page_agreement_min": 0.95,
+      "type_agreement_min": 0.95,
+      "invalid_candidate_id_tolerance": 0,
+      "fabricated_provenance_tolerance": 0
+    }
+  },
+  "wave3": {
+    "collect_only_on_this_natural_boot": true,
+    "reuse_layers": [
+      "R0_ENVIRONMENT",
+      "R1_CERTIFICATION",
+      "R2_COMPILED_CACHE",
+      "R3_LIVE_SESSION"
+    ],
+    "stages": [
+      "C0_STATIC",
+      "C1_IMPORT_ACCELERATOR",
+      "C2A_BACKEND_TOOLCHAIN",
+      "C2B_ENGINE_BOOT",
+      "C3_CANARY",
+      "C4_DOMAIN"
+    ],
+    "freeze_ready_condition": "R2 verified reuse plus C3 PASS under the same execution identity with no new shared control-plane mechanism"
+  },
+  "boundaries": {
+    "production_routing_changed": false,
+    "scientific_state_materialized": false,
+    "semantic_materializer_invoked": false,
+    "no_new_model_family": true
+  }
+}
