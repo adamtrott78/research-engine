@@ -391,8 +391,9 @@ def test_production_gate_is_non_materializing_and_forbids_codex():
     ).read_text(encoding="utf-8")
 
     assert "RESEARCH_ENGINE_DAEMON_MUST_REMAIN_STOPPED" in text
-    assert "class ForbiddenFallback" in text
-    assert "CODEX_FALLBACK_CALLED" in text
+    assert "class NoCodexFallback" in text
+    assert "forbidden-fallback-sentinel" in text
+    assert "LOCAL_PAGE_SCOPED_VERIFY_FELL_THROUGH_WITHOUT_CODEX_CALL" in text
     assert "codex_calls_performed" in text
     assert 'SCIENTIFIC_STATE_MATERIALIZED=false' in text
     assert 'PRODUCTION_ENV_MUTATED=false' in text
