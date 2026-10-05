@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "task": "research-engine-local-document-pipeline-v1",
+  "stage": "residual_escalation_and_local_semantic_fallbacks",
+  "benchmark_contract": "benchmarks/document_intelligence/qwen35-visual-benchmark-contract.v1.json",
+  "research_engine_measurement_sha": "a3d80e9329e231889b11430f98c0de342349fe1f",
+  "status": "SELECTED_LOCAL_VLM_GUARDED_PROMOTION_PENDING_DOWNSTREAM_CALIBRATION",
+  "resource_measurement": {
+    "candidate_inference_calls": 3,
+    "failure": null,
+    "model_init_seconds": 117.64840551599627,
+    "peak_gpu_delta_mib": 11989,
+    "peak_tree_rss_mib": 5807.02734375,
+    "warm_region_seconds_max": 5.179953836006462,
+    "all_resource_checks_passed": true
+  },
+  "human_and_codex_adjudication": {
+    "figure6": {
+      "decision": "PASS",
+      "qwen_strengths": [
+        "Recovered all three panels and all required visible model labels.",
+        "Recovered dashed training-error and bold testing-error semantics from supplied caption context.",
+        "Correctly reported plain-110 absent.",
+        "Returned no curve numeric estimates on either Figure 6 call.",
+        "Warm repeat reproduced the same structured facts."
+      ],
+      "codex_control_agreement": "AGREES_ON_ALL_SCORED_VISUAL_FACTS"
+    },
+    "figure3": {
+      "decision": "PASS_ONLY_WITH_RELATION_GUARD_AND_CANONICALIZATION",
+      "qwen_strengths": [
+        "Recovered the three architecture columns.",
+        "Correctly localized shortcut presence to the 34-layer residual column.",
+        "Recovered the dimension-increase meaning of dotted shortcuts.",
+        "Recovered every required stage width; the emitted width list contained a duplicate terminal 512 that is safely canonicalizable by stable de-duplication.",
+        "Returned the caption FLOPs that were explicitly supplied as caption context; those values are not counted as visual recovery."
+      ],
+      "qwen_limitations": [
+        "The free-text solid-shortcut relation 'skips convolutional layers and pooling' does not establish the contract's exact same-dimension identity-shortcut relation and must not be accepted as an authoritative relation without validation.",
+        "The raw stage-width list [64,128,256,512,512] requires deterministic stable de-duplication to the scored stage set [64,128,256,512]."
+      ],
+      "codex_control": {
+        "solid_shortcut_relation": "identity shortcut connecting blocks within a same-width stage",
+        "dotted_shortcut_relation": "shortcut across a stage transition with changed dimensions",
+        "stage_channel_widths": [
+          64,
+          128,
+          256,
+          512
+        ],
+        "caption_flops_visual_read": "ABSTAINED_NOT_VISIBLE_IN_CROP"
+      }
+    }
+  },
+  "decision": {
+    "new_model_bakeoff_required": false,
+    "selected_local_vlm_family": "Qwen3.5-4B",
+    "unguarded_free_text_visual_semantic_replacement": false,
+    "per_field_or_question_confidence_guard_required": true,
+    "unsupported_or_disagreeing_relation_fallthrough": "REMOTE_CODEX_AUTHORITATIVE_PDF",
+    "next_scientific_gate": "BOUNDED_QWEN_LOCAL_EXTRACT_VERIFY_CALIBRATION_WITH_FAIL_CLOSED_RELATION_GUARD"
+  },
+  "production_change": false,
+  "semantic_baseline_change": false,
+  "scientific_state_materialized": false
+}
