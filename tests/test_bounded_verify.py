@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from research_engine.bounded_verify import (
     BoundedVerifySemanticDelegate,
     prepare_bounded_verify_job,
@@ -265,3 +268,65 @@ def test_bounded_verify_falls_through_without_local_call_when_ineligible():
     assert result["_execution"]["routing"]["reason"].startswith(
         "VERIFY_EXACT_ONE_PAGE_REQUIRED"
     )
+
+
+def test_production_gate_is_non_materializing_and_forbids_codex():
+    root = Path(__file__).parents[1]
+    text = (
+        root / "deploy" / "run-qwen35-bounded-verify-production-gate.sh"
+    ).read_text(encoding="utf-8")
+
+    assert "RESEARCH_ENGINE_DAEMON_MUST_REMAIN_STOPPED" in text
+    assert "class ForbiddenFallback" in text
+    assert "CODEX_FALLBACK_CALLED" in text
+    assert "codex_calls_performed" in text
+    assert 'SCIENTIFIC_STATE_MATERIALIZED=false' in text
+    assert 'PRODUCTION_ENV_MUTATED=false' in text
+    assert "SemanticResultMaterializer" not in text
+    assert "CodexExecExecutor" not in text
+    assert "pip install" not in text
+    assert "QWEN_BOUNDED_VERIFY_PRODUCTION_GATE=PASS" in text
+    assert "workspace-control-tmp" in text
+
+
+def test_production_config_and_acceptance_require_bounded_qwen_verify():
+    root = Path(__file__).parents[1]
+    config = (
+        root / "deploy" / "configure-production-local-inference.sh"
+    ).read_text(encoding="utf-8")
+    acceptance = (
+        root / "deploy" / "run-lambda-production-acceptance.sh"
+    ).read_text(encoding="utf-8")
+
+    for line in (
+        "RESEARCH_ENGINE_QWEN_VERIFY_ENABLED=1",
+        "RESEARCH_ENGINE_QWEN_VERIFY_GPU_INDEX=1",
+        "RESEARCH_ENGINE_QWEN_VERIFY_MAX_CONTEXT_CHARS=20000",
+        "RESEARCH_ENGINE_QWEN_VERIFY_TIMEOUT_SECONDS=900",
+    ):
+        assert line in config
+    assert "QWEN_VERIFY_OWNER_SPAWNED_DURING_BOOTSTRAP" in acceptance
+    assert "qwen_verify_owner_zero_spawn" in acceptance
+    assert "BOUNDED_LOCAL_QWEN_PRIMARY_WITH_REMOTE_CODEX_FALLTHROUGH" in acceptance
+
+
+def test_localization_matrix_promotes_only_bounded_verify():
+    root = Path(__file__).parents[1]
+    matrix = json.loads(
+        (
+            root
+            / "benchmarks"
+            / "document_intelligence"
+            / "localization-matrix.v2.json"
+        ).read_text(encoding="utf-8")
+    )
+    rows = {row["job_type"]: row for row in matrix["job_type_decisions"]}
+    verify = rows["VERIFY"]
+    extract = rows["EXTRACT"]
+
+    assert verify["production_placement"] == (
+        "BOUNDED_LOCAL_QWEN_PRIMARY_WITH_REMOTE_CODEX_FALLTHROUGH"
+    )
+    assert verify["localization_decision"] == "PROMOTE_BOUNDED_LOCAL_VERIFY"
+    assert "Qwen3.5-4B" in " ".join(verify["local_support"])
+    assert extract["localization_decision"] != "PROMOTE_BOUNDED_LOCAL_VERIFY"
