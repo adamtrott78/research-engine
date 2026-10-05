@@ -358,16 +358,44 @@ print(json.dumps({"certification":cert,"adoption_detail":detail},indent=2,sort_k
 PY
 
 echo "=== FINAL OPERATION RECEIPT ==="
-"$core_venv/bin/python" - "$opstate" "$operation_receipt" "$opid" "$git_sha" "$out" "$report" "$wave3" "$qwen" "$codex" "$plan" "$sidecar" <<'PY'
+"$core_venv/bin/python" - "$opstate" "$operation_receipt" "$opdetailstate" "$operation_detail" "$opid" "$execid" "$git_sha" "$out" "$report" "$certification" "$wave3" "$qwen" "$codex" "$plan" "$sidecar" <<'PY'
 import json,pathlib,sys
-state,out,opid,sha,root,report,wave3,qwen,codex,plan,sidecar=sys.argv[1:]
+state,out,detail_state,detail_out,opid,execid,sha,root,report,cert,wave3,qwen,codex,plan,sidecar=sys.argv[1:]
 decision=json.load(open(report,encoding="utf-8"))["decision"]
-p={"schema_version":1,"operation_id":opid,"task_id":"research-engine-local-document-pipeline-v1","git_sha":sha,"operation_type":"QWEN35_GROUNDED_CANDIDATE_EXTRACT_CALIBRATION","execution_identity":"qwen35-vllm-cu129-image-native-sampler-v3","status":"PASS","terminal_stage":"C4_DOMAIN","result_decision":decision,"owner_process":None,"artifacts":{"output_root":root,"scientific_report":report,"wave3_adoption":wave3,"qwen_result":qwen,"codex_control":codex,"candidate_plan":plan,"sidecar_receipt":sidecar},"expensive_stages_repeated":[]}
-for dest in (state,out): pathlib.Path(dest).write_text(json.dumps(p,indent=2,sort_keys=True)+"\n",encoding="utf-8")
-print(json.dumps(p,indent=2,sort_keys=True))
+receipt={
+ "schema_version":1,
+ "operation_id":opid,
+ "task_id":"research-engine-local-document-pipeline-v1",
+ "git_sha":sha,
+ "operation_type":"QWEN35_GROUNDED_CANDIDATE_EXTRACT_CALIBRATION",
+ "execution_identity":execid,
+ "status":"PASS",
+ "terminal_stage":"C4_DOMAIN",
+}
+detail={
+ "schema_version":1,
+ "operation_id":opid,
+ "status":"PASS",
+ "result_decision":decision,
+ "artifacts":{
+  "output_root":root,
+  "scientific_report":report,
+  "runtime_certification":cert,
+  "wave3_adoption":wave3,
+  "qwen_result":qwen,
+  "codex_control":codex,
+  "candidate_plan":plan,
+  "sidecar_receipt":sidecar,
+ },
+ "expensive_stages_repeated":[],
+}
+for dest in (state,out):
+ pathlib.Path(dest).write_text(json.dumps(receipt,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+for dest in (detail_state,detail_out):
+ pathlib.Path(dest).write_text(json.dumps(detail,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+print(json.dumps({"receipt":receipt,"detail":detail},indent=2,sort_keys=True))
 PY
 
-echo
 echo "=== COMPACT RESULT ==="
 "$core_venv/bin/python" - "$report" "$wave3" "$sidecar" "$plan" <<'PY'
 import json,sys
