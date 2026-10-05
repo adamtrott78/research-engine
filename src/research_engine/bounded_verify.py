@@ -43,12 +43,12 @@ def qwen_verify_max_context_chars_from_env() -> int:
     return value
 
 
-def prepare_bounded_verify_job(
+def prepare_bounded_verify_pages(
     job: ResearchJob,
     *,
     max_context_chars: int = DEFAULT_MAX_CONTEXT_CHARS,
-) -> tuple[ResearchJob | None, str]:
-    """Return the exact calibrated one-page VERIFY unit or a fallthrough reason."""
+) -> tuple[list[tuple[int, ResearchJob, list[str]]] | None, str]:
+    """Split one hydrated radius-0 VERIFY job into calibrated page-scoped units."""
 
     if job.job_type != JobType.VERIFY:
         return None, "NOT_VERIFY"
@@ -60,15 +60,15 @@ def prepare_bounded_verify_job(
 
     pages = [dict(page) for page in context.get("pages") or []]
     supplied = [int(x) for x in scope.get("supplied_page_numbers") or []]
-    if len(pages) != 1 or len(supplied) != 1:
-        return None, (
-            "VERIFY_EXACT_ONE_PAGE_REQUIRED:"
-            f"supplied={supplied}:pages={len(pages)}"
-        )
+    if not pages or not supplied:
+        return None, "VERIFY_NO_SUPPLIED_PAGES"
 
-    page_number = int(pages[0].get("page_number") or 0)
-    if page_number <= 0 or supplied != [page_number]:
-        return None, "VERIFY_SUPPLIED_PAGE_MISMATCH"
+    by_page_text: dict[int, dict[str, Any]] = {}
+    for page in pages:
+        page_number = int(page.get("page_number") or 0)
+        if page_number <= 0 or page_number in by_page_text:
+            return None, "VERIFY_INVALID_OR_DUPLICATE_PAGE"
+        by_page_text[page_number] = page
 
     authoritative = [
         dict(item) for item in context.get("authoritative_evidence") or []
@@ -76,40 +76,93 @@ def prepare_bounded_verify_job(
     if not authoritative:
         return None, "VERIFY_NO_AUTHORITATIVE_EVIDENCE"
 
-    evidence_pages: set[int] = set()
+    by_page_evidence: dict[int, list[dict[str, Any]]] = {}
+    evidence_ids_seen: set[str] = set()
     for item in authoritative:
+        evidence_id = str(item.get("id") or "")
         cited = item.get("page_number")
+        if not evidence_id:
+            return None, "VERIFY_EVIDENCE_MISSING_ID"
+        if evidence_id in evidence_ids_seen:
+            return None, "VERIFY_DUPLICATE_EVIDENCE_ID"
+        evidence_ids_seen.add(evidence_id)
         if cited is None:
             return None, "VERIFY_EVIDENCE_MISSING_PAGE"
-        evidence_pages.add(int(cited))
-    if evidence_pages != {page_number}:
+        by_page_evidence.setdefault(int(cited), []).append(item)
+
+    expected_pages = set(by_page_evidence)
+    if set(supplied) != expected_pages or set(by_page_text) != expected_pages:
         return None, (
-            "VERIFY_EVIDENCE_SPANS_MULTIPLE_PAGES:"
-            + ",".join(str(x) for x in sorted(evidence_pages))
+            "VERIFY_PAGE_SCOPE_MISMATCH:"
+            f"supplied={sorted(set(supplied))}:"
+            f"text={sorted(by_page_text)}:"
+            f"evidence={sorted(expected_pages)}"
         )
 
-    window, window_meta = bounded_verification_page(
-        page_text=str(pages[0].get("text") or ""),
-        authoritative_evidence=authoritative,
-        max_chars=max_context_chars,
-    )
-    if window is None:
-        return None, "VERIFY_WINDOW:" + str(window_meta.get("reason") or "UNKNOWN")
+    bounded_units: list[tuple[int, ResearchJob, list[str]]] = []
+    page_count = len(expected_pages)
+    for page_number in sorted(expected_pages):
+        page_evidence = by_page_evidence[page_number]
+        window, window_meta = bounded_verification_page(
+            page_text=str(by_page_text[page_number].get("text") or ""),
+            authoritative_evidence=page_evidence,
+            max_chars=max_context_chars,
+        )
+        if window is None:
+            return None, (
+                f"VERIFY_PAGE_{page_number}_WINDOW:"
+                + str(window_meta.get("reason") or "UNKNOWN")
+            )
 
-    pages[0]["text"] = window
-    context["pages"] = pages
-    scope["text_window"] = window_meta
-    scope["bounded_local_verify"] = {
-        "model": QWEN_VERIFY_MODEL,
-        "revision": QWEN_VERIFY_REVISION,
-        "runtime_contract": QWEN_VERIFY_RUNTIME_CONTRACT,
-        "max_context_chars": max_context_chars,
-        "eligibility": "RADIUS_0_EXACT_ONE_AUTHORITATIVE_PAGE",
-    }
-    context["verification_scope"] = scope
-    payload = copy.deepcopy(job.payload)
-    payload["_research_context"] = context
-    return replace(job, payload=payload), "PASS"
+        page = copy.deepcopy(by_page_text[page_number])
+        page["text"] = window
+        unit_context = copy.deepcopy(context)
+        unit_context["pages"] = [page]
+        unit_context["authoritative_evidence"] = copy.deepcopy(page_evidence)
+        unit_context["verification_scope"] = {
+            "cited_page_numbers": [page_number],
+            "page_radius": 0,
+            "supplied_page_numbers": [page_number],
+            "text_window": window_meta,
+            "bounded_local_verify": {
+                "model": QWEN_VERIFY_MODEL,
+                "revision": QWEN_VERIFY_REVISION,
+                "runtime_contract": QWEN_VERIFY_RUNTIME_CONTRACT,
+                "max_context_chars": max_context_chars,
+                "eligibility": "RADIUS_0_PAGE_SCOPED_AUTHORITATIVE_EVIDENCE",
+                "source_job_page_count": page_count,
+                "selected_page_number": page_number,
+            },
+        }
+        payload = copy.deepcopy(job.payload)
+        payload["_research_context"] = unit_context
+        evidence_ids = [str(item["id"]) for item in page_evidence]
+        bounded_units.append(
+            (page_number, replace(job, payload=payload), evidence_ids)
+        )
+
+    return bounded_units, "PASS"
+
+
+def prepare_bounded_verify_job(
+    job: ResearchJob,
+    *,
+    max_context_chars: int = DEFAULT_MAX_CONTEXT_CHARS,
+) -> tuple[ResearchJob | None, str]:
+    """Backward-compatible helper for callers requiring exactly one page unit."""
+
+    units, reason = prepare_bounded_verify_pages(
+        job,
+        max_context_chars=max_context_chars,
+    )
+    if units is None:
+        return None, reason
+    if len(units) != 1:
+        return None, (
+            "VERIFY_EXACT_ONE_PAGE_REQUIRED:"
+            + ",".join(str(page) for page, _job, _ids in units)
+        )
+    return units[0][1], "PASS"
 
 
 def qwen_verify_messages(job: ResearchJob) -> list[dict[str, str]]:
@@ -218,83 +271,172 @@ class BoundedVerifySemanticDelegate:
                 local_attempted=False,
             )
 
-        bounded, reason = prepare_bounded_verify_job(
+        units, reason = prepare_bounded_verify_pages(
             job,
             max_context_chars=self.max_context_chars,
         )
-        if bounded is None:
+        if units is None:
             return self._fallback(
                 job,
                 reason=reason,
                 local_attempted=False,
             )
 
-        try:
-            response = self.local_inference.qwen_verify_request(
-                messages=qwen_verify_messages(bounded),
-                job_id=job.id,
-            )
-        except LocalInferenceBackpressureError as exc:
-            return self._fallback(
-                job,
-                reason="QWEN_VERIFY_BACKPRESSURE",
-                local_attempted=True,
-                local_detail={"error": str(exc)},
-            )
-        except LocalInferenceError as exc:
-            return self._fallback(
-                job,
-                reason="QWEN_VERIFY_RUNTIME_FAILURE",
-                local_attempted=True,
-                local_detail={"error": str(exc)},
-            )
+        all_authoritative = [
+            dict(item)
+            for item in (
+                job.payload.get("_research_context") or {}
+            ).get("authoritative_evidence") or []
+        ]
+        authoritative_order = [str(item["id"]) for item in all_authoritative]
+        expected_item_id = str((job.payload.get("item") or {}).get("id") or "")
+        total_input_tokens = 0
+        total_output_tokens = 0
+        page_receipts: list[dict[str, Any]] = []
 
-        parsed = response.get("result")
-        guard = guard_qwen_semantic_result(
-            bounded,
-            parsed if isinstance(parsed, dict) else None,
-        )
-        if guard["status"] != "PASS_GUARDED":
-            return self._fallback(
-                job,
-                reason="QWEN_VERIFY_GUARD_FAILURE",
-                local_attempted=True,
-                local_detail={
-                    "guard_reasons": list(guard.get("reasons") or []),
+        for page_number, bounded, expected_ids in units:
+            try:
+                response = self.local_inference.qwen_verify_request(
+                    messages=qwen_verify_messages(bounded),
+                    job_id=f"{job.id}:page:{page_number}",
+                )
+            except LocalInferenceBackpressureError as exc:
+                return self._fallback(
+                    job,
+                    reason=f"QWEN_VERIFY_PAGE_{page_number}_BACKPRESSURE",
+                    local_attempted=True,
+                    local_detail={
+                        "error": str(exc),
+                        "completed_pages": page_receipts,
+                    },
+                )
+            except LocalInferenceError as exc:
+                return self._fallback(
+                    job,
+                    reason=f"QWEN_VERIFY_PAGE_{page_number}_RUNTIME_FAILURE",
+                    local_attempted=True,
+                    local_detail={
+                        "error": str(exc),
+                        "completed_pages": page_receipts,
+                    },
+                )
+
+            parsed = response.get("result")
+            guard = guard_qwen_semantic_result(
+                bounded,
+                parsed if isinstance(parsed, dict) else None,
+            )
+            if guard["status"] != "PASS_GUARDED":
+                return self._fallback(
+                    job,
+                    reason=f"QWEN_VERIFY_PAGE_{page_number}_GUARD_FAILURE",
+                    local_attempted=True,
+                    local_detail={
+                        "guard_reasons": list(guard.get("reasons") or []),
+                        "completed_pages": page_receipts,
+                        "server_pid": response.get("server_pid"),
+                        "request_seq": response.get("request_seq"),
+                    },
+                )
+
+            canonical = copy.deepcopy(dict(guard["canonical_result"]))
+            accepted = [str(x) for x in canonical["accepted_evidence_ids"]]
+            issues = [str(x) for x in canonical["issues"]]
+            local_item_id = str(canonical["item_id"])
+            if expected_item_id and local_item_id != expected_item_id:
+                return self._fallback(
+                    job,
+                    reason=f"QWEN_VERIFY_PAGE_{page_number}_ITEM_ID_MISMATCH",
+                    local_attempted=True,
+                    local_detail={
+                        "expected_item_id": expected_item_id,
+                        "actual_item_id": local_item_id,
+                        "completed_pages": page_receipts,
+                    },
+                )
+            if not bool(canonical["verified"]):
+                return self._fallback(
+                    job,
+                    reason=f"QWEN_VERIFY_PAGE_{page_number}_NOT_VERIFIED",
+                    local_attempted=True,
+                    local_detail={
+                        "issues": issues,
+                        "accepted_evidence_ids": accepted,
+                        "completed_pages": page_receipts,
+                    },
+                )
+            if issues:
+                return self._fallback(
+                    job,
+                    reason=f"QWEN_VERIFY_PAGE_{page_number}_ISSUES_PRESENT",
+                    local_attempted=True,
+                    local_detail={
+                        "issues": issues,
+                        "accepted_evidence_ids": accepted,
+                        "completed_pages": page_receipts,
+                    },
+                )
+            if set(accepted) != set(expected_ids):
+                return self._fallback(
+                    job,
+                    reason=f"QWEN_VERIFY_PAGE_{page_number}_INCOMPLETE_ACCEPTANCE",
+                    local_attempted=True,
+                    local_detail={
+                        "expected_evidence_ids": expected_ids,
+                        "accepted_evidence_ids": accepted,
+                        "completed_pages": page_receipts,
+                    },
+                )
+
+            usage = dict(response.get("usage") or {})
+            total_input_tokens += int(usage.get("input_tokens") or 0)
+            total_output_tokens += int(usage.get("output_tokens") or 0)
+            page_receipts.append(
+                {
+                    "page_number": page_number,
+                    "accepted_evidence_ids": expected_ids,
                     "server_pid": response.get("server_pid"),
                     "request_seq": response.get("request_seq"),
-                },
+                    "wall_time_ms": response.get("wall_time_ms"),
+                    "input_tokens": int(usage.get("input_tokens") or 0),
+                    "output_tokens": int(usage.get("output_tokens") or 0),
+                }
             )
 
-        result = copy.deepcopy(dict(guard["canonical_result"]))
-        usage = dict(response.get("usage") or {})
+        result = {
+            "verified": True,
+            "item_id": expected_item_id or str(
+                page_receipts and job.payload.get("item", {}).get("id") or ""
+            ),
+            "accepted_evidence_ids": authoritative_order,
+            "issues": [],
+        }
         result["_execution"] = {
             "provider": "local-qwen-vllm",
             "model": f"{QWEN_VERIFY_MODEL}@{QWEN_VERIFY_REVISION}",
-            "response_id": response.get("request_id"),
+            "response_id": f"page-scoped:{job.id}",
             "executor_tier": str(self.tier),
             "reasoning_effort": "none",
             "usage": {
-                "input_tokens": int(usage.get("input_tokens") or 0),
+                "input_tokens": total_input_tokens,
                 "cached_input_tokens": 0,
-                "output_tokens": int(usage.get("output_tokens") or 0),
+                "output_tokens": total_output_tokens,
                 "reasoning_output_tokens": 0,
             },
             "routing": {
-                "policy": "QWEN35_BOUNDED_VERIFY_PRIMARY_CODEX_FALLTHROUGH",
+                "policy": "QWEN35_PAGE_SCOPED_VERIFY_PRIMARY_CODEX_FALLTHROUGH",
                 "decision": "LOCAL_QWEN_ACCEPTED",
-                "reason": "PASS_GUARDED",
+                "reason": "ALL_PAGE_UNITS_PASS_GUARDED_FULL_ACCEPTANCE",
                 "local_attempted": True,
+                "page_count": len(units),
+                "qwen_calls": len(units),
                 "guard_reasons": [],
             },
             "local_inference": {
-                "family": response.get("family"),
-                "server_pid": response.get("server_pid"),
-                "model_load_count": response.get("model_load_count"),
-                "request_seq": response.get("request_seq"),
-                "wall_time_ms": response.get("wall_time_ms"),
-                "runtime_contract": response.get("runtime_contract"),
-                "model_revision": response.get("model_revision"),
+                "family": "qwen_verify",
+                "runtime_contract": QWEN_VERIFY_RUNTIME_CONTRACT,
+                "model_revision": QWEN_VERIFY_REVISION,
+                "page_receipts": page_receipts,
             },
         }
         return result
