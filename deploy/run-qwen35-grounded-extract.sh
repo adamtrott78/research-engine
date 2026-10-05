@@ -23,8 +23,10 @@ codex="$out/codex-control-results.json"
 report="$out/grounded-extract-report.json"
 helper_log="$out/qwen-helper.log"
 reuse="$out/qwen-runtime-reuse-evidence.json"
+certification="$out/runtime-certification.json"
 wave3="$out/wave3-adoption-evidence.json"
 operation_receipt="$out/runtime-operation-receipt.json"
+operation_detail="$out/runtime-operation-detail.json"
 
 fail(){ echo "ERROR=$1" >&2; exit "${2:-1}"; }
 require_stopped(){
@@ -72,10 +74,15 @@ require_stopped
 echo
 echo "=== CHEAP SOURCE SELECTION ==="
 PYTHONPATH="$root/src" "$core_venv/bin/python" -m research_engine.qwen_grounded_extract select "$run_id" --output "$selection"
+execid="$(PYTHONPATH="$root/src" "$core_venv/bin/python" -m research_engine.qwen_grounded_extract execution-id)"
+pkgid="$(PYTHONPATH="$root/src" "$core_venv/bin/python" -m research_engine.qwen_grounded_extract package-id)"
 opid="$(PYTHONPATH="$root/src" "$core_venv/bin/python" -m research_engine.qwen_grounded_extract operation-id --selection "$selection" --git-sha "$git_sha")"
 opslug="${opid#sha256:}"
 opstate="$state/runtime-operations/qwen35-grounded-extract/$opslug.json"
+opdetailstate="$state/runtime-operations/qwen35-grounded-extract/$opslug.detail.json"
 mkdir -p "$(dirname "$opstate")"
+echo "EXECUTION_IDENTITY=$execid"
+echo "PACKAGE_IDENTITY=$pkgid"
 echo "OPERATION_ID=$opid"
 
 if [ -f "$opstate" ]; then
@@ -92,6 +99,7 @@ PY
   echo "RECOVERY_DECISION=$recovery"
   if [ "$recovery" = COMPLETED_REUSE ]; then
     cat "$opstate"
+    [ ! -f "$opdetailstate" ] || cat "$opdetailstate"
     echo "NO_RERUN_REQUIRED=true"
     exit 0
   fi
@@ -121,16 +129,16 @@ PY
   fi
 fi
 
-"$core_venv/bin/python" - "$opstate" "$operation_receipt" "$opid" "$git_sha" "$out" "$BASHPID" <<'PY'
+"$core_venv/bin/python" - "$opstate" "$operation_receipt" "$opdetailstate" "$operation_detail" "$opid" "$execid" "$git_sha" "$out" "$BASHPID" <<'PY'
 import json,pathlib,sys
-state,out,opid,sha,root,pid=sys.argv[1:]
-p={
+state,out,detail_state,detail_out,opid,execid,sha,root,pid=sys.argv[1:]
+receipt={
  "schema_version":1,
  "operation_id":opid,
  "task_id":"research-engine-local-document-pipeline-v1",
  "git_sha":sha,
  "operation_type":"QWEN35_GROUNDED_CANDIDATE_EXTRACT_CALIBRATION",
- "execution_identity":"qwen35-vllm-cu129-image-native-sampler-v3",
+ "execution_identity":execid,
  "status":"RUNNING",
  "terminal_stage":"C0_STATIC",
  "owner_process":{
@@ -139,10 +147,12 @@ p={
    "executable":"bash",
    "argv":["bash","deploy/run-qwen35-grounded-extract.sh"],
  },
- "artifacts":{"output_root":root},
 }
+detail={"schema_version":1,"operation_id":opid,"status":"RUNNING","artifacts":{"output_root":root}}
 for dest in (state,out):
- pathlib.Path(dest).write_text(json.dumps(p,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+ pathlib.Path(dest).write_text(json.dumps(receipt,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+for dest in (detail_state,detail_out):
+ pathlib.Path(dest).write_text(json.dumps(detail,indent=2,sort_keys=True)+"\n",encoding="utf-8")
 PY
 
 echo
