@@ -85,3 +85,77 @@ def test_postgres_is_boot_persistent_and_runner_self_heals_db_only():
     assert "POSTGRESQL_NOT_READY" in runner
     assert "up -d daemon" not in runner
     assert "research-engine-daemon.service" in runner
+
+
+def test_verify_quote_window_preserves_all_authoritative_quotes():
+    from research_engine.qwen_guarded_semantic import bounded_verification_page
+
+    text = "A" * 12000 + " first supported quote " + "B" * 10000 + " second supported quote " + "C" * 12000
+    evidence = [
+        {"id": "e1", "raw_source_form": "first supported quote"},
+        {"id": "e2", "raw_source_form": "second supported quote"},
+    ]
+    window, meta = bounded_verification_page(
+        page_text=text,
+        authoritative_evidence=evidence,
+        max_chars=20000,
+    )
+    assert window is not None
+    assert len(window) <= 20000
+    assert "first supported quote" in window
+    assert "second supported quote" in window
+    assert meta["windowed"] is True
+    assert meta["reason"] == "AUTHORITATIVE_QUOTE_WINDOW"
+
+
+def test_verify_quote_window_fails_closed_when_quote_not_locatable():
+    from research_engine.qwen_guarded_semantic import bounded_verification_page
+
+    window, meta = bounded_verification_page(
+        page_text="A" * 25000,
+        authoritative_evidence=[
+            {"id": "missing", "raw_source_form": "not present"}
+        ],
+        max_chars=20000,
+    )
+    assert window is None
+    assert meta["reason"] == "AUTHORITATIVE_QUOTE_NOT_LOCATABLE"
+    assert meta["missing_evidence_ids"] == ["missing"]
+
+
+def test_selected_page_extractor_reads_only_authorized_pages(monkeypatch, tmp_path):
+    import sys
+    import types
+    from research_engine.qwen_guarded_semantic import SelectedPdfPageTextExtractor
+
+    touched = []
+
+    class Page:
+        def __init__(self, number):
+            self.number = number
+        def extract_text(self):
+            touched.append(self.number)
+            return f"page-{self.number}"
+
+    class Reader:
+        def __init__(self, _path):
+            self.pages = [Page(1), Page(2), Page(3), Page(4)]
+
+    fake = types.SimpleNamespace(PdfReader=Reader)
+    monkeypatch.setitem(sys.modules, "pypdf", fake)
+
+    path = tmp_path / "fake.pdf"
+    path.write_bytes(b"%PDF")
+    rows = SelectedPdfPageTextExtractor([2, 4])(path)
+    assert rows == [
+        {"page_number": 2, "text": "page-2"},
+        {"page_number": 4, "text": "page-4"},
+    ]
+    assert touched == [2, 4]
+
+
+def test_planner_diagnostics_are_not_opaque():
+    text=(ROOT/"src"/"research_engine"/"qwen_guarded_semantic.py").read_text()
+    assert "rejections=" in text
+    assert "SOURCE_JOB_NOT_COMPLETED" in text
+    assert "VERIFY_WINDOW:" in text
