@@ -83,9 +83,16 @@ def test_qwen_runner_keeps_daemon_stopped_and_model_offline():
     assert 'assert torch.cuda.is_available()' in text
     assert '"cuda_allocation_probe": "PASS"' in text
     assert '"vllm_multimodal_import_probe": "PASS"' in text
-    assert 'runtime_contract_version="qwen35-vllm-cu129-image-v2"' in text
+    assert 'runtime_contract_version="qwen35-vllm-cu129-image-native-sampler-v3"' in text
     assert 'expected_vllm_wheel_sha="e98cb69659bfcfc849cf11ce0781a7161d40b02b51a6c3636924a5909f2aabcc"' in text
     assert "RUNTIME_IDENTITY_CACHE=VERIFIED_REUSE" in text
+    assert "VLLM_USE_FLASHINFER_SAMPLER=0" in text
+    assert '"sampling_backend": "vllm_native"' in text
+    assert '"vllm_flashinfer_sampler": False' in text
+    assert 'vllm_cache_root="$state/residual-runtime-cache/$runtime_contract_version/$model_revision"' in text
+    assert 'export XDG_CACHE_HOME="$vllm_cache_root"' in text
+    assert 'XDG_CACHE_HOME="$output_root/xdg-cache"' not in text
+    assert "QWEN_ENGINE_SAMPLER_JIT_NVCC_MISSING" in text
     assert "qwen35-benchmark-receipt.json" in text
     assert "CONTENT-ADDRESSED VALIDATED FIGURE RENDER CACHE" in text
     assert '"cache_key":cache_key' in text

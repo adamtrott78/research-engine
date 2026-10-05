@@ -22,8 +22,10 @@ helper_log="$output_root/qwen35-helper.log"
 console_log="$output_root/qwen35-benchmark-console.log"
 render_receipt="$output_root/qwen35-render-receipt.json"
 render_cache_root="$state/residual-render-cache/qwen35-visual-v2"
-runtime_contract_version="qwen35-vllm-cu129-image-v2"
+runtime_contract_version="qwen35-vllm-cu129-image-native-sampler-v3"
 render_contract_version="qwen35-validated-region-render-v2"
+model_revision="851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a"
+vllm_cache_root="$state/residual-runtime-cache/$runtime_contract_version/$model_revision"
 expected_vllm_dist="0.30.0+cu129"
 expected_vllm_wheel_sha="e98cb69659bfcfc849cf11ce0781a7161d40b02b51a6c3636924a5909f2aabcc"
 expected_torch="2.13.0+cu129"
@@ -31,6 +33,7 @@ expected_torchvision="0.28.0+cu129"
 expected_torchcodec="0.16.0+cu129"
 pytorch_cu129_index="https://download.pytorch.org/whl/cu129"
 vllm_cu129_wheel="https://github.com/vllm-project/vllm/releases/download/v0.30.0/vllm-0.30.0%2Bcu129-cp38-abi3-manylinux_2_28_x86_64.whl"
+export VLLM_USE_FLASHINFER_SAMPLER=0
 
 terminal_stage="bootstrap"
 status="FAILED"
@@ -91,11 +94,14 @@ write_compact_receipt() {
     RECEIPT_RUNTIME_REUSE_CHECK_SECONDS="$runtime_reuse_check_seconds" \
     RECEIPT_RUNTIME_SETUP_SECONDS="$runtime_setup_seconds" \
     RECEIPT_RUNTIME_SMOKE_SECONDS="$runtime_smoke_seconds" \
+    RECEIPT_RUNTIME_CONTRACT_VERSION="$runtime_contract_version" \
+    RECEIPT_SAMPLER_BACKEND="vllm_native" \
+    RECEIPT_VLLM_CACHE_ROOT="$vllm_cache_root" \
     RECEIPT_QWEN_STARTED="$started" RECEIPT_QWEN_COMPLETED="$completed" \
     RECEIPT_MODEL_INITIALIZED="$initialized" RECEIPT_EXIT_CODE="$rc" \
-    python3 - "$receipt" "$root" "$output_root" "$report" "$runtime_ready" "$host_receipt" "$render_receipt" "$runtime_log" "$console_log" <<'PY'
+    python3 - "$receipt" "$root" "$output_root" "$report" "$runtime_ready" "$host_receipt" "$render_receipt" "$runtime_log" "$helper_log" "$console_log" <<'PY'
 import json, os, pathlib, subprocess, sys
-receipt, root, out, report, runtime, host, render, runtime_log, console_log = map(pathlib.Path, sys.argv[1:])
+receipt, root, out, report, runtime, host, render, runtime_log, helper_log, console_log = map(pathlib.Path, sys.argv[1:])
 def read_json(path):
     try: return json.loads(path.read_text(encoding="utf-8"))
     except Exception: return None
@@ -120,7 +126,10 @@ payload={
   "status":os.environ.get("RECEIPT_STATUS"),
   "failure":{"class":os.environ.get("RECEIPT_FAILURE_CLASS"),"message":os.environ.get("RECEIPT_FAILURE_MESSAGE")},
   "runtime":{
-    "contract_version":"qwen35-vllm-cu129-image-v2",
+    "contract_version":os.environ.get("RECEIPT_RUNTIME_CONTRACT_VERSION"),
+    "sampling_backend":os.environ.get("RECEIPT_SAMPLER_BACKEND"),
+    "flashinfer_sampler_enabled":False,
+    "persistent_compile_cache_root":os.environ.get("RECEIPT_VLLM_CACHE_ROOT"),
     "setup_mode":setup_mode,
     "verified_identity_reused":os.environ.get("RECEIPT_RUNTIME_IDENTITY_REUSED")=="true",
     "installation_or_download_performed":setup_mode in {"full_rebuild","torchcodec_repair"},
@@ -134,8 +143,8 @@ payload={
   "qwen_quality_result":primary.get("measurement_decision") if isinstance(primary,dict) else None,
   "renders":{"generated":sum(not bool(x.get("cache_hit")) for x in targets),"reused":sum(bool(x.get("cache_hit")) for x in targets),"targets":targets},
   "timing_seconds":{"runtime_reuse_check":fenv("RECEIPT_RUNTIME_REUSE_CHECK_SECONDS"),"runtime_setup":fenv("RECEIPT_RUNTIME_SETUP_SECONDS"),"runtime_smoke":fenv("RECEIPT_RUNTIME_SMOKE_SECONDS"),"render_total":render_obj.get("render_total_seconds") if isinstance(render_obj,dict) else None},
-  "artifacts":{"output_root":str(out),"primary_report":str(report) if report.exists() else None,"runtime_receipt":str(runtime) if runtime.exists() else None,"host_build_receipt":str(host) if host.exists() else None,"render_receipt":str(render) if render.exists() else None,"runtime_log":str(runtime_log) if runtime_log.exists() else None,"console_log":str(console_log)},
-  "artifact_bytes":{"runtime_log":size(runtime_log),"console_log":size(console_log)},
+  "artifacts":{"output_root":str(out),"primary_report":str(report) if report.exists() else None,"runtime_receipt":str(runtime) if runtime.exists() else None,"host_build_receipt":str(host) if host.exists() else None,"render_receipt":str(render) if render.exists() else None,"runtime_log":str(runtime_log) if runtime_log.exists() else None,"helper_log":str(helper_log) if helper_log.exists() else None,"console_log":str(console_log)},
+  "artifact_bytes":{"runtime_log":size(runtime_log),"helper_log":size(helper_log),"console_log":size(console_log)},
   "exit_code":int(os.environ.get("RECEIPT_EXIT_CODE","1")),
   "scientific_state_materialized":False,
   "production_routing_changed":False,
@@ -203,14 +212,15 @@ driver_major="${driver_version%%.*}"
 [ "$driver_major" -ge 525 ] || fail "CUDA12_MINOR_COMPAT_DRIVER_TOO_OLD" 49 "CUDA 12.x runtime selected on NVIDIA driver older than 525: $driver_version"
 driver_cuda_max="$(nvidia-smi 2>/dev/null | sed -n 's/.*CUDA Version: \([0-9.]*\).*/\1/p' | head -1)"
 python3 - "$host_receipt" "$gpu_name" "$driver_version" "$driver_cuda_max" "$expected_vllm_dist" "$expected_vllm_wheel_sha" "$expected_torch" "$expected_torchvision" "$expected_torchcodec" "$runtime_contract_version" <<'PY'
-import json, platform, sys, sysconfig
+import json, platform, shutil, sys, sysconfig
 from pathlib import Path
 payload={
  "schema_version":1,
  "architecture":platform.machine(),
  "python":{"version":platform.python_version(),"implementation":platform.python_implementation(),"soabi":sysconfig.get_config_var("SOABI")},
  "gpu":{"name":sys.argv[2],"driver_version":sys.argv[3],"driver_reported_cuda_max":sys.argv[4] or None},
- "requested_runtime":{"vllm_distribution":sys.argv[5],"vllm_release_wheel_sha256":sys.argv[6],"torch":sys.argv[7],"torchvision":sys.argv[8],"torchcodec":sys.argv[9],"runtime_contract_version":sys.argv[10],"cuda_build_family":"cu129"},
+ "requested_runtime":{"vllm_distribution":sys.argv[5],"vllm_release_wheel_sha256":sys.argv[6],"torch":sys.argv[7],"torchvision":sys.argv[8],"torchcodec":sys.argv[9],"runtime_contract_version":sys.argv[10],"cuda_build_family":"cu129","sampling_backend":"vllm_native","VLLM_USE_FLASHINFER_SAMPLER":"0"},
+ "nvcc":{"path":shutil.which("nvcc"),"required_for_selected_sampler":False},
  "compatibility_predicates":{"x86_64":platform.machine()=="x86_64","cuda12_minor_compat_driver_family":int(sys.argv[3].split(".")[0])>=525},
 }
 Path(sys.argv[1]).write_text(json.dumps(payload,indent=2,sort_keys=True)+"\n",encoding="utf-8")
@@ -255,6 +265,8 @@ assert p["python_version"] == platform.python_version()
 assert p["python_soabi"] == sysconfig.get_config_var("SOABI")
 assert p["vllm_multimodal_import_probe"] == "PASS"
 assert p["cuda_allocation_probe"] == "PASS"
+assert p["vllm_flashinfer_sampler"] is False
+assert p["sampling_backend"] == "vllm_native"
 PY
     then runtime_ready_ok=1; fi
 fi
@@ -340,6 +352,7 @@ set +e
 "$runtime/bin/python" - "$runtime_ready" "$expected_vllm_dist" "$expected_vllm_wheel_sha" "$expected_torch" "$expected_torchvision" "$expected_torchcodec" "$runtime_contract_version" >"$runtime_log" 2>&1 <<'PY'
 import importlib.metadata
 import json
+import os
 import pathlib
 import platform
 import sys
@@ -354,6 +367,7 @@ assert direct.get("archive_info",{}).get("hash") == f"sha256={sys.argv[3]}", dir
 import torch
 import torchcodec
 from vllm import LLM, SamplingParams
+from vllm import envs as vllm_envs
 import vllm
 
 torchcodec_dist = importlib.metadata.version("torchcodec")
@@ -364,6 +378,8 @@ assert torchcodec_dist == sys.argv[6], torchcodec_dist
 assert vllm.__version__ == "0.30.0", vllm.__version__
 assert LLM is not None
 assert SamplingParams is not None
+assert os.environ.get("VLLM_USE_FLASHINFER_SAMPLER") == "0"
+assert vllm_envs.VLLM_USE_FLASHINFER_SAMPLER is False
 assert torch.cuda.is_available(), "vLLM runtime Torch cannot access CUDA"
 assert torch.cuda.device_count() == 1, torch.cuda.device_count()
 probe = torch.empty((32, 32), device="cuda:0")
@@ -383,6 +399,8 @@ payload = {
     "cuda_device_name": torch.cuda.get_device_name(0),
     "cuda_allocation_probe": "PASS",
     "vllm_multimodal_import_probe": "PASS",
+    "sampling_backend": "vllm_native",
+    "vllm_flashinfer_sampler": False,
     "engine": "native_qwen3.5_multimodal",
 }
 path = pathlib.Path(sys.argv[1])
@@ -479,8 +497,11 @@ terminal_stage="qwen_inference"
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 export HF_DATASETS_OFFLINE=1
-export XDG_CACHE_HOME="$output_root/xdg-cache"
+export XDG_CACHE_HOME="$vllm_cache_root"
 mkdir -p "$XDG_CACHE_HOME"
+echo "VLLM_SAMPLING_BACKEND=vllm_native"
+echo "VLLM_USE_FLASHINFER_SAMPLER=$VLLM_USE_FLASHINFER_SAMPLER"
+echo "VLLM_PERSISTENT_COMPILE_CACHE=$XDG_CACHE_HOME"
 
 set +e
 "$runtime/bin/python" "$helper" \
@@ -494,7 +515,15 @@ set +e
 helper_rc=${PIPESTATUS[0]}
 set -e
 require_stopped
-[ "$helper_rc" -eq 0 ] || fail "QWEN_MEASUREMENT_REJECTED" "$helper_rc" "Qwen helper returned a non-passing measurement decision; inspect primary report"
+if [ "$helper_rc" -ne 0 ]; then
+    if grep -q "Could not find nvcc" "$helper_log"; then
+        fail "QWEN_ENGINE_SAMPLER_JIT_NVCC_MISSING" "$helper_rc" "Engine startup selected a sampler path requiring nvcc; inspect helper log"
+    elif grep -q "Engine core initialization failed" "$helper_log"; then
+        fail "QWEN_ENGINE_INITIALIZATION_FAILED" "$helper_rc" "vLLM engine initialization failed before Qwen inference; inspect helper log"
+    else
+        fail "QWEN_MEASUREMENT_REJECTED" "$helper_rc" "Qwen helper returned a non-passing measurement decision; inspect primary report"
+    fi
+fi
 terminal_stage="complete"
 status="SUCCESS"
 failure_class="NONE"
