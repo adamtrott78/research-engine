@@ -95,6 +95,30 @@ PY
     echo "NO_RERUN_REQUIRED=true"
     exit 0
   fi
+  if [ "$recovery" = INSPECT_OWNER ]; then
+    owner_pid="$("$core_venv/bin/python" - "$opstate" <<'PY'
+import json,sys
+r=json.load(open(sys.argv[1],encoding="utf-8"))
+print(((r.get("owner_process") or {}).get("pid")) or "")
+PY
+)"
+    if [ -n "$owner_pid" ] && [ -r "/proc/$owner_pid/cmdline" ]; then
+      owner_match="$("$core_venv/bin/python" - "/proc/$owner_pid/cmdline" <<'PY'
+import pathlib,sys
+raw=pathlib.Path(sys.argv[1]).read_bytes()
+argv=[x.decode("utf-8",errors="replace") for x in raw.split(b"\0") if x]
+ok=(len(argv)>1 and pathlib.PurePath(argv[0]).name in {"bash","sh"} and pathlib.PurePath(argv[1]).name=="run-qwen35-grounded-extract.sh")
+print("true" if ok else "false")
+PY
+)"
+      if [ "$owner_match" = true ]; then
+        echo "ACTIVE_OPERATION_OWNER_PID=$owner_pid"
+        echo "NO_DUPLICATE_LAUNCH=true"
+        exit 70
+      fi
+    fi
+    echo "STALE_RUNNING_RECEIPT=true"
+  fi
 fi
 
 "$core_venv/bin/python" - "$opstate" "$operation_receipt" "$opid" "$git_sha" "$out" "$BASHPID" <<'PY'
@@ -147,6 +171,7 @@ assert p["runtime_contract_version"]==sys.argv[2]
 assert p["sampling_backend"]=="vllm_native"
 assert p["vllm_flashinfer_sampler"] is False
 assert p["vllm_distribution"]=="0.30.0+cu129"
+assert p["vllm_release_wheel_sha256"]=="e98cb69659bfcfc849cf11ce0781a7161d40b02b51a6c3636924a5909f2aabcc"
 assert p["torch"]=="2.13.0+cu129"
 assert p["torchvision"]=="0.28.0+cu129"
 assert p["torchcodec"]=="0.16.0+cu129"
