@@ -4,6 +4,7 @@ import argparse
 import copy
 import json
 import os
+import re
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -11,7 +12,7 @@ from typing import Any
 from jsonschema import ValidationError, validate
 
 from .codex_executor import CodexExecExecutor
-from .orchestration import ExecutorTier, JobType, OrchestratorStore, ResearchJob
+from .orchestration import ExecutorTier, JobExecutionError, JobType, OrchestratorStore, ResearchJob
 from .openai_executor import result_schema
 from .paper_package_ab import (
     PaperPackageABPlanner,
@@ -27,6 +28,148 @@ CONTROL_TYPES = {
     JobType.EXTRACT: "PAPER_PACKAGE_EXTRACT_AB_CONTROL_PDF",
     JobType.VERIFY: "PAPER_PACKAGE_VERIFY_AB_CONTROL_PDF",
 }
+
+
+class SelectedPdfPageTextExtractor:
+    """Extract only explicitly authorized 1-based PDF pages."""
+
+    def __init__(self, page_numbers: list[int] | set[int]):
+        normalized = sorted({int(x) for x in page_numbers})
+        if not normalized or any(x <= 0 for x in normalized):
+            raise ValueError("page_numbers must contain positive 1-based pages")
+        self.page_numbers = normalized
+
+    def __call__(self, path: Path) -> list[dict[str, Any]]:
+        try:
+            from pypdf import PdfReader
+            reader = PdfReader(str(path))
+        except Exception as exc:
+            raise JobExecutionError(
+                f"failed to parse selected PDF pages: {exc}",
+                code="SOURCE_PARSE_FAILED",
+                retryable=False,
+                detail={"path": str(path), "page_numbers": self.page_numbers},
+            ) from exc
+
+        pages: list[dict[str, Any]] = []
+        for page_number in self.page_numbers:
+            if page_number > len(reader.pages):
+                raise JobExecutionError(
+                    "selected page is outside source PDF",
+                    code="MISSING_VERIFICATION_SOURCE_PAGE",
+                    retryable=False,
+                    detail={
+                        "path": str(path),
+                        "page_number": page_number,
+                        "pdf_page_count": len(reader.pages),
+                    },
+                )
+            try:
+                text = reader.pages[page_number - 1].extract_text() or ""
+            except Exception as exc:
+                raise JobExecutionError(
+                    f"failed to extract selected PDF page {page_number}: {exc}",
+                    code="SOURCE_PARSE_FAILED",
+                    retryable=False,
+                    detail={"path": str(path), "page_number": page_number},
+                ) from exc
+            pages.append({"page_number": page_number, "text": text})
+        return pages
+
+
+def _flexible_quote_span(text: str, quote: str) -> tuple[int, int] | None:
+    quote = str(quote or "").strip()
+    if not quote:
+        return None
+    direct = text.find(quote)
+    if direct >= 0:
+        return direct, direct + len(quote)
+    tokens = quote.split()
+    if not tokens:
+        return None
+    match = re.search(
+        r"\s+".join(re.escape(token) for token in tokens),
+        text,
+        flags=re.DOTALL,
+    )
+    return None if match is None else match.span()
+
+
+def bounded_verification_page(
+    *,
+    page_text: str,
+    authoritative_evidence: list[dict[str, Any]],
+    max_chars: int,
+) -> tuple[str | None, dict[str, Any]]:
+    """Return a deterministic quote-preserving window for one VERIFY page."""
+
+    text = str(page_text or "")
+    if len(text) <= max_chars:
+        return text, {
+            "windowed": False,
+            "full_page_char_count": len(text),
+            "window_start_char": 0,
+            "window_end_char": len(text),
+            "window_char_count": len(text),
+            "reason": "FULL_PAGE_WITHIN_BOUND",
+        }
+
+    spans: list[tuple[int, int]] = []
+    missing: list[str] = []
+    for item in authoritative_evidence:
+        quote = str(item.get("raw_source_form") or "")
+        span = _flexible_quote_span(text, quote)
+        if span is None:
+            missing.append(str(item.get("id") or "unknown"))
+        else:
+            spans.append(span)
+
+    if missing or not spans:
+        return None, {
+            "windowed": True,
+            "full_page_char_count": len(text),
+            "reason": "AUTHORITATIVE_QUOTE_NOT_LOCATABLE",
+            "missing_evidence_ids": missing,
+        }
+
+    anchor_start = min(start for start, _ in spans)
+    anchor_end = max(end for _, end in spans)
+    if anchor_end - anchor_start > max_chars:
+        return None, {
+            "windowed": True,
+            "full_page_char_count": len(text),
+            "reason": "AUTHORITATIVE_QUOTE_SPAN_EXCEEDS_BOUND",
+            "anchor_span_chars": anchor_end - anchor_start,
+        }
+
+    spare = max_chars - (anchor_end - anchor_start)
+    start = max(0, anchor_start - spare // 2)
+    end = min(len(text), start + max_chars)
+    if end - start < max_chars:
+        start = max(0, end - max_chars)
+    window = text[start:end]
+
+    missing_after = [
+        str(item.get("id") or "unknown")
+        for item in authoritative_evidence
+        if _norm(str(item.get("raw_source_form") or "")) not in _norm(window)
+    ]
+    if missing_after:
+        return None, {
+            "windowed": True,
+            "full_page_char_count": len(text),
+            "reason": "WINDOW_DROPPED_AUTHORITATIVE_QUOTE",
+            "missing_evidence_ids": missing_after,
+        }
+
+    return window, {
+        "windowed": True,
+        "full_page_char_count": len(text),
+        "window_start_char": start,
+        "window_end_char": end,
+        "window_char_count": len(window),
+        "reason": "AUTHORITATIVE_QUOTE_WINDOW",
+    }
 
 
 def _norm(value: str) -> str:
@@ -181,6 +324,7 @@ class GuardedQwenCalibrationPlanner:
         max_context_chars: int = 20_000,
     ):
         self.store = store
+        self.artifact_root = Path(artifact_root)
         self.queue = OrchestratorStore(store)
         self.planner = PaperPackageABPlanner(
             store=store,
@@ -221,7 +365,20 @@ class GuardedQwenCalibrationPlanner:
             for page in context.get("pages") or []
         )
 
-    def _bounded_extract(self, job: ResearchJob) -> ResearchJob | None:
+    def _hydrator_for_pages(
+        self,
+        page_numbers: list[int] | set[int],
+    ) -> ResearchContextHydrator:
+        return ResearchContextHydrator(
+            store=self.store,
+            artifact_root=self.artifact_root,
+            text_extractor=SelectedPdfPageTextExtractor(page_numbers),
+            verify_page_radius=0,
+        )
+
+    def _bounded_extract(
+        self, job: ResearchJob
+    ) -> tuple[ResearchJob | None, str]:
         historical = dict(job.result or {})
         evidence = [dict(item) for item in historical.get("evidence") or []]
         pages = sorted(
@@ -232,45 +389,128 @@ class GuardedQwenCalibrationPlanner:
             }
         )
         if not (1 <= len(pages) <= 4):
-            return None
+            return None, f"EXTRACT_PAGE_COUNT:{len(pages)}"
 
-        hydrated = self.hydrator.hydrate(job)
-        payload = copy.deepcopy(hydrated.payload)
-        context = dict(payload.get("_research_context") or {})
-        selected = [
-            dict(page)
-            for page in context.get("pages") or []
-            if int(page.get("page_number") or 0) in set(pages)
-        ]
+        hydrated = self._hydrator_for_pages(pages).hydrate(job)
+        context = dict(hydrated.payload.get("_research_context") or {})
+        selected = [dict(page) for page in context.get("pages") or []]
         if {int(page["page_number"]) for page in selected} != set(pages):
-            return None
-        context["pages"] = selected
+            return None, "EXTRACT_SELECTED_PAGE_MISMATCH"
         context["bounded_calibration_scope"] = {
             "selection_basis": "historical_evidence_page_numbers_not_answer_content",
             "page_numbers": pages,
             "max_pages": 4,
+            "source_extraction": "SELECTED_PAGES_ONLY",
         }
+        payload = copy.deepcopy(hydrated.payload)
         payload["_research_context"] = context
         bounded = replace(hydrated, payload=payload)
-        return (
-            bounded
-            if self._context_chars(bounded) <= self.max_context_chars
-            else None
-        )
+        chars = self._context_chars(bounded)
+        if chars > self.max_context_chars:
+            return None, f"EXTRACT_CONTEXT_CHARS:{chars}"
+        return bounded, "PASS"
 
-    def _bounded_verify(self, job: ResearchJob) -> ResearchJob | None:
-        hydrated = self.hydrator.hydrate(job)
-        context = dict(hydrated.payload.get("_research_context") or {})
-        pages = list(context.get("pages") or [])
-        scope = dict(context.get("verification_scope") or {})
-        if int(scope.get("page_radius", -1)) != 0:
-            return None
-        if len(pages) != 1 or len(scope.get("supplied_page_numbers") or []) != 1:
-            return None
-        return (
-            hydrated
-            if self._context_chars(hydrated) <= self.max_context_chars
-            else None
+    def _bounded_verify(
+        self, job: ResearchJob
+    ) -> tuple[ResearchJob | None, str]:
+        materialized = (
+            (job.payload.get("extraction") or {})
+            .get("_materialization", {})
+        )
+        evidence_ids = list(materialized.get("evidence_ids") or [])
+        if not evidence_ids:
+            return None, "VERIFY_NO_EVIDENCE_IDS"
+
+        authoritative = self.hydrator._evidence(evidence_ids)
+        by_page: dict[int, list[dict[str, Any]]] = {}
+        for item in authoritative:
+            page_number = item.get("page_number")
+            if page_number is None:
+                continue
+            by_page.setdefault(int(page_number), []).append(dict(item))
+        if not by_page:
+            return None, "VERIFY_NO_CITED_PAGES"
+
+        page_rejections: list[str] = []
+        for page_number in sorted(by_page):
+            page_evidence = by_page[page_number]
+            page_evidence_ids = [str(item["id"]) for item in page_evidence]
+
+            scoped_payload = copy.deepcopy(job.payload)
+            scoped_materialized = (
+                scoped_payload.setdefault("extraction", {})
+                .setdefault("_materialization", {})
+            )
+            scoped_materialized["evidence_ids"] = page_evidence_ids
+            scoped_job = replace(job, payload=scoped_payload)
+
+            try:
+                hydrated = self._hydrator_for_pages([page_number]).hydrate(
+                    scoped_job
+                )
+            except JobExecutionError as exc:
+                page_rejections.append(
+                    f"page={page_number}:HYDRATION:{exc.code}"
+                )
+                continue
+
+            payload = copy.deepcopy(hydrated.payload)
+            context = dict(payload.get("_research_context") or {})
+            pages = [dict(page) for page in context.get("pages") or []]
+            scope = dict(context.get("verification_scope") or {})
+            if int(scope.get("page_radius", -1)) != 0:
+                page_rejections.append(
+                    f"page={page_number}:VERIFY_RADIUS_NOT_ZERO"
+                )
+                continue
+            if (
+                len(pages) != 1
+                or len(scope.get("supplied_page_numbers") or []) != 1
+            ):
+                page_rejections.append(
+                    f"page={page_number}:VERIFY_SINGLE_PAGE_REQUIRED"
+                )
+                continue
+
+            window, window_meta = bounded_verification_page(
+                page_text=str(pages[0].get("text") or ""),
+                authoritative_evidence=[
+                    dict(item)
+                    for item in context.get("authoritative_evidence") or []
+                ],
+                max_chars=self.max_context_chars,
+            )
+            if window is None:
+                page_rejections.append(
+                    f"page={page_number}:VERIFY_WINDOW:"
+                    f"{window_meta.get('reason')}"
+                )
+                continue
+
+            pages[0]["text"] = window
+            context["pages"] = pages
+            scope["text_window"] = window_meta
+            scope["source_extraction"] = "SELECTED_PAGE_ONLY"
+            scope["derived_page_scoped_control"] = {
+                "source_job_id": job.id,
+                "source_evidence_ids": evidence_ids,
+                "selected_page_number": page_number,
+                "selected_evidence_ids": page_evidence_ids,
+                "selection_rule": "LOWEST_CITED_PAGE_THAT_FITS_BOUND",
+            }
+            context["verification_scope"] = scope
+            payload["_research_context"] = context
+            bounded = replace(hydrated, payload=payload)
+            chars = self._context_chars(bounded)
+            if chars > self.max_context_chars:
+                page_rejections.append(
+                    f"page={page_number}:VERIFY_CONTEXT_CHARS:{chars}"
+                )
+                continue
+            return bounded, "PASS"
+
+        return None, "VERIFY_NO_PAGE_CLUSTER_FITS:" + "|".join(
+            page_rejections
         )
 
     def build(self, *, run_id: str) -> dict[str, Any]:
@@ -287,11 +527,15 @@ class GuardedQwenCalibrationPlanner:
             }
             selected: ResearchJob | None = None
             source_id: str | None = None
+            rejections: list[dict[str, str]] = []
             for job_id in controlled:
                 source = by_id.get(job_id)
                 if source is None:
+                    rejections.append(
+                        {"job_id": job_id, "reason": "SOURCE_JOB_NOT_COMPLETED"}
+                    )
                     continue
-                candidate = (
+                candidate, reason = (
                     self._bounded_extract(source)
                     if job_type == JobType.EXTRACT
                     else self._bounded_verify(source)
@@ -300,9 +544,11 @@ class GuardedQwenCalibrationPlanner:
                     selected = candidate
                     source_id = job_id
                     break
+                rejections.append({"job_id": job_id, "reason": reason})
             if selected is None:
                 raise ValueError(
-                    f"no preserved {job_type} control fits bounded Qwen context"
+                    f"no preserved {job_type} control fits bounded Qwen context; "
+                    f"rejections={json.dumps(rejections, sort_keys=True)}"
                 )
             context = dict(selected.payload.get("_research_context") or {})
             records.append(
