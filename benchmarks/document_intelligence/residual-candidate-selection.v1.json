@@ -213,11 +213,18 @@
         "verify_warm_job_seconds_lte": 45
       },
       "benchmark_status": {
-        "status": "OPEN_TARGETED_VISUAL_FALLBACK_MEASUREMENT",
-        "source_case": "benchmarks/document_intelligence/cases/semantic-visuals-v1.json",
-        "contract": "benchmarks/document_intelligence/qwen35-visual-benchmark-contract.v1.json",
-        "runtime": "vLLM 0.30.0 offline multimodal",
-        "scope": "Same validated Figure 6/Figure 3 regions after PaddleOCR-VL semantic-quality failure; explicit evidence questions; no generic chart transcription."
+        "status": "SELECTED_LOCAL_VLM_GUARDED_PROMOTION_PENDING_DOWNSTREAM_CALIBRATION",
+        "visual_contract": "benchmarks/document_intelligence/qwen35-visual-benchmark-contract.v1.json",
+        "visual_review": "benchmarks/document_intelligence/qwen35-visual-human-codex-review.v1.json",
+        "semantic_calibration_contract": "benchmarks/document_intelligence/qwen35-guarded-semantic-calibration-contract.v1.json",
+        "measurement": {
+          "visual_candidate_inference_calls": 3,
+          "model_init_seconds": 117.64840551599627,
+          "peak_gpu_delta_mib": 11989,
+          "peak_rss_mib": 5807.02734375,
+          "warm_region_seconds_max": 5.179953836006462
+        },
+        "decision": "No new VLM family bakeoff. Figure 6 passes; Figure 3 requires deterministic canonicalization and fail-closed relation validation. Next gate is exactly one bounded EXTRACT and one radius-0 VERIFY call in one Qwen engine session, each compared with contemporaneous STANDARD Codex."
       }
     }
   ],
@@ -252,7 +259,9 @@
     "no_job_tier_change": true,
     "no_daemon_lifecycle_change": true,
     "no_scientific_state_materialization": true,
-    "next_gate": "QWEN3_5_4B_TARGETED_VISUAL_FALLBACK_BENCHMARK",
-    "source_gate_pass_receipt": "benchmarks/document_intelligence/residual-source-audit-pass.v1.json"
+    "next_gate": "QWEN3_5_4B_GUARDED_EXTRACT_VERIFY_CALIBRATION",
+    "source_gate_pass_receipt": "benchmarks/document_intelligence/residual-source-audit-pass.v1.json",
+    "qwen_new_model_bakeoff_required": false,
+    "qwen_unguarded_relation_promotion": false
   }
 }
