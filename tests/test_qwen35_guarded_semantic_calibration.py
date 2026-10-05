@@ -73,3 +73,15 @@ def test_runner_forbids_install_and_keeps_c3_out():
     assert '("figure6_first", args.figure6, FIGURE6_PROMPT, False)' in visual
     assert '("figure3_warm", args.figure3, FIGURE3_PROMPT, True)' in visual
     assert '("figure6_warm_repeat", args.figure6, FIGURE6_PROMPT, True)' in visual
+
+
+def test_postgres_is_boot_persistent_and_runner_self_heals_db_only():
+    compose=(ROOT/"docker-compose.yml").read_text()
+    assert "db:\n    restart: unless-stopped\n" in compose
+
+    runner=(ROOT/"deploy"/"run-qwen35-guarded-semantic-calibration.sh").read_text()
+    assert "docker compose -f docker-compose.yml up -d db" in runner
+    assert "POSTGRESQL=running/ready" in runner
+    assert "POSTGRESQL_NOT_READY" in runner
+    assert "up -d daemon" not in runner
+    assert "research-engine-daemon.service" in runner
