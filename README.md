@@ -5,6 +5,37 @@ Implementation repository for a provenance-first automated research system.
 The architectural contracts are developed and validated in `adamtrott78/workspace-control`
 under `architecture/research-engine/`. This repository owns executable implementation.
 
+## Workspace-control scope binding
+
+Substantial multi-step work in this repository is governed by the shared
+workspace-control Scope Closure Gate pinned by
+`policies/workspace-control-scope-adapter.v1.json`.
+
+The adapter currently binds to:
+
+`adamtrott78/workspace-control@1295477546c802029d7c52755beeacdef31b5346`
+
+and routes executors to the shared:
+
+- `procedures/scope_closure.md`;
+- `schemas/scope_envelope.v1.schema.json`;
+- `scripts/scope_control.py`.
+
+Research-engine does not vendor or import that control-plane implementation.
+At task start, derive the scope envelope from the authoritative owning
+workspace-control task capsule, including its task ID, objective/current bounded
+goal, exact `next_safe_action`, and any explicit scope authorizations.
+
+Newly discovered work may continue immediately only when it is required for
+correctness/safety/durability, directly blocks the recorded next safe action or
+required validation, or is explicitly authorized. Non-blocking adjacent
+hardening, refactors, new model comparisons, extra experiments, and neighboring
+runner improvements are deferred as follow-up work.
+
+Once the owning objective is durable, required validation passes, and no
+execute-now finding remains, the required decision is
+`CHECKPOINT_AND_STOP`.
+
 ## v1 invariants
 
 - scientific/source records are authoritative;
