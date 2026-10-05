@@ -243,6 +243,7 @@ def main() -> int:
     }
 
     try:
+        print(json.dumps({"event": "QWEN_MODEL_INIT_START"}, sort_keys=True), flush=True)
         started = time.perf_counter()
         llm = LLM(
             model=str(args.model_dir),
@@ -257,6 +258,7 @@ def main() -> int:
             mm_processor_cache_gb=0.25,
         )
         init_seconds = time.perf_counter() - started
+        print(json.dumps({"event": "QWEN_MODEL_INIT_COMPLETE", "seconds": init_seconds}, sort_keys=True), flush=True)
         sampling = SamplingParams(
             temperature=0.7,
             top_p=0.8,
