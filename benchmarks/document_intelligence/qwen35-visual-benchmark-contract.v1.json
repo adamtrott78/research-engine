@@ -54,7 +54,10 @@
     "network_model_downloads_during_inference": "FORBIDDEN",
     "selection_reason": "Current vLLM natively supports Qwen3.5 hybrid multimodal models and is an official serving path for the pinned model.",
     "enforce_eager": false,
-    "execution_mode": "DEFAULT_HYBRID_CUDA_GRAPH_FOR_SERVING_PERFORMANCE"
+    "execution_mode": "DEFAULT_HYBRID_CUDA_GRAPH_FOR_SERVING_PERFORMANCE",
+    "cuda_build": "12.9",
+    "host_driver_mutation_required": false,
+    "compatibility_rationale": "Initial Lambda CUDA preflight showed the host driver exposes CUDA 12.8 while the generic vLLM 0.30.0 install selected CUDA 13.0 and failed before inference. Prefer the official CUDA-12.9 vLLM build first so this isolated benchmark remains within the CUDA 12.x compatibility family without mutating the host driver."
   },
   "authoritative_source": {
     "case_id": "semantic-visuals-v1",
