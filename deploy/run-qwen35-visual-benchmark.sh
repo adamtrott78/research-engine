@@ -21,6 +21,7 @@ runtime_log="$output_root/qwen35-runtime-preflight.log"
 helper_log="$output_root/qwen35-helper.log"
 console_log="$output_root/qwen35-benchmark-console.log"
 render_receipt="$output_root/qwen35-render-receipt.json"
+runtime_reuse_evidence="$output_root/qwen35-runtime-reuse-evidence.json"
 render_cache_root="$state/residual-render-cache/qwen35-visual-v2"
 runtime_contract_version="qwen35-vllm-cu129-image-native-sampler-v3"
 render_contract_version="qwen35-validated-region-render-v2"
@@ -99,9 +100,9 @@ write_compact_receipt() {
     RECEIPT_VLLM_CACHE_ROOT="$vllm_cache_root" \
     RECEIPT_QWEN_STARTED="$started" RECEIPT_QWEN_COMPLETED="$completed" \
     RECEIPT_MODEL_INITIALIZED="$initialized" RECEIPT_EXIT_CODE="$rc" \
-    python3 - "$receipt" "$root" "$output_root" "$report" "$runtime_ready" "$host_receipt" "$render_receipt" "$runtime_log" "$helper_log" "$console_log" <<'PY'
+    python3 - "$receipt" "$root" "$output_root" "$report" "$runtime_ready" "$host_receipt" "$render_receipt" "$runtime_log" "$helper_log" "$console_log" "$runtime_reuse_evidence" <<'PY'
 import json, os, pathlib, subprocess, sys
-receipt, root, out, report, runtime, host, render, runtime_log, helper_log, console_log = map(pathlib.Path, sys.argv[1:])
+receipt, root, out, report, runtime, host, render, runtime_log, helper_log, console_log, runtime_reuse_evidence = map(pathlib.Path, sys.argv[1:])
 def read_json(path):
     try: return json.loads(path.read_text(encoding="utf-8"))
     except Exception: return None
@@ -143,7 +144,7 @@ payload={
   "qwen_quality_result":primary.get("measurement_decision") if isinstance(primary,dict) else None,
   "renders":{"generated":sum(not bool(x.get("cache_hit")) for x in targets),"reused":sum(bool(x.get("cache_hit")) for x in targets),"targets":targets},
   "timing_seconds":{"runtime_reuse_check":fenv("RECEIPT_RUNTIME_REUSE_CHECK_SECONDS"),"runtime_setup":fenv("RECEIPT_RUNTIME_SETUP_SECONDS"),"runtime_smoke":fenv("RECEIPT_RUNTIME_SMOKE_SECONDS"),"render_total":render_obj.get("render_total_seconds") if isinstance(render_obj,dict) else None},
-  "artifacts":{"output_root":str(out),"primary_report":str(report) if report.exists() else None,"runtime_receipt":str(runtime) if runtime.exists() else None,"host_build_receipt":str(host) if host.exists() else None,"render_receipt":str(render) if render.exists() else None,"runtime_log":str(runtime_log) if runtime_log.exists() else None,"helper_log":str(helper_log) if helper_log.exists() else None,"console_log":str(console_log)},
+  "artifacts":{"output_root":str(out),"primary_report":str(report) if report.exists() else None,"runtime_receipt":str(runtime) if runtime.exists() else None,"host_build_receipt":str(host) if host.exists() else None,"render_receipt":str(render) if render.exists() else None,"runtime_log":str(runtime_log) if runtime_log.exists() else None,"helper_log":str(helper_log) if helper_log.exists() else None,"console_log":str(console_log),"runtime_reuse_evidence":str(runtime_reuse_evidence) if runtime_reuse_evidence.exists() else None},
   "artifact_bytes":{"runtime_log":size(runtime_log),"helper_log":size(helper_log),"console_log":size(console_log)},
   "exit_code":int(os.environ.get("RECEIPT_EXIT_CODE","1")),
   "scientific_state_materialized":False,
@@ -248,40 +249,9 @@ echo
 echo "=== EXACT RUNTIME / WHEEL IDENTITY CACHE ==="
 terminal_stage="runtime_identity_cache"
 runtime_reuse_start_ns="$(now_ns)"
-runtime_ready_ok=0
-if [ -f "$runtime_ready" ]; then
-    if python3 - "$runtime_ready" "$runtime_contract_version" "$expected_vllm_dist" "$expected_vllm_wheel_sha" "$expected_torch" "$expected_torchvision" "$expected_torchcodec" <<'PY'
-import json, platform, sys, sysconfig
-from pathlib import Path
-p=json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-assert p["runtime_contract_version"] == sys.argv[2]
-assert p["vllm_distribution"] == sys.argv[3]
-assert p["vllm_release_wheel_sha256"] == sys.argv[4]
-assert p["torch"] == sys.argv[5]
-assert p["torchvision"] == sys.argv[6]
-assert p["torchcodec"] == sys.argv[7]
-assert p["torch_cuda_runtime"] == "12.9"
-assert p["python_version"] == platform.python_version()
-assert p["python_soabi"] == sysconfig.get_config_var("SOABI")
-assert p["vllm_multimodal_import_probe"] == "PASS"
-assert p["cuda_allocation_probe"] == "PASS"
-assert p["vllm_flashinfer_sampler"] is False
-assert p["sampling_backend"] == "vllm_native"
-PY
-    then runtime_ready_ok=1; fi
-fi
-runtime_reuse_end_ns="$(now_ns)"
-runtime_reuse_check_seconds="$(elapsed_seconds "$runtime_reuse_start_ns" "$runtime_reuse_end_ns")"
-
-echo
-echo "=== RECONCILE ISOLATED VLLM CUDA-12.9 RUNTIME ==="
-terminal_stage="runtime_reconcile"
-runtime_setup_start_ns="$(now_ns)"
-runtime_rebuild=0
-if [ ! -x "$runtime/bin/python" ]; then
-    runtime_rebuild=1
-else
-    if ! "$runtime/bin/python" - "$expected_vllm_dist" "$expected_vllm_wheel_sha" "$expected_torch" "$expected_torchvision" <<'PY'
+package_environment_compatible=0
+if [ -x "$runtime/bin/python" ]; then
+    if "$runtime/bin/python" - "$expected_vllm_dist" "$expected_vllm_wheel_sha" "$expected_torch" "$expected_torchvision" <<'PY'
 import importlib.metadata
 import json
 import sys
@@ -296,8 +266,50 @@ assert torch.version.cuda == "12.9", torch.version.cuda
 assert importlib.metadata.version("torchvision") == sys.argv[4]
 PY
     then
-        runtime_rebuild=1
+        package_environment_compatible=1
     fi
+fi
+
+certification_transition_json="$(
+    PYTHONPATH="$root/src" python3 - "$runtime_ready" "$runtime_contract_version" "$package_environment_compatible" <<'PY'
+import json
+import pathlib
+import sys
+from research_engine.qwen_runtime_certification import certification_transition
+
+path = pathlib.Path(sys.argv[1])
+try:
+    cached = json.loads(path.read_text(encoding="utf-8"))
+except Exception:
+    cached = None
+transition = certification_transition(
+    cached,
+    requested_contract_identity=sys.argv[2],
+    package_environment_compatible=sys.argv[3] == "1",
+)
+print(json.dumps(transition, sort_keys=True))
+PY
+)"
+echo "CERTIFICATION_TRANSITION=$certification_transition_json"
+
+runtime_ready_ok="$(
+    python3 - "$certification_transition_json" <<'PY'
+import json
+import sys
+obj=json.loads(sys.argv[1])
+print(1 if obj["status"]=="CERTIFICATION_HIT" and obj["package_environment_compatible"] else 0)
+PY
+)"
+runtime_reuse_end_ns="$(now_ns)"
+runtime_reuse_check_seconds="$(elapsed_seconds "$runtime_reuse_start_ns" "$runtime_reuse_end_ns")"
+
+echo
+echo "=== RECONCILE ISOLATED VLLM CUDA-12.9 RUNTIME ==="
+terminal_stage="runtime_reconcile"
+runtime_setup_start_ns="$(now_ns)"
+runtime_rebuild=0
+if [ "$package_environment_compatible" -ne 1 ]; then
+    runtime_rebuild=1
 fi
 
 if [ "$runtime_rebuild" -eq 1 ]; then
@@ -497,8 +509,13 @@ terminal_stage="qwen_inference"
 export HF_HUB_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 export HF_DATASETS_OFFLINE=1
+cache_present_before=false
+if [ -d "$vllm_cache_root" ] && find "$vllm_cache_root" -type f -print -quit 2>/dev/null | grep -q .; then
+    cache_present_before=true
+fi
 export XDG_CACHE_HOME="$vllm_cache_root"
 mkdir -p "$XDG_CACHE_HOME"
+echo "VLLM_COMPILE_CACHE_PRESENT_BEFORE=$cache_present_before"
 echo "VLLM_SAMPLING_BACKEND=vllm_native"
 echo "VLLM_USE_FLASHINFER_SAMPLER=$VLLM_USE_FLASHINFER_SAMPLER"
 echo "VLLM_PERSISTENT_COMPILE_CACHE=$XDG_CACHE_HOME"
@@ -524,6 +541,29 @@ if [ "$helper_rc" -ne 0 ]; then
         fail "QWEN_MEASUREMENT_REJECTED" "$helper_rc" "Qwen helper returned a non-passing measurement decision; inspect primary report"
     fi
 fi
+
+PYTHONPATH="$root/src" python3 - "$helper_log" "$runtime_reuse_evidence" "$cache_present_before" "$runtime_setup_mode" "$runtime_identity_reused" <<'PY'
+import json
+import pathlib
+import sys
+from research_engine.qwen_runtime_certification import make_runtime_reuse_report
+
+helper_log=pathlib.Path(sys.argv[1])
+output=pathlib.Path(sys.argv[2])
+report=make_runtime_reuse_report(
+    log_text=helper_log.read_text(encoding="utf-8", errors="replace"),
+    cache_present_before=sys.argv[3].lower()=="true",
+    package_environment_reused=sys.argv[4] not in {"full_rebuild","torchcodec_repair"},
+    execution_certification_reused=sys.argv[5].lower()=="true",
+    live_engine_reused_for_domain_calls=True,
+)
+report["source_helper_log"]=str(helper_log)
+report["scientific_call_count_added_for_wave3"]=0
+output.write_text(json.dumps(report,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+print(json.dumps(report,sort_keys=True))
+PY
+echo "QWEN_RUNTIME_REUSE_EVIDENCE=$runtime_reuse_evidence"
+
 terminal_stage="complete"
 status="SUCCESS"
 failure_class="NONE"
