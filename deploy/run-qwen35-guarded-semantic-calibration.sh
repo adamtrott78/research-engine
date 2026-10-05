@@ -77,10 +77,20 @@ do
 done
 
 echo
-echo "=== POSTGRESQL READ-ONLY CALIBRATION SOURCE ==="
+echo "=== ENSURE POSTGRESQL SUPPORT SERVICE ==="
 export RESEARCH_ENGINE_DATABASE_URL="${RESEARCH_ENGINE_DATABASE_URL:-postgresql://research_engine:research_engine@localhost:5432/research_engine}"
 export RESEARCH_ENGINE_ARTIFACT_ROOT="${RESEARCH_ENGINE_ARTIFACT_ROOT:-$state/artifacts}"
-sudo docker compose -f docker-compose.yml exec -T db pg_isready -U research_engine -d research_engine
+sudo docker compose -f docker-compose.yml up -d db
+db_ready=0
+for _ in $(seq 1 30); do
+  if sudo docker compose -f docker-compose.yml exec -T db pg_isready -U research_engine -d research_engine >/dev/null 2>&1; then
+    db_ready=1
+    break
+  fi
+  sleep 2
+done
+[ "$db_ready" -eq 1 ] || fail "POSTGRESQL_NOT_READY" 38
+echo "POSTGRESQL=running/ready"
 require_stopped
 
 echo

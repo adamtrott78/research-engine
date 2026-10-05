@@ -1,5 +1,6 @@
 services:
   db:
+    restart: unless-stopped
     image: pgvector/pgvector:0.8.6-pg18
     environment:
       POSTGRES_DB: research_engine
