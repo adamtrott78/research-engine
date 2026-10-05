@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "task": "research-engine-local-document-pipeline-v1",
+  "title": "WORKSPACE-CONTROL WAVE-3 FIELD EVIDENCE",
+  "status": "PARTIAL_MEASURED_NEXT_NATURAL_BOOT_PENDING_R2_DELTA",
+  "successful_cold_v3_baseline": {
+    "research_engine_sha": "a3d80e9329e231889b11430f98c0de342349fe1f",
+    "model_engine_initialization_seconds": 117.64840551599627,
+    "vllm_engine_init_seconds": 93.11,
+    "torch_compile_seconds": 18.17,
+    "profiling_warmup_seconds": 48.84,
+    "package_install_or_download_performed": false,
+    "render_cache": {
+      "generated": 0,
+      "reused": 2,
+      "seconds": 0.003600846990593709
+    }
+  },
+  "reuse_layers": {
+    "R0_package_environment": {
+      "before": "v2 certification mismatch entering native-sampler v3",
+      "after": "existing cu129 package environment reused; no package installation/download",
+      "measured_setup_seconds": 1.143321,
+      "result": "REUSED"
+    },
+    "R1_execution_certification": {
+      "before": "generic AssertionError on v2->v3 sentinel mismatch",
+      "after": "typed CERTIFICATION_MISS: EXECUTION_CONTRACT_CHANGED; package compatibility retained; earliest revalidation runtime_multimodal_smoke",
+      "result": "IMPLEMENTED_AND_UNIT_TESTED"
+    },
+    "R2_compiled_jit_runtime_cache": {
+      "cold_v3_baseline": {
+        "torch_compile_seconds": 18.17,
+        "profiling_warmup_seconds": 48.84,
+        "cache_root": "~/.research-engine/residual-runtime-cache/qwen35-vllm-cu129-image-native-sampler-v3/851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a"
+      },
+      "next_natural_boot_measurement": "PENDING",
+      "result": "INSTRUMENTATION_READY_NO_RERUN_PERFORMED"
+    },
+    "R3_live_initialized_engine_session": {
+      "successful_benchmark": "one initialized engine served all three scientific calls",
+      "C3_design": "separate authorized same-modality certification accepts/reuses a live engine and forbids a second heavyweight boot for subsequent domain work",
+      "result": "DESIGNED_NOT_EXECUTED"
+    }
+  },
+  "historical_failure_envelope": {
+    "source": "existing FlashInfer/nvcc failure only; no induced failure",
+    "structured_fixture": "benchmarks/document_intelligence/qwen35-flashinfer-nvcc-failure-envelope.v1.json",
+    "causal_error_preserved": true,
+    "result": "UNIT_TESTED"
+  },
+  "idempotent_recovery": {
+    "source_receipt_fixture": "tests/fixtures/qwen35-success-receipt.v1.json",
+    "expected_result": "COMPLETED_REUSE",
+    "expensive_stage_repeat": false,
+    "probe_wall_seconds": null,
+    "result": "LOGIC_UNIT_TESTED; LAMBDA_DRY_RUN_PENDING_NONDESTRUCTIVE_PROBE"
+  }
+}
