@@ -2,6 +2,8 @@ import json
 import re
 from pathlib import Path
 
+import importlib.util
+
 from research_engine.qwen_grounded_extract import (
     exact_text_candidates,
     execution_identity,
@@ -146,3 +148,88 @@ def test_wave3_certification_freeze_requires_explicit_r2_hit_and_c3():
     assert 'shared_r2="VERIFIED_HIT" if local_r2=="VERIFIED_HIT"' in text
     assert 'freeze=runtime_certified and shared_r2=="VERIFIED_HIT"' in text
     assert 'runtime_certified=all(x["status"]=="PASS" for x in stages[:5])' in text
+
+
+def _load_grounded_helper():
+    path=ROOT/"benchmarks"/"document_intelligence"/"run_qwen35_grounded_extract.py"
+    spec=importlib.util.spec_from_file_location("grounded_helper",path)
+    module=importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_domain_prompt_compaction_preserves_candidate_ids_and_hides_provenance():
+    helper=_load_grounded_helper()
+    plan={
+        "job":{"payload":{"item":{"id":"paper","title":"title","rationale":"why"}}},
+        "candidates":[
+            {
+                "candidate_id":"pdf:p2:0000",
+                "source_layer":"AUTHORITATIVE_PDF_TEXT",
+                "candidate_kind":"TEXT_SPAN",
+                "page_number":2,
+                "display_text":"A"*1000,
+            },
+            {
+                "candidate_id":"formula:p3:x",
+                "source_layer":"CODEFORMULAV2",
+                "candidate_kind":"FORMULA_ENRICHMENT",
+                "page_number":3,
+                "display_text":"B"*1000,
+            },
+        ],
+    }
+    messages=helper.domain_prompt(plan,excerpt_cap=80)
+    payload=json.loads(messages[1]["content"])
+    assert [row[0] for row in payload["candidates"]]==[
+        "pdf:p2:0000","formula:p3:x"
+    ]
+    assert all(len(row)==2 for row in payload["candidates"])
+    serialized=messages[1]["content"]
+    assert "page_number" not in serialized
+    assert "source_layer" not in serialized
+    assert "candidate_kind" not in serialized
+    assert "raw_source_form" not in serialized
+
+
+def test_token_fit_preserves_every_candidate_id():
+    helper=_load_grounded_helper()
+
+    class FakeTokenizer:
+        def apply_chat_template(self,messages,tokenize,add_generation_prompt):
+            assert tokenize is True
+            assert add_generation_prompt is True
+            # Simulate a tokenizer where each four serialized characters cost a token.
+            chars=sum(len(str(message["content"])) for message in messages)
+            return list(range((chars+3)//4))
+
+    plan={
+        "job":{"payload":{"item":{"id":"paper","title":"title","rationale":"why"}}},
+        "candidates":[
+            {
+                "candidate_id":f"pdf:p2:{i:04d}",
+                "display_text":"candidate text "+("x"*900),
+            }
+            for i in range(30)
+        ],
+    }
+    messages,meta=helper.fit_domain_prompt(plan,FakeTokenizer())
+    payload=json.loads(messages[1]["content"])
+    assert [row[0] for row in payload["candidates"]]==[
+        f"pdf:p2:{i:04d}" for i in range(30)
+    ]
+    assert meta["all_candidate_ids_preserved"] is True
+    assert meta["input_tokens"] <= helper.DOMAIN_INPUT_TOKEN_LIMIT
+    assert meta["excerpt_cap_chars"] is not None
+
+
+def test_runner_persists_certification_before_failure_exit_and_uses_actual_counts():
+    text=(ROOT/"deploy"/"run-qwen35-grounded-extract.sh").read_text()
+    cert=text.index("=== WORKSPACE-CONTROL WAVE-3 CERTIFICATION + ADOPTION DETAIL ===")
+    failure=text.index('if [ "$qwen_rc" -ne 0 ]; then')
+    assert cert < failure
+    assert 'c4_scientific_domain_calls_started' in text
+    assert 'c4_scientific_domain_calls_completed' in text
+    assert 'live_engine_reused_for_domain_calls=(c3_pass and c4_completed==1)' in text
+    assert 'stage=str(result.get("failure_stage")' in text
