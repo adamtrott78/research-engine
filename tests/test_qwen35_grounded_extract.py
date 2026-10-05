@@ -102,8 +102,10 @@ def test_runner_reuses_sidecar_and_has_no_materialization_or_install():
     assert "PACKAGE_INSTALL_DOWNLOAD_WORK=FORBIDDEN_AND_SKIPPED" in text
     assert "SemanticResultMaterializer" not in text
     assert "pip install" not in text
-    assert "C3_CALLS=1" in text
-    assert "C4_SCIENTIFIC_CALLS=1" in text
+    assert "C3_CALLS=" in text
+    assert "C3_REUSED=" in text
+    assert "C4_SCIENTIFIC_CALLS_STARTED=" in text
+    assert "C4_SCIENTIFIC_CALLS_COMPLETED=" in text
     assert "COMPLETED_REUSE" in text
     assert "runtime-operation-receipt.json" in text
 
@@ -233,5 +235,17 @@ def test_runner_persists_certification_before_failure_exit_and_uses_actual_count
     assert cert < failure
     assert 'c4_scientific_domain_calls_started' in text
     assert 'c4_scientific_domain_calls_completed' in text
-    assert 'live_engine_reused_for_domain_calls=(c3_pass and c4_completed==1)' in text
+    assert 'live_engine_reused_for_domain_calls=(c3_calls==1 and c3_pass and c4_completed==1)' in text
     assert 'stage=str(result.get("failure_stage")' in text
+
+
+def test_retry_reuses_passing_c3_for_same_execution_identity():
+    helper=(ROOT/"benchmarks"/"document_intelligence"/"run_qwen35_grounded_extract.py").read_text()
+    runner=(ROOT/"deploy"/"run-qwen35-grounded-extract.sh").read_text()
+    assert "--reuse-canary-from" in helper
+    assert "C3_CANARY_REUSED" in helper
+    assert 'report["c3_canary_reused"] = True' in helper
+    assert "RECOVER REUSABLE C3 CERTIFICATION" in runner
+    assert 'receipt.get("execution_identity") != execid' in runner
+    assert 'qwen_args+=(--reuse-canary-from "$reuse_c3_from")' in runner
+    assert "live_engine_reused_for_domain_calls=(c3_calls==1 and c3_pass and c4_completed==1)" in runner

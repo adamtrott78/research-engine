@@ -212,6 +212,7 @@ def main() -> int:
     p.add_argument("--gpu-uuid", required=True)
     p.add_argument("--baseline-gpu-used-mib", type=float, required=True)
     p.add_argument("--output", type=Path, required=True)
+    p.add_argument("--reuse-canary-from", type=Path)
     args = p.parse_args()
 
     from vllm import LLM, SamplingParams
@@ -227,6 +228,8 @@ def main() -> int:
         "vllm_version": getattr(vllm, "__version__", "unknown"),
         "model_init_seconds": None,
         "c3_canary_calls": 0,
+        "c3_canary_reused": False,
+        "c3_canary_reuse_source": None,
         "scientific_inference_calls": 0,
         "scientific_inference_calls_started": 0,
         "scientific_inference_calls_completed": 0,
@@ -290,38 +293,62 @@ def main() -> int:
         )
 
         current_stage = "C3_CANARY"
-        print(json.dumps({"event": "C3_CANARY_START"}, sort_keys=True), flush=True)
-        start = time.perf_counter()
-        out = llm.chat(
-            canary_prompt(),
-            sampling_params=canary_sampling,
-            use_tqdm=False,
-            chat_template_kwargs={"enable_thinking": False},
-        )[0].outputs[0]
-        canary_seconds = time.perf_counter() - start
-        parsed, error = parse_json_object(out.text)
-        selected = (
-            list(parsed.get("selected_candidate_ids") or [])
-            if parsed is not None
-            else []
-        )
-        canary_pass = selected == CANARY_EXPECTED
-        report["c3_canary_calls"] = 1
-        report["canary"] = {
-            "seconds": canary_seconds,
-            "parsed": parsed,
-            "parse_error": error,
-            "pass": canary_pass,
-            "expected_selected_candidate_ids": CANARY_EXPECTED,
-            "synthetic_non_scientific": True,
-        }
-        print(
-            json.dumps(
-                {"event": "C3_CANARY_COMPLETE", "seconds": canary_seconds, "pass": canary_pass},
-                sort_keys=True,
-            ),
-            flush=True,
-        )
+        canary_pass = False
+        if args.reuse_canary_from is not None:
+            prior = json.loads(args.reuse_canary_from.read_text(encoding="utf-8"))
+            prior_canary = dict(prior.get("canary") or {})
+            if not prior_canary.get("pass"):
+                raise RuntimeError("requested C3 reuse source does not contain a passing canary")
+            if list(prior_canary.get("expected_selected_candidate_ids") or []) != CANARY_EXPECTED:
+                raise RuntimeError("requested C3 reuse source has incompatible canary contract")
+            report["canary"] = prior_canary
+            report["c3_canary_reused"] = True
+            report["c3_canary_reuse_source"] = str(args.reuse_canary_from)
+            print(
+                json.dumps(
+                    {
+                        "event": "C3_CANARY_REUSED",
+                        "source": str(args.reuse_canary_from),
+                        "pass": True,
+                    },
+                    sort_keys=True,
+                ),
+                flush=True,
+            )
+            canary_pass = True
+        else:
+            print(json.dumps({"event": "C3_CANARY_START"}, sort_keys=True), flush=True)
+            start = time.perf_counter()
+            out = llm.chat(
+                canary_prompt(),
+                sampling_params=canary_sampling,
+                use_tqdm=False,
+                chat_template_kwargs={"enable_thinking": False},
+            )[0].outputs[0]
+            canary_seconds = time.perf_counter() - start
+            parsed, error = parse_json_object(out.text)
+            selected = (
+                list(parsed.get("selected_candidate_ids") or [])
+                if parsed is not None
+                else []
+            )
+            canary_pass = selected == CANARY_EXPECTED
+            report["c3_canary_calls"] = 1
+            report["canary"] = {
+                "seconds": canary_seconds,
+                "parsed": parsed,
+                "parse_error": error,
+                "pass": canary_pass,
+                "expected_selected_candidate_ids": CANARY_EXPECTED,
+                "synthetic_non_scientific": True,
+            }
+            print(
+                json.dumps(
+                    {"event": "C3_CANARY_COMPLETE", "seconds": canary_seconds, "pass": canary_pass},
+                    sort_keys=True,
+                ),
+                flush=True,
+            )
         if not canary_pass:
             raise RuntimeError("C3 same-modality canary failed")
 
@@ -399,6 +426,8 @@ def main() -> int:
                 "measurement_decision": report["measurement_decision"],
                 "model_init_seconds": report.get("model_init_seconds"),
                 "c3_canary_pass": bool((report.get("canary") or {}).get("pass")),
+                "c3_canary_calls": report["c3_canary_calls"],
+                "c3_canary_reused": report["c3_canary_reused"],
                 "scientific_inference_calls": report["scientific_inference_calls"],
                 "scientific_inference_calls_started": report["scientific_inference_calls_started"],
                 "scientific_inference_calls_completed": report["scientific_inference_calls_completed"],
