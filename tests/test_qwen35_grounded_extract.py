@@ -321,3 +321,9 @@ def test_guard_collapses_exact_semantic_duplicates_conservatively():
     assert len(evidence)==1
     assert evidence[0]["confidence"]==0.70
     assert result["canonicalization"]["exact_semantic_duplicates_collapsed"]==1
+
+
+def test_shared_r3_requires_c3_to_run_in_current_live_engine():
+    text=(ROOT/"deploy"/"run-qwen35-grounded-extract.sh").read_text()
+    assert 'c3_current_live_call=(int(q.get("c3_canary_calls") or 0)==1 and c3 and not bool(q.get("c3_canary_reused")))' in text
+    assert '"R3_LIVE_SESSION":"HEALTHY_REUSE" if c3_current_live_call and c4 else "NOT_APPLICABLE"' in text
