@@ -52,9 +52,11 @@ def test_extract_verify_remain_authoritative_pdf_standard_semantic():
     assert "AUTHORITATIVE_PDF" in extract["production_placement"]
 
     assert verify["executor_tier"] == "STANDARD"
-    assert verify["localization_decision"] == "RETAIN_BASELINE"
-    assert "AUTHORITATIVE_PDF" in verify["production_placement"]
-    assert "CITED_PAGES" in verify["production_placement"]
+    assert verify["localization_decision"] == "PROMOTE_BOUNDED_LOCAL_VERIFY"
+    assert verify["production_placement"] == (
+        "BOUNDED_LOCAL_QWEN_PRIMARY_WITH_REMOTE_CODEX_FALLTHROUGH"
+    )
+    assert "authoritative" in verify["authority"].lower()
 
 
 def test_measured_component_policy_locks_document_routing_boundaries():
@@ -80,7 +82,7 @@ def test_measured_component_policy_locks_document_routing_boundaries():
     )
     assert (
         components["verify_semantic_offload"]["decision"]
-        == "DEFER_RETAIN_STANDARD_REMOTE"
+        == "PROMOTE_BOUNDED_LOCAL_QWEN_VERIFY"
     )
 
 

@@ -71,6 +71,7 @@ class LocalModelOwner:
         self._requests_accepted = 0
         self._requests_completed = 0
         self._requests_failed = 0
+        self._eviction_count = 0
         self._last_response_metadata: dict[str, Any] = {}
         self._worker = threading.Thread(
             target=self._worker_loop,
@@ -304,6 +305,23 @@ class LocalModelOwner:
             self._log_handle.close()
             self._log_handle = None
 
+    def evict(self) -> bool:
+        """Stop an idle resident model so another family can own its GPU."""
+
+        with self._lock:
+            if self._closed:
+                return False
+            if not self._queue.empty():
+                raise LocalInferenceError(
+                    f"cannot evict {self.spec.family} with queued requests"
+                )
+            proc = self._process
+            if proc is None or proc.poll() is not None:
+                return False
+            self._eviction_count += 1
+            self._stop_process()
+            return True
+
     def health(self) -> dict[str, Any]:
         proc = self._process
         with self._lock:
@@ -319,6 +337,7 @@ class LocalModelOwner:
                 "requests_accepted": self._requests_accepted,
                 "requests_completed": self._requests_completed,
                 "requests_failed": self._requests_failed,
+                "eviction_count": self._eviction_count,
                 "queue_depth": self._queue.qsize(),
                 "max_pending": self.spec.max_pending,
                 "last_response_metadata": dict(self._last_response_metadata),
@@ -339,17 +358,86 @@ class LocalModelOwner:
 
 
 class LocalInferenceService:
-    """Shared process-local broker for specialized document model owners."""
+    """Shared process-local broker for heavyweight local model owners."""
 
     def __init__(
         self,
         *,
         formula: LocalModelOwner,
         table: LocalModelOwner,
+        qwen_verify: LocalModelOwner | None = None,
+        gpu_bindings: Mapping[str, int] | None = None,
     ):
         self.formula = formula
         self.table = table
+        self.qwen_verify = qwen_verify
         self._closed = False
+        self._owners: dict[str, LocalModelOwner] = {
+            "formula": formula,
+            "table": table,
+        }
+        if qwen_verify is not None:
+            self._owners["qwen_verify"] = qwen_verify
+        defaults = {"formula": 0, "table": 1}
+        if qwen_verify is not None:
+            defaults["qwen_verify"] = 1
+        supplied = dict(gpu_bindings or {})
+        self._gpu_bindings = {
+            family: int(supplied.get(family, gpu))
+            for family, gpu in defaults.items()
+        }
+        self._gpu_conditions = {
+            gpu: threading.Condition()
+            for gpu in set(self._gpu_bindings.values())
+        }
+        self._gpu_active_requests = {
+            gpu: 0
+            for gpu in set(self._gpu_bindings.values())
+        }
+        self._gpu_resident_family: dict[int, str | None] = {
+            gpu: None
+            for gpu in set(self._gpu_bindings.values())
+        }
+
+    def _request_family(
+        self,
+        family: str,
+        payload: Mapping[str, Any],
+        *,
+        timeout_seconds: float | None = None,
+    ) -> dict[str, Any]:
+        owner = self._owners.get(family)
+        if owner is None:
+            raise LocalInferenceError(
+                f"local inference family {family} is unavailable"
+            )
+        gpu = self._gpu_bindings[family]
+        condition = self._gpu_conditions[gpu]
+        with condition:
+            while (
+                self._gpu_active_requests[gpu] > 0
+                and self._gpu_resident_family[gpu] not in {None, family}
+            ):
+                condition.wait()
+            if self._gpu_resident_family[gpu] != family:
+                for other_family, other in self._owners.items():
+                    if (
+                        other_family != family
+                        and self._gpu_bindings.get(other_family) == gpu
+                    ):
+                        other.evict()
+                self._gpu_resident_family[gpu] = family
+            self._gpu_active_requests[gpu] += 1
+
+        try:
+            return owner.request(
+                payload,
+                timeout_seconds=timeout_seconds,
+            )
+        finally:
+            with condition:
+                self._gpu_active_requests[gpu] -= 1
+                condition.notify_all()
 
     def formula_page(
         self,
@@ -361,7 +449,8 @@ class LocalInferenceService:
     ) -> dict[str, Any]:
         if page_number < 1:
             raise ValueError("page_number must be >= 1")
-        return self.formula.request(
+        return self._request_family(
+            "formula",
             {
                 "op": "infer",
                 "source_pdf": str(Path(source_pdf).resolve()),
@@ -386,7 +475,8 @@ class LocalInferenceService:
             raise ValueError("page_number must be >= 1")
         if len(pdf_bbox) != 4:
             raise ValueError("pdf_bbox must contain four values")
-        return self.table.request(
+        return self._request_family(
+            "table",
             {
                 "op": "infer",
                 "source_pdf": str(Path(source_pdf).resolve()),
@@ -399,19 +489,47 @@ class LocalInferenceService:
             timeout_seconds=timeout_seconds,
         )
 
+    def qwen_verify_request(
+        self,
+        *,
+        messages: list[dict[str, str]],
+        job_id: str,
+        timeout_seconds: float | None = None,
+    ) -> dict[str, Any]:
+        if self.qwen_verify is None:
+            raise LocalInferenceError("Qwen bounded VERIFY owner is unavailable")
+        return self._request_family(
+            "qwen_verify",
+            {
+                "op": "verify",
+                "job_id": str(job_id),
+                "messages": list(messages),
+            },
+            timeout_seconds=timeout_seconds,
+        )
+
     def health(self) -> dict[str, Any]:
-        return {
+        payload = {
             "enabled": not self._closed,
+            "gpu_bindings": dict(self._gpu_bindings),
+            "gpu_resident_family": dict(self._gpu_resident_family),
+            "gpu_active_requests": dict(self._gpu_active_requests),
             "formula": self.formula.health(),
             "table": self.table.health(),
         }
+        payload["qwen_verify"] = (
+            self.qwen_verify.health()
+            if self.qwen_verify is not None
+            else {"enabled": False}
+        )
+        return payload
 
     def close(self) -> None:
         if self._closed:
             return
         self._closed = True
-        self.formula.close()
-        self.table.close()
+        for owner in self._owners.values():
+            owner.close()
 
     def __enter__(self) -> "LocalInferenceService":
         return self
@@ -524,6 +642,11 @@ def local_inference_service_from_env(
 
     formula_gpu = _env_int("RESEARCH_ENGINE_FORMULA_GPU_INDEX", 0)
     table_gpu = _env_int("RESEARCH_ENGINE_TABLE_GPU_INDEX", 1)
+    qwen_flag = os.getenv("RESEARCH_ENGINE_QWEN_VERIFY_ENABLED", "0").strip()
+    if qwen_flag not in {"0", "1"}:
+        raise ValueError("RESEARCH_ENGINE_QWEN_VERIFY_ENABLED must be 0 or 1")
+    qwen_enabled = qwen_flag == "1"
+    qwen_gpu = _env_int("RESEARCH_ENGINE_QWEN_VERIFY_GPU_INDEX", 1)
     logs = Path(log_root).resolve() if log_root is not None else (
         state / "logs" / "local-inference"
     )
@@ -541,6 +664,111 @@ def local_inference_service_from_env(
         "PADDLE_PDX_MODEL_SOURCE": "BOS",
         "RESEARCH_ENGINE_PADDLE_DEVICE": "gpu:0",
     }
+
+    qwen_owner = None
+    if qwen_enabled:
+        qwen_runtime = Path(
+            os.getenv(
+                "RESEARCH_ENGINE_QWEN_VERIFY_RUNTIME",
+                str(state / "residual-runtimes" / "qwen3.5-4b-vllm-0.30.0"),
+            )
+        )
+        qwen_model = Path(
+            os.getenv(
+                "RESEARCH_ENGINE_QWEN_VERIFY_MODEL",
+                str(
+                    state
+                    / "residual-models"
+                    / "qwen3.5-4b"
+                    / "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a"
+                ),
+            )
+        )
+        qwen_cache = Path(
+            os.getenv(
+                "RESEARCH_ENGINE_QWEN_VERIFY_CACHE",
+                str(
+                    state
+                    / "residual-runtime-cache"
+                    / "qwen35-vllm-cu129-image-native-sampler-v3"
+                    / "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a"
+                ),
+            )
+        )
+        qwen_python = qwen_runtime / "bin" / "python"
+        qwen_ready = qwen_runtime / ".workspace-control-ready.json"
+        qwen_server = (
+            root
+            / "benchmarks"
+            / "document_intelligence"
+            / "runtimes"
+            / "qwen35_verify_server.py"
+        )
+        for path in (
+            qwen_python,
+            qwen_ready,
+            qwen_model,
+            qwen_server,
+        ):
+            if not path.exists():
+                raise FileNotFoundError(path)
+
+        ready = json.loads(qwen_ready.read_text(encoding="utf-8"))
+        required = {
+            "runtime_contract_version": "qwen35-vllm-cu129-image-native-sampler-v3",
+            "sampling_backend": "vllm_native",
+            "vllm_distribution": "0.30.0+cu129",
+            "torch": "2.13.0+cu129",
+            "torchcodec": "0.16.0+cu129",
+            "torch_cuda_runtime": "12.9",
+            "cuda_allocation_probe": "PASS",
+            "vllm_multimodal_import_probe": "PASS",
+        }
+        mismatches = {
+            key: {"expected": expected, "actual": ready.get(key)}
+            for key, expected in required.items()
+            if ready.get(key) != expected
+        }
+        if mismatches:
+            raise LocalInferenceError(
+                "Qwen VERIFY runtime certification mismatch: "
+                + json.dumps(mismatches, sort_keys=True)
+            )
+
+        qwen_cache.mkdir(parents=True, exist_ok=True)
+        qwen_timeout = float(
+            os.getenv(
+                "RESEARCH_ENGINE_QWEN_VERIFY_TIMEOUT_SECONDS",
+                str(request_timeout),
+            )
+        )
+        if qwen_timeout <= 0:
+            raise ValueError(
+                "RESEARCH_ENGINE_QWEN_VERIFY_TIMEOUT_SECONDS must be positive"
+            )
+        qwen_owner = LocalModelOwner(
+            LocalModelProcessSpec(
+                family="qwen_verify",
+                command=(
+                    str(qwen_python),
+                    str(qwen_server),
+                    "--model-dir",
+                    str(qwen_model.resolve()),
+                ),
+                environment={
+                    "CUDA_VISIBLE_DEVICES": str(qwen_gpu),
+                    "VLLM_USE_FLASHINFER_SAMPLER": "0",
+                    "HF_HUB_OFFLINE": "1",
+                    "TRANSFORMERS_OFFLINE": "1",
+                    "HF_DATASETS_OFFLINE": "1",
+                    "XDG_CACHE_HOME": str(qwen_cache.resolve()),
+                },
+                max_pending=max_pending,
+                request_timeout_seconds=qwen_timeout,
+                cwd=str(root),
+                log_path=str(logs / "qwen-verify.log"),
+            )
+        )
 
     return LocalInferenceService(
         formula=LocalModelOwner(
@@ -565,4 +793,10 @@ def local_inference_service_from_env(
                 log_path=str(logs / "table.log"),
             )
         ),
+        qwen_verify=qwen_owner,
+        gpu_bindings={
+            "formula": formula_gpu,
+            "table": table_gpu,
+            **({"qwen_verify": qwen_gpu} if qwen_owner is not None else {}),
+        },
     )

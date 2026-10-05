@@ -15,6 +15,9 @@ formula_runtime="$state/document-runtimes/docling-formula-enrichment"
 formula_cache="$state/document-models/docling-formula-enrichment-2.131.0"
 table_runtime="$state/document-runtimes/paddle-table-recognition-v2"
 table_cache="$state/document-models/paddle-table-recognition-v2-3.7.0"
+qwen_runtime="$state/residual-runtimes/qwen3.5-4b-vllm-0.30.0"
+qwen_ready="$qwen_runtime/.workspace-control-ready.json"
+qwen_model="$state/residual-models/qwen3.5-4b/851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a"
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 output_root="$visible_tmp_root/lambda-production-acceptance-$stamp"
 report="$output_root/lambda-production-acceptance-report.json"
@@ -85,18 +88,24 @@ set +a
 [ "${RESEARCH_ENGINE_LOCAL_INFERENCE_TIMEOUT_SECONDS:-}" = "900" ] || fail "LOCAL_INFERENCE_TIMEOUT_NOT_900" 49
 [ "${RESEARCH_ENGINE_FORMULA_GPU_INDEX:-}" = "0" ] || fail "FORMULA_GPU_NOT_0" 50
 [ "${RESEARCH_ENGINE_TABLE_GPU_INDEX:-}" = "1" ] || fail "TABLE_GPU_NOT_1" 51
-[ "${RESEARCH_ENGINE_DETERMINISTIC_WORKERS:-}" = "1" ] || fail "DETERMINISTIC_WORKERS_NOT_1" 52
-[ "${RESEARCH_ENGINE_CHEAP_WORKERS:-}" = "1" ] || fail "CHEAP_WORKERS_NOT_1" 53
-[ "${RESEARCH_ENGINE_STANDARD_WORKERS:-}" = "1" ] || fail "STANDARD_WORKERS_NOT_1" 54
-[ "${RESEARCH_ENGINE_STRONG_WORKERS:-}" = "1" ] || fail "STRONG_WORKERS_NOT_1" 55
-[ -n "${RESEARCH_ENGINE_CODEX_BIN:-}" ] || fail "CODEX_BIN_NOT_CONFIGURED" 56
-[ -x "$RESEARCH_ENGINE_CODEX_BIN" ] || fail "CODEX_BIN_NOT_EXECUTABLE" 57
+[ "${RESEARCH_ENGINE_QWEN_VERIFY_ENABLED:-}" = "1" ] || fail "QWEN_VERIFY_NOT_ENABLED" 52
+[ "${RESEARCH_ENGINE_QWEN_VERIFY_GPU_INDEX:-}" = "1" ] || fail "QWEN_VERIFY_GPU_NOT_1" 53
+[ "${RESEARCH_ENGINE_QWEN_VERIFY_MAX_CONTEXT_CHARS:-}" = "20000" ] || fail "QWEN_VERIFY_CONTEXT_NOT_20000" 54
+[ "${RESEARCH_ENGINE_QWEN_VERIFY_TIMEOUT_SECONDS:-}" = "900" ] || fail "QWEN_VERIFY_TIMEOUT_NOT_900" 55
+[ "${RESEARCH_ENGINE_DETERMINISTIC_WORKERS:-}" = "1" ] || fail "DETERMINISTIC_WORKERS_NOT_1" 56
+[ "${RESEARCH_ENGINE_CHEAP_WORKERS:-}" = "1" ] || fail "CHEAP_WORKERS_NOT_1" 57
+[ "${RESEARCH_ENGINE_STANDARD_WORKERS:-}" = "1" ] || fail "STANDARD_WORKERS_NOT_1" 58
+[ "${RESEARCH_ENGINE_STRONG_WORKERS:-}" = "1" ] || fail "STRONG_WORKERS_NOT_1" 59
+[ -n "${RESEARCH_ENGINE_CODEX_BIN:-}" ] || fail "CODEX_BIN_NOT_CONFIGURED" 60
+[ -x "$RESEARCH_ENGINE_CODEX_BIN" ] || fail "CODEX_BIN_NOT_EXECUTABLE" 61
 
 echo "SEMANTIC_BACKEND=$RESEARCH_ENGINE_SEMANTIC_BACKEND"
 echo "VERIFY_PAGE_RADIUS=$RESEARCH_ENGINE_VERIFY_PAGE_RADIUS"
 echo "LOCAL_INFERENCE_ENABLED=$RESEARCH_ENGINE_LOCAL_INFERENCE_ENABLED"
 echo "FORMULA_GPU_INDEX=$RESEARCH_ENGINE_FORMULA_GPU_INDEX"
 echo "TABLE_GPU_INDEX=$RESEARCH_ENGINE_TABLE_GPU_INDEX"
+echo "QWEN_VERIFY_ENABLED=$RESEARCH_ENGINE_QWEN_VERIFY_ENABLED"
+echo "QWEN_VERIFY_GPU_INDEX=$RESEARCH_ENGINE_QWEN_VERIFY_GPU_INDEX"
 "$RESEARCH_ENGINE_CODEX_BIN" --version
 
 export RESEARCH_ENGINE_DATABASE_URL="postgresql://research_engine:research_engine@localhost:5432/research_engine"
@@ -180,7 +189,11 @@ for path in \
     "$formula_runtime/bin/python" \
     "$formula_cache" \
     "$table_runtime/bin/python" \
-    "$table_cache"
+    "$table_cache" \
+    "$qwen_runtime/bin/python" \
+    "$qwen_ready" \
+    "$qwen_model/model.safetensors-00001-of-00002.safetensors" \
+    "$qwen_model/model.safetensors-00002-of-00002.safetensors"
 do
     [ -e "$path" ] || fail "MISSING_DOCUMENT_RUNTIME_OR_CACHE:$path" 60
 done
@@ -188,8 +201,10 @@ echo "NATIVE_RUNTIME=$native_runtime"
 echo "STANDARD_RUNTIME=$standard_runtime"
 echo "FORMULA_RUNTIME=$formula_runtime"
 echo "TABLE_RUNTIME=$table_runtime"
+echo "QWEN_VERIFY_RUNTIME=$qwen_runtime"
 echo "FORMULA_CACHE_SIZE=$(du -sh "$formula_cache" | awk '{print $1}')"
 echo "TABLE_CACHE_SIZE=$(du -sh "$table_cache" | awk '{print $1}')"
+echo "QWEN_MODEL_SIZE=$(du -sh "$qwen_model" | awk '{print $1}')"
 
 echo
 echo "=== GPU INVENTORY / BOUNDED ALLOCATION PROBES ==="
@@ -278,8 +293,12 @@ if JOB_TIERS[JobType.VERIFY] != ExecutorTier.STANDARD:
     raise SystemExit("VERIFY_NOT_STANDARD")
 if "AUTHORITATIVE_PDF" not in rows[JobType.EXTRACT]["production_placement"]:
     raise SystemExit("EXTRACT_NOT_AUTHORITATIVE_PDF")
-if "AUTHORITATIVE_PDF" not in rows[JobType.VERIFY]["production_placement"]:
-    raise SystemExit("VERIFY_NOT_AUTHORITATIVE_PDF")
+if rows[JobType.VERIFY]["production_placement"] != "BOUNDED_LOCAL_QWEN_PRIMARY_WITH_REMOTE_CODEX_FALLTHROUGH":
+    raise SystemExit("VERIFY_BOUNDED_LOCAL_ROUTE_NOT_PROMOTED")
+if rows[JobType.VERIFY]["localization_decision"] != "PROMOTE_BOUNDED_LOCAL_VERIFY":
+    raise SystemExit("VERIFY_LOCALIZATION_DECISION_NOT_PROMOTED")
+if "authoritative" not in rows[JobType.VERIFY]["authority"].lower():
+    raise SystemExit("VERIFY_AUTHORITY_NOT_PRESERVED")
 if license_review["decision"] != "PASS_INTERNAL_DEPLOYMENT_WITH_SHARING_OBLIGATION":
     raise SystemExit("CODEFORMULA_LICENSE_REVIEW_NOT_ACCEPTED")
 
@@ -290,6 +309,8 @@ try:
         raise SystemExit("FORMULA_OWNER_SPAWNED_DURING_BOOTSTRAP")
     if health["table"]["spawn_count"] != 0:
         raise SystemExit("TABLE_OWNER_SPAWNED_DURING_BOOTSTRAP")
+    if health["qwen_verify"]["spawn_count"] != 0:
+        raise SystemExit("QWEN_VERIFY_OWNER_SPAWNED_DURING_BOOTSTRAP")
 finally:
     service.close()
 
@@ -299,6 +320,8 @@ payload = {
     "verify_tier": str(JOB_TIERS[JobType.VERIFY]),
     "license_decision": license_review["decision"],
     "broker_constructed_without_model_process_spawn": True,
+    "bounded_verify_route": rows[JobType.VERIFY]["production_placement"],
+    "qwen_verify_owner_zero_spawn": health["qwen_verify"]["spawn_count"] == 0,
     "broker_initial_health": health,
 }
 with open(output_path, "w", encoding="utf-8") as handle:

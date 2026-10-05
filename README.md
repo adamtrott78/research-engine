@@ -56,7 +56,17 @@ execute-now finding remains, the required decision is
 
 ## Semantic execution
 
-The production default is `RESEARCH_ENGINE_SEMANTIC_BACKEND=codex`.
+The production default remains `RESEARCH_ENGINE_SEMANTIC_BACKEND=codex`
+for general semantic work and for EXTRACT.
+
+When `RESEARCH_ENGINE_QWEN_VERIFY_ENABLED=1`, one narrowly promoted VERIFY
+class is routed to the validated local Qwen3.5-4B runtime first: radius-0 jobs
+whose authoritative evidence already resolves to exactly one PDF page and fits
+the bounded quote-preserving context limit. Qwen may only verify the supplied
+authoritative evidence IDs. A deterministic guard rejects unknown IDs or other
+contract violations, and any ineligible, backpressured, runtime-failed, or
+guard-failed VERIFY falls through to STANDARD Codex. The original PDF/evidence
+remain scientific authority and the existing semantic materializer is unchanged.
 
 Codex must be signed in with the operator's ChatGPT account on the host. The
 research engine invokes `codex exec` non-interactively with structured output,
@@ -168,10 +178,13 @@ scheduler's current job tiers and explicitly records where local processing is
 validated, where remote/web/human reasoning is retained, and where candidate
 localization was rejected or deferred.
 
-In particular, EXTRACT and VERIFY remain STANDARD semantic jobs over
-authoritative-PDF context. The measured paper-package A/B did not justify
-replacing that baseline. Specialized local document models remain targeted
-sidecar/escalation components rather than a silent semantic-context substitute.
+EXTRACT remains a STANDARD Codex semantic job over authoritative-PDF
+context. VERIFY also remains STANDARD-tier work, but the measured bounded
+radius-0/exact-one-page residual class is now eligible for local Qwen3.5-4B as
+the primary semantic verifier with deterministic guard and STANDARD Codex
+fallthrough. Multi-page or otherwise ineligible VERIFY continues directly to
+Codex. Specialized local document models remain targeted sidecar/escalation
+components rather than a silent semantic-context substitute.
 
 
 ### Lambda production acceptance

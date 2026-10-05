@@ -707,6 +707,7 @@ def daemon_from_env(
                         worker_id=f"{prefix}:{str(tier).lower()}:{index}",
                         logical_agent_id=f"semantic:{str(tier).lower()}:{index}",
                         lease_seconds=lease_seconds,
+                        local_inference=local_inference,
                     )
                 )
 
