@@ -257,9 +257,10 @@
     },
     {
       "component": "verify_semantic_offload",
-      "decision": "DEFER_RETAIN_STANDARD_REMOTE",
+      "decision": "PROMOTE_BOUNDED_LOCAL_QWEN_VERIFY",
       "production_path": "STANDARD semantic VERIFY over authoritative cited pages",
-      "evidence": "Quality acceptable in sample but no compelling controlled efficiency gain or local-model benchmark."
+      "evidence": "Quality acceptable in sample but no compelling controlled efficiency gain or local-model benchmark.",
+      "rationale": "Measured guarded Qwen3.5-4B bounded VERIFY matched STANDARD Codex on the calibrated radius-0 exact-one-page class. Promote only that class to local Qwen primary with deterministic evidence-ID guard and STANDARD Codex fallthrough; retain remote baseline for all ineligible VERIFY."
     },
     {
       "component": "shared_heavy_model_ownership",
