@@ -386,8 +386,16 @@ class LocalInferenceService:
             family: int(supplied.get(family, gpu))
             for family, gpu in defaults.items()
         }
-        self._gpu_locks = {
-            gpu: threading.Lock()
+        self._gpu_conditions = {
+            gpu: threading.Condition()
+            for gpu in set(self._gpu_bindings.values())
+        }
+        self._gpu_active_requests = {
+            gpu: 0
+            for gpu in set(self._gpu_bindings.values())
+        }
+        self._gpu_resident_family: dict[int, str | None] = {
+            gpu: None
             for gpu in set(self._gpu_bindings.values())
         }
 
@@ -404,18 +412,32 @@ class LocalInferenceService:
                 f"local inference family {family} is unavailable"
             )
         gpu = self._gpu_bindings[family]
-        lock = self._gpu_locks[gpu]
-        with lock:
-            for other_family, other in self._owners.items():
-                if (
-                    other_family != family
-                    and self._gpu_bindings.get(other_family) == gpu
-                ):
-                    other.evict()
+        condition = self._gpu_conditions[gpu]
+        with condition:
+            while (
+                self._gpu_active_requests[gpu] > 0
+                and self._gpu_resident_family[gpu] not in {None, family}
+            ):
+                condition.wait()
+            if self._gpu_resident_family[gpu] != family:
+                for other_family, other in self._owners.items():
+                    if (
+                        other_family != family
+                        and self._gpu_bindings.get(other_family) == gpu
+                    ):
+                        other.evict()
+                self._gpu_resident_family[gpu] = family
+            self._gpu_active_requests[gpu] += 1
+
+        try:
             return owner.request(
                 payload,
                 timeout_seconds=timeout_seconds,
             )
+        finally:
+            with condition:
+                self._gpu_active_requests[gpu] -= 1
+                condition.notify_all()
 
     def formula_page(
         self,
@@ -490,6 +512,8 @@ class LocalInferenceService:
         payload = {
             "enabled": not self._closed,
             "gpu_bindings": dict(self._gpu_bindings),
+            "gpu_resident_family": dict(self._gpu_resident_family),
+            "gpu_active_requests": dict(self._gpu_active_requests),
             "formula": self.formula.health(),
             "table": self.table.health(),
         }
