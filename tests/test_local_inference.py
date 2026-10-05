@@ -324,3 +324,47 @@ def test_qwen_verify_protocol_server_is_one_boot_bounded_service():
     assert 'PREFIX = "@@RESEARCH_ENGINE_RESPONSE@@"' in server
     assert "max_tokens=2048" in server
     assert "enable_thinking" in server
+
+
+def test_shared_gpu_same_family_requests_preserve_owner_queue_semantics(tmp_path: Path):
+    formula = _owner(tmp_path, family="formula")
+    table = _owner(tmp_path, family="table", max_pending=2)
+    qwen = _owner(tmp_path, family="qwen_verify")
+    service = LocalInferenceService(
+        formula=formula,
+        table=table,
+        qwen_verify=qwen,
+        gpu_bindings={"formula": 0, "table": 1, "qwen_verify": 1},
+    )
+    try:
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            first = pool.submit(
+                service._request_family,
+                "table",
+                {"op": "infer", "value": "first", "delay": 0.35},
+            )
+            deadline = time.monotonic() + 2
+            while table.health()["spawn_count"] < 1:
+                if time.monotonic() >= deadline:
+                    raise AssertionError("first shared-GPU table request did not start")
+                time.sleep(0.01)
+
+            second = pool.submit(
+                service._request_family,
+                "table",
+                {"op": "infer", "value": "second", "delay": 0.05},
+            )
+            deadline = time.monotonic() + 2
+            while table.health()["queue_depth"] < 1:
+                if time.monotonic() >= deadline:
+                    raise AssertionError("second same-family request did not enter owner queue")
+                time.sleep(0.01)
+
+            assert service.health()["gpu_resident_family"][1] == "table"
+            assert service.health()["gpu_active_requests"][1] == 2
+            assert first.result()["result"]["echo"] == "first"
+            assert second.result()["result"]["echo"] == "second"
+            assert table.health()["spawn_count"] == 1
+            assert table.health()["requests_completed"] == 2
+    finally:
+        service.close()
