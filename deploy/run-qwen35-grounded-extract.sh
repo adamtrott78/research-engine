@@ -255,39 +255,42 @@ out.write_text(json.dumps(r,indent=2,sort_keys=True)+"\n",encoding="utf-8")
 print(json.dumps(r,indent=2,sort_keys=True))
 PY
 if [ "$qwen_rc" -ne 0 ]; then
-  "$core_venv/bin/python" - "$opstate" "$operation_receipt" "$opid" "$git_sha" "$out" "$qwen" "$helper_log" <<'PY'
+  "$core_venv/bin/python" - "$opstate" "$operation_receipt" "$opdetailstate" "$operation_detail" "$opid" "$execid" "$git_sha" "$out" "$qwen" "$helper_log" <<'PY'
 import json,pathlib,sys
-state,out,opid,sha,root,qwen,log=sys.argv[1:]
+state,out,detail_state,detail_out,opid,execid,sha,root,qwen,log=sys.argv[1:]
 result={}
 try: result=json.load(open(qwen,encoding="utf-8"))
 except Exception: pass
 engine_init=1 if result.get("model_init_seconds") is not None else 0
-c3=(result.get("canary") or {})
-domain=(result.get("domain") or {})
+c3=result.get("canary") or {}
+domain=result.get("domain") or {}
 started=int(bool(c3))+int(bool(domain))
 completed=int(bool(c3.get("parsed")))+int(bool(domain.get("parsed")))
-p={
+stage="C3_CANARY" if engine_init and not c3.get("pass") else "C2B_ENGINE_BOOT"
+receipt={
  "schema_version":1,
  "operation_id":opid,
  "task_id":"research-engine-local-document-pipeline-v1",
  "git_sha":sha,
  "operation_type":"QWEN35_GROUNDED_CANDIDATE_EXTRACT_CALIBRATION",
- "execution_identity":"qwen35-vllm-cu129-image-native-sampler-v3",
+ "execution_identity":execid,
  "status":"FAIL",
- "terminal_stage":"C3_CANARY" if engine_init and not c3.get("pass") else "C2B_ENGINE_BOOT",
+ "terminal_stage":stage,
  "failure_envelope":{
    "schema_version":1,
-   "stage":"C3_CANARY" if engine_init and not c3.get("pass") else "C2B_ENGINE_BOOT",
+   "stage":stage,
    "parent_failure":{"class":"QWEN_HELPER_FAILED","message":str(result.get("failure") or "grounded extract helper failed")},
    "causal_failure":{"class":"RUNTIME_OR_CANARY_FAILURE","message":"inspect compact Qwen result/helper log","role":"qwen_engine"},
    "state_flags":{"scientific_state_materialized":False,"production_routing_changed":False},
    "counts":{"engine_init_completed":engine_init,"inference_calls_started":started,"inference_calls_completed":completed},
    "artifacts":{"qwen_result":qwen,"targeted_traceback_log":log,"full_log":log},
  },
- "artifacts":{"output_root":root,"qwen_result":qwen,"helper_log":log},
 }
+detail={"schema_version":1,"operation_id":opid,"status":"FAIL","artifacts":{"output_root":root,"qwen_result":qwen,"helper_log":log}}
 for dest in (state,out):
- pathlib.Path(dest).write_text(json.dumps(p,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+ pathlib.Path(dest).write_text(json.dumps(receipt,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+for dest in (detail_state,detail_out):
+ pathlib.Path(dest).write_text(json.dumps(detail,indent=2,sort_keys=True)+"\n",encoding="utf-8")
 PY
   fail "QWEN_GROUNDED_EXTRACT_RUNTIME_FAILED" "$qwen_rc"
 fi
