@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "operation": "qwen3.5-4b-targeted-visual-fallback-benchmark",
+  "git_source_identity": "a3d80e9329e231889b11430f98c0de342349fe1f",
+  "terminal_stage": "complete",
+  "status": "SUCCESS",
+  "model": {
+    "family": "Qwen3.5-4B",
+    "revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+    "initialization_occurred": true
+  },
+  "runtime": {
+    "contract_version": "qwen35-vllm-cu129-image-native-sampler-v3",
+    "sampling_backend": "vllm_native",
+    "flashinfer_sampler_enabled": false,
+    "installation_or_download_performed": false
+  },
+  "qwen_calls_started": 3,
+  "qwen_calls_completed": 3,
+  "renders": {
+    "generated": 0,
+    "reused": 2,
+    "targets": [
+      {
+        "id": "figure6_cifar_training_chart",
+        "crop_sha256": "59a1c0e4cd1413ff329931a4d9bf9082d46fd2a316bdfccfc59858a99b23b04a"
+      },
+      {
+        "id": "figure3_network_architecture",
+        "crop_sha256": "fc9b9b633ead850c313a2b17181eed52146f29b4db753baa9cc90afbcb134579"
+      }
+    ]
+  },
+  "scientific_state_materialized": false,
+  "production_routing_changed": false
+}
