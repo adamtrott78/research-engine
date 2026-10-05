@@ -435,7 +435,7 @@ class GroundedExtractPlanner:
         chars = sum(len(row["display_text"]) for row in kept)
         for row in extras:
             size = len(row["display_text"])
-            if chars + size > 28_000:
+            if chars + size > 18_000:
                 continue
             kept.append(row)
             chars += size
