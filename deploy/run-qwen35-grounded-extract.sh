@@ -321,6 +321,7 @@ execid,pkgid,git_sha=sys.argv[5],sys.argv[6],sys.argv[7]
 local_r2=r["reuse_layers"]["R2_compiled_jit_runtime_cache"]["state"]
 shared_r2="VERIFIED_HIT" if local_r2=="VERIFIED_HIT" else ("MISS" if local_r2=="MISS" else "PRESENT_UNVERIFIED")
 c3=bool((q.get("canary") or {}).get("pass"))
+c3_current_live_call=(int(q.get("c3_canary_calls") or 0)==1 and c3 and not bool(q.get("c3_canary_reused")))
 c4=bool((q.get("domain") or {}).get("structured_output_valid")) and int(q.get("scientific_inference_calls_completed") or q.get("scientific_inference_calls") or 0)==1
 stages=[
  {"stage":"C0_STATIC","status":"PASS","execution_identity":execid,"evidence":{"git_sha":git_sha}},
@@ -342,7 +343,7 @@ cert={
   "R0_ENVIRONMENT":"VERIFIED_REUSE",
   "R1_CERTIFICATION":"VERIFIED_HIT",
   "R2_COMPILED_CACHE":shared_r2,
-  "R3_LIVE_SESSION":"HEALTHY_REUSE" if c3 and c4 else "NOT_APPLICABLE",
+  "R3_LIVE_SESSION":"HEALTHY_REUSE" if c3_current_live_call and c4 else "NOT_APPLICABLE",
  },
 }
 freeze=runtime_certified and shared_r2=="VERIFIED_HIT"
