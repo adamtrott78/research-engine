@@ -115,3 +115,15 @@ def test_model_downloads_wait_for_missing_source_case_manifests():
         "Do not download or install any selected model until the three missing "
         "source-case manifests are durable."
     )
+
+
+def test_qwen_visual_gate_selects_family_but_requires_guarded_semantic_calibration():
+    data = _selection()
+    row = data["candidates"][2]
+    status = row["benchmark_status"]
+    assert status["status"] == "SELECTED_LOCAL_VLM_GUARDED_PROMOTION_PENDING_DOWNSTREAM_CALIBRATION"
+    assert status["measurement"]["visual_candidate_inference_calls"] == 3
+    assert status["semantic_calibration_contract"].endswith("qwen35-guarded-semantic-calibration-contract.v1.json")
+    assert data["promotion_boundary"]["qwen_new_model_bakeoff_required"] is False
+    assert data["promotion_boundary"]["qwen_unguarded_relation_promotion"] is False
+    assert data["promotion_boundary"]["next_gate"] == "QWEN3_5_4B_GUARDED_EXTRACT_VERIFY_CALIBRATION"

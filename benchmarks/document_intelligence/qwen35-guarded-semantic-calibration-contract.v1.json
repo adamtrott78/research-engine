@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "task": "research-engine-local-document-pipeline-v1",
+  "stage": "residual_escalation_and_local_semantic_fallbacks",
+  "operation": "QWEN35_GUARDED_EXTRACT_VERIFY_CALIBRATION",
+  "status": "READY_FOR_BOUNDED_LAMBDA_AFTER_CI",
+  "candidate": {
+    "family": "Qwen3.5-4B",
+    "revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+    "runtime_contract": "qwen35-vllm-cu129-image-native-sampler-v3",
+    "sampling_backend": "vllm_native"
+  },
+  "source_selection": {
+    "source": "preserved current-PDF-control jobs from paper-package A/B model-variance ambiguity",
+    "jobs_exactly": 2,
+    "job_types": [
+      "EXTRACT",
+      "VERIFY"
+    ],
+    "extract_context": "historical evidence page numbers only for benchmark case selection; answers are not supplied to Qwen; <=4 authoritative pages and <=20000 chars",
+    "verify_context": "radius-0 exact cited authoritative page; exactly one page and <=20000 chars"
+  },
+  "qwen_execution": {
+    "one_model_boot": true,
+    "inference_calls_exactly": 2,
+    "thinking": false,
+    "temperature": 0,
+    "top_p": 1,
+    "seed": 0,
+    "max_tokens": 2048,
+    "max_model_len": 8192,
+    "gpu_memory_utilization": 0.65,
+    "max_num_seqs": 1,
+    "package_install_or_download_during_gate": false
+  },
+  "deterministic_guard": {
+    "extract": [
+      "structured schema valid",
+      "1-4 bounded pages",
+      "every raw_source_form exact whitespace-normalized substring of cited supplied page",
+      "all cited pages inside context",
+      "unique evidence IDs",
+      "confidence within [0,1]"
+    ],
+    "verify": [
+      "structured schema valid",
+      "verification page_radius=0",
+      "exactly one supplied page",
+      "accepted IDs subset of authoritative_evidence IDs"
+    ],
+    "failure_action": "FALLTHROUGH_CODEX"
+  },
+  "control": {
+    "model_tier": "STANDARD",
+    "provider": "codex-chatgpt-plan",
+    "context": "same bounded authoritative-PDF context supplied to Qwen",
+    "required_for_every_calibration_job": true,
+    "promotion_requires": "both guarded Qwen jobs pass contemporaneous Codex agreement"
+  },
+  "resource_ceilings": {
+    "peak_vram_mib_lte": 16384,
+    "peak_rss_mib_lte": 32768,
+    "model_init_seconds_lte": 120,
+    "extract_job_seconds_lte": 60,
+    "verify_job_seconds_lte": 45
+  },
+  "wave3_opportunistic": {
+    "collect_on_same_natural_boot": [
+      "R0 package environment reuse",
+      "R1 execution certification",
+      "R2 compile/JIT-cache classification",
+      "R3 live-engine reuse",
+      "model init",
+      "torch/vLLM compile",
+      "profiling/warmup"
+    ],
+    "extra_certification_calls": 0
+  },
+  "promotion_boundary": {
+    "production_routing_changed": false,
+    "scientific_state_materialized": false,
+    "semantic_materialization_invoked": false,
+    "new_model_bakeoff": false,
+    "decision_values": [
+      "PROMOTION_CANDIDATE_GUARDED_BOUNDED_SEMANTICS",
+      "FAIL_CLOSED_RETAIN_CODEX"
+    ]
+  }
+}
