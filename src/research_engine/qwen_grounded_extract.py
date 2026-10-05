@@ -498,6 +498,19 @@ def ensure_sidecar(selection):
         return compiler.compile_artifact(str(selection["source_artifact_id"]))
 
 
+def _claim_evidence_id(candidate_id: str, kind: str, normalized: str) -> str:
+    digest = hashlib.sha256(
+        _canonical(
+            {
+                "candidate_id": candidate_id,
+                "type": kind,
+                "normalized_form": normalized,
+            }
+        )
+    ).hexdigest()[:16]
+    return f"grounded:{candidate_id}:{digest}"
+
+
 def guard_and_canonicalize(plan, payload):
     candidates = {
         str(row["candidate_id"]): dict(row)
@@ -509,19 +522,15 @@ def guard_and_canonicalize(plan, payload):
         reasons.append("NO_SELECTIONS")
     if len(selections) > MAX_SELECTIONS:
         reasons.append(f"TOO_MANY_SELECTIONS:{len(selections)}")
+
     ids = [str(row.get("candidate_id") or "") for row in selections]
-    if len(ids) != len(set(ids)):
-        reasons.append("DUPLICATE_CANDIDATE_ID")
     unknown = sorted(x for x in ids if x not in candidates)
     if unknown:
         reasons.append("UNKNOWN_CANDIDATE_IDS:" + ",".join(unknown))
 
-    evidence = []
-    provenance = []
+    validated: list[dict[str, Any]] = []
     for idx, row in enumerate(selections):
-        candidate = candidates.get(str(row.get("candidate_id") or ""))
-        if candidate is None:
-            continue
+        candidate_id = str(row.get("candidate_id") or "")
         kind = str(row.get("type") or "").strip()
         normalized = str(row.get("normalized_form") or "").strip()
         confidence = row.get("confidence")
@@ -532,14 +541,61 @@ def guard_and_canonicalize(plan, payload):
         if not isinstance(confidence, (int, float)) or not 0 <= float(confidence) <= 1:
             reasons.append(f"SELECTION_{idx}:INVALID_CONFIDENCE")
             confidence = 0.0
+        validated.append(
+            {
+                "candidate_id": candidate_id,
+                "type": kind,
+                "normalized_form": normalized,
+                "confidence": float(confidence),
+            }
+        )
+
+    # A provenance candidate is a source locator, not a claim identifier. The
+    # same immutable candidate may legitimately support multiple distinct
+    # normalized claims. Collapse only exact semantic duplicates so repeated
+    # model rows cannot inflate replay precision/coverage. When duplicate rows
+    # disagree only on confidence, retain the minimum confidence conservatively.
+    canonical_rows: list[dict[str, Any]] = []
+    row_by_key: dict[tuple[str, str, str], dict[str, Any]] = {}
+    duplicates_collapsed = 0
+    for row in validated:
+        key = (
+            row["candidate_id"],
+            row["type"],
+            row["normalized_form"],
+        )
+        existing = row_by_key.get(key)
+        if existing is None:
+            existing = dict(row)
+            row_by_key[key] = existing
+            canonical_rows.append(existing)
+            continue
+        duplicates_collapsed += 1
+        existing["confidence"] = min(
+            float(existing["confidence"]),
+            float(row["confidence"]),
+        )
+
+    evidence = []
+    provenance = []
+    for row in canonical_rows:
+        candidate = candidates.get(row["candidate_id"])
+        if candidate is None:
+            continue
+        kind = row["type"]
+        normalized = row["normalized_form"]
         evidence.append(
             {
-                "id": f"grounded:{candidate['candidate_id']}",
+                "id": _claim_evidence_id(
+                    candidate["candidate_id"],
+                    kind,
+                    normalized,
+                ),
                 "type": kind or "unknown",
                 "normalized_form": normalized,
                 "raw_source_form": candidate["raw_source_form"],
                 "page_number": candidate["page_number"],
-                "confidence": float(confidence),
+                "confidence": float(row["confidence"]),
             }
         )
         provenance.append(
@@ -557,6 +613,12 @@ def guard_and_canonicalize(plan, payload):
         "reasons": reasons,
         "canonical_result": {"evidence": evidence} if not reasons else None,
         "selected_provenance": provenance,
+        "canonicalization": {
+            "input_selection_count": len(selections),
+            "canonical_selection_count": len(canonical_rows),
+            "exact_semantic_duplicates_collapsed": duplicates_collapsed,
+            "candidate_reuse_allowed_for_distinct_claims": True,
+        },
     }
 
 
