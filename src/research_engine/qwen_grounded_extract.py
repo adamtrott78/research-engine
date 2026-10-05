@@ -26,6 +26,7 @@ TASK_ID = "research-engine-local-document-pipeline-v1"
 OPERATION_TYPE = "QWEN35_GROUNDED_CANDIDATE_EXTRACT_CALIBRATION"
 EXECUTION_CONTRACT = "qwen35-vllm-cu129-image-native-sampler-v3"
 MODEL_REVISION = "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a"
+VLLM_WHEEL_SHA256 = "e98cb69659bfcfc849cf11ce0781a7161d40b02b51a6c3636924a5909f2aabcc"
 MAX_SELECTIONS = 12
 
 
@@ -43,13 +44,40 @@ def stable_sha256(value: Any) -> str:
     return "sha256:" + hashlib.sha256(_canonical(value)).hexdigest()
 
 
+def execution_identity() -> str:
+    return stable_sha256(
+        {
+            "runtime_contract": EXECUTION_CONTRACT,
+            "model_revision": MODEL_REVISION,
+            "sampling_backend": "vllm_native",
+            "vllm_distribution": "0.30.0+cu129",
+            "torch": "2.13.0+cu129",
+            "torchvision": "0.28.0+cu129",
+            "torchcodec": "0.16.0+cu129",
+        }
+    )
+
+
+def package_identity() -> str:
+    return stable_sha256(
+        {
+            "vllm_distribution": "0.30.0+cu129",
+            "vllm_release_wheel_sha256": VLLM_WHEEL_SHA256,
+            "torch": "2.13.0+cu129",
+            "torchvision": "0.28.0+cu129",
+            "torchcodec": "0.16.0+cu129",
+            "cuda_runtime": "12.9",
+        }
+    )
+
+
 def operation_id(*, git_sha: str, source_job_id: str, source_pdf_sha256: str) -> str:
     return stable_sha256(
         {
             "task_id": TASK_ID,
             "git_sha": git_sha,
             "operation_type": OPERATION_TYPE,
-            "execution_identity": EXECUTION_CONTRACT,
+            "execution_identity": execution_identity(),
             "material_inputs": {
                 "source_job_id": source_job_id,
                 "source_pdf_sha256": source_pdf_sha256,
@@ -605,6 +633,8 @@ def main():
     a = sub.add_parser("operation-id")
     a.add_argument("--selection", required=True)
     a.add_argument("--git-sha", required=True)
+    sub.add_parser("execution-id")
+    sub.add_parser("package-id")
     args = p.parse_args()
 
     store = PostgresStore(os.environ["RESEARCH_ENGINE_DATABASE_URL"])
@@ -654,6 +684,13 @@ def main():
         )
         _write(args.output, result)
         print(json.dumps(result, indent=2, sort_keys=True))
+        return 0
+
+    if args.command == "execution-id":
+        print(execution_identity())
+        return 0
+    if args.command == "package-id":
+        print(package_identity())
         return 0
 
     selection = _read(args.selection)
