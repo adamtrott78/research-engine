@@ -1,10 +1,13 @@
 import json
+import re
 from pathlib import Path
 
 from research_engine.qwen_grounded_extract import (
     exact_text_candidates,
+    execution_identity,
     guard_and_canonicalize,
     operation_id,
+    package_identity,
 )
 
 
@@ -107,3 +110,39 @@ def test_sidecar_candidate_layers_are_explicitly_derived():
     assert d["sidecar_policy"]["authority_remains_pdf"] is True
     assert "CodeFormulaV2 formula-enrichment outputs when sidecar routing naturally produces them" in d["candidate_layers"]
     assert "TableFormer ACCURATE grids when sidecar routing naturally produces them" in d["candidate_layers"]
+
+
+def test_shared_wave3_identities_are_sha256_contract_ids():
+    pattern=r"^sha256:[0-9a-f]{64}$"
+    assert re.fullmatch(pattern, execution_identity())
+    assert re.fullmatch(pattern, package_identity())
+    op=operation_id(
+        git_sha="a"*40,
+        source_job_id="job:x",
+        source_pdf_sha256="b"*64,
+    )
+    assert re.fullmatch(pattern, op)
+
+
+def test_runner_separates_strict_shared_receipts_from_project_detail():
+    text=(ROOT/"deploy"/"run-qwen35-grounded-extract.sh").read_text()
+    assert 'certification="$out/runtime-certification.json"' in text
+    assert 'wave3="$out/wave3-adoption-evidence.json"' in text
+    assert 'operation_receipt="$out/runtime-operation-receipt.json"' in text
+    assert 'operation_detail="$out/runtime-operation-detail.json"' in text
+    assert '"execution_identity":execid' in text
+    assert '"package_identity":pkgid' in text
+    assert '"result_decision":decision' in text
+    assert '"result_decision":decision' not in text.split(
+        'receipt={',1
+    )[1].split('detail={',1)[0]
+    assert '"artifacts":{' not in text.split(
+        'receipt={',1
+    )[1].split('detail={',1)[0]
+
+
+def test_wave3_certification_freeze_requires_explicit_r2_hit_and_c3():
+    text=(ROOT/"deploy"/"run-qwen35-grounded-extract.sh").read_text()
+    assert 'shared_r2="VERIFIED_HIT" if local_r2=="VERIFIED_HIT"' in text
+    assert 'freeze=runtime_certified and shared_r2=="VERIFIED_HIT"' in text
+    assert 'runtime_certified=all(x["status"]=="PASS" for x in stages[:5])' in text

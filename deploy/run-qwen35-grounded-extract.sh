@@ -23,8 +23,10 @@ codex="$out/codex-control-results.json"
 report="$out/grounded-extract-report.json"
 helper_log="$out/qwen-helper.log"
 reuse="$out/qwen-runtime-reuse-evidence.json"
+certification="$out/runtime-certification.json"
 wave3="$out/wave3-adoption-evidence.json"
 operation_receipt="$out/runtime-operation-receipt.json"
+operation_detail="$out/runtime-operation-detail.json"
 
 fail(){ echo "ERROR=$1" >&2; exit "${2:-1}"; }
 require_stopped(){
@@ -72,10 +74,15 @@ require_stopped
 echo
 echo "=== CHEAP SOURCE SELECTION ==="
 PYTHONPATH="$root/src" "$core_venv/bin/python" -m research_engine.qwen_grounded_extract select "$run_id" --output "$selection"
+execid="$(PYTHONPATH="$root/src" "$core_venv/bin/python" -m research_engine.qwen_grounded_extract execution-id)"
+pkgid="$(PYTHONPATH="$root/src" "$core_venv/bin/python" -m research_engine.qwen_grounded_extract package-id)"
 opid="$(PYTHONPATH="$root/src" "$core_venv/bin/python" -m research_engine.qwen_grounded_extract operation-id --selection "$selection" --git-sha "$git_sha")"
 opslug="${opid#sha256:}"
 opstate="$state/runtime-operations/qwen35-grounded-extract/$opslug.json"
+opdetailstate="$state/runtime-operations/qwen35-grounded-extract/$opslug.detail.json"
 mkdir -p "$(dirname "$opstate")"
+echo "EXECUTION_IDENTITY=$execid"
+echo "PACKAGE_IDENTITY=$pkgid"
 echo "OPERATION_ID=$opid"
 
 if [ -f "$opstate" ]; then
@@ -92,6 +99,7 @@ PY
   echo "RECOVERY_DECISION=$recovery"
   if [ "$recovery" = COMPLETED_REUSE ]; then
     cat "$opstate"
+    [ ! -f "$opdetailstate" ] || cat "$opdetailstate"
     echo "NO_RERUN_REQUIRED=true"
     exit 0
   fi
@@ -121,16 +129,16 @@ PY
   fi
 fi
 
-"$core_venv/bin/python" - "$opstate" "$operation_receipt" "$opid" "$git_sha" "$out" "$BASHPID" <<'PY'
+"$core_venv/bin/python" - "$opstate" "$operation_receipt" "$opdetailstate" "$operation_detail" "$opid" "$execid" "$git_sha" "$out" "$BASHPID" <<'PY'
 import json,pathlib,sys
-state,out,opid,sha,root,pid=sys.argv[1:]
-p={
+state,out,detail_state,detail_out,opid,execid,sha,root,pid=sys.argv[1:]
+receipt={
  "schema_version":1,
  "operation_id":opid,
  "task_id":"research-engine-local-document-pipeline-v1",
  "git_sha":sha,
  "operation_type":"QWEN35_GROUNDED_CANDIDATE_EXTRACT_CALIBRATION",
- "execution_identity":"qwen35-vllm-cu129-image-native-sampler-v3",
+ "execution_identity":execid,
  "status":"RUNNING",
  "terminal_stage":"C0_STATIC",
  "owner_process":{
@@ -139,10 +147,12 @@ p={
    "executable":"bash",
    "argv":["bash","deploy/run-qwen35-grounded-extract.sh"],
  },
- "artifacts":{"output_root":root},
 }
+detail={"schema_version":1,"operation_id":opid,"status":"RUNNING","artifacts":{"output_root":root}}
 for dest in (state,out):
- pathlib.Path(dest).write_text(json.dumps(p,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+ pathlib.Path(dest).write_text(json.dumps(receipt,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+for dest in (detail_state,detail_out):
+ pathlib.Path(dest).write_text(json.dumps(detail,indent=2,sort_keys=True)+"\n",encoding="utf-8")
 PY
 
 echo
@@ -245,39 +255,42 @@ out.write_text(json.dumps(r,indent=2,sort_keys=True)+"\n",encoding="utf-8")
 print(json.dumps(r,indent=2,sort_keys=True))
 PY
 if [ "$qwen_rc" -ne 0 ]; then
-  "$core_venv/bin/python" - "$opstate" "$operation_receipt" "$opid" "$git_sha" "$out" "$qwen" "$helper_log" <<'PY'
+  "$core_venv/bin/python" - "$opstate" "$operation_receipt" "$opdetailstate" "$operation_detail" "$opid" "$execid" "$git_sha" "$out" "$qwen" "$helper_log" <<'PY'
 import json,pathlib,sys
-state,out,opid,sha,root,qwen,log=sys.argv[1:]
+state,out,detail_state,detail_out,opid,execid,sha,root,qwen,log=sys.argv[1:]
 result={}
 try: result=json.load(open(qwen,encoding="utf-8"))
 except Exception: pass
 engine_init=1 if result.get("model_init_seconds") is not None else 0
-c3=(result.get("canary") or {})
-domain=(result.get("domain") or {})
+c3=result.get("canary") or {}
+domain=result.get("domain") or {}
 started=int(bool(c3))+int(bool(domain))
 completed=int(bool(c3.get("parsed")))+int(bool(domain.get("parsed")))
-p={
+stage="C3_CANARY" if engine_init and not c3.get("pass") else "C2B_ENGINE_BOOT"
+receipt={
  "schema_version":1,
  "operation_id":opid,
  "task_id":"research-engine-local-document-pipeline-v1",
  "git_sha":sha,
  "operation_type":"QWEN35_GROUNDED_CANDIDATE_EXTRACT_CALIBRATION",
- "execution_identity":"qwen35-vllm-cu129-image-native-sampler-v3",
+ "execution_identity":execid,
  "status":"FAIL",
- "terminal_stage":"C3_CANARY" if engine_init and not c3.get("pass") else "C2B_ENGINE_BOOT",
+ "terminal_stage":stage,
  "failure_envelope":{
    "schema_version":1,
-   "stage":"C3_CANARY" if engine_init and not c3.get("pass") else "C2B_ENGINE_BOOT",
+   "stage":stage,
    "parent_failure":{"class":"QWEN_HELPER_FAILED","message":str(result.get("failure") or "grounded extract helper failed")},
    "causal_failure":{"class":"RUNTIME_OR_CANARY_FAILURE","message":"inspect compact Qwen result/helper log","role":"qwen_engine"},
    "state_flags":{"scientific_state_materialized":False,"production_routing_changed":False},
    "counts":{"engine_init_completed":engine_init,"inference_calls_started":started,"inference_calls_completed":completed},
    "artifacts":{"qwen_result":qwen,"targeted_traceback_log":log,"full_log":log},
  },
- "artifacts":{"output_root":root,"qwen_result":qwen,"helper_log":log},
 }
+detail={"schema_version":1,"operation_id":opid,"status":"FAIL","artifacts":{"output_root":root,"qwen_result":qwen,"helper_log":log}}
 for dest in (state,out):
- pathlib.Path(dest).write_text(json.dumps(p,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+ pathlib.Path(dest).write_text(json.dumps(receipt,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+for dest in (detail_state,detail_out):
+ pathlib.Path(dest).write_text(json.dumps(detail,indent=2,sort_keys=True)+"\n",encoding="utf-8")
 PY
   fail "QWEN_GROUNDED_EXTRACT_RUNTIME_FAILED" "$qwen_rc"
 fi
@@ -295,50 +308,119 @@ PYTHONPATH="$root/src" "$core_venv/bin/python" -m research_engine.qwen_grounded_
 require_stopped
 
 echo
-echo "=== WORKSPACE-CONTROL WAVE-3 ADOPTION RECEIPT ==="
-"$core_venv/bin/python" - "$qwen" "$reuse" "$wave3" "$git_sha" <<'PY'
-import hashlib,json,pathlib,sys
-q=json.load(open(sys.argv[1],encoding="utf-8")); r=json.load(open(sys.argv[2],encoding="utf-8"))
-identity_payload={"model_revision":"851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a","runtime_contract":"qwen35-vllm-cu129-image-native-sampler-v3","sampling_backend":"vllm_native"}
-identity="sha256:"+hashlib.sha256(json.dumps(identity_payload,sort_keys=True,separators=(",",":")).encode()).hexdigest()
+echo "=== WORKSPACE-CONTROL WAVE-3 CERTIFICATION + ADOPTION DETAIL ==="
+"$core_venv/bin/python" - "$qwen" "$reuse" "$certification" "$wave3" "$execid" "$pkgid" "$git_sha" <<'PY'
+import json,pathlib,sys
+q=json.load(open(sys.argv[1],encoding="utf-8"))
+r=json.load(open(sys.argv[2],encoding="utf-8"))
+execid,pkgid,git_sha=sys.argv[5],sys.argv[6],sys.argv[7]
 local_r2=r["reuse_layers"]["R2_compiled_jit_runtime_cache"]["state"]
 shared_r2="VERIFIED_HIT" if local_r2=="VERIFIED_HIT" else ("MISS" if local_r2=="MISS" else "PRESENT_UNVERIFIED")
-c3=bool((q.get("canary") or {}).get("pass")); c4=bool((q.get("domain") or {}).get("structured_output_valid")) and q.get("scientific_inference_calls")==1
+c3=bool((q.get("canary") or {}).get("pass"))
+c4=bool((q.get("domain") or {}).get("structured_output_valid")) and q.get("scientific_inference_calls")==1
 stages=[
- {"stage":"C0_STATIC","status":"PASS","execution_identity":identity,"evidence":{"git_sha":sys.argv[4]}},
- {"stage":"C1_IMPORT_ACCELERATOR","status":"PASS","execution_identity":identity,"evidence":{"package_reuse":True}},
- {"stage":"C2A_BACKEND_TOOLCHAIN","status":"PASS","execution_identity":identity,"evidence":{"sampling_backend":"vllm_native"}},
- {"stage":"C2B_ENGINE_BOOT","status":"PASS" if q.get("model_init_seconds") is not None and q.get("failure") is None else "FAIL","execution_identity":identity,"evidence":{"model_init_seconds":q.get("model_init_seconds")}},
- {"stage":"C3_CANARY","status":"PASS" if c3 else "FAIL","execution_identity":identity,"evidence":{"synthetic_non_scientific":True,"seconds":(q.get("canary") or {}).get("seconds")}},
- {"stage":"C4_DOMAIN","status":"PASS" if c4 else "FAIL","execution_identity":identity,"evidence":{"scientific_calls":q.get("scientific_inference_calls"),"seconds":(q.get("domain") or {}).get("seconds")}},
+ {"stage":"C0_STATIC","status":"PASS","execution_identity":execid,"evidence":{"git_sha":git_sha}},
+ {"stage":"C1_IMPORT_ACCELERATOR","status":"PASS","execution_identity":execid,"evidence":{"package_reuse":True}},
+ {"stage":"C2A_BACKEND_TOOLCHAIN","status":"PASS","execution_identity":execid,"evidence":{"sampling_backend":"vllm_native"}},
+ {"stage":"C2B_ENGINE_BOOT","status":"PASS" if q.get("model_init_seconds") is not None and q.get("failure") is None else "FAIL","execution_identity":execid,"evidence":{"model_init_seconds":q.get("model_init_seconds")}},
+ {"stage":"C3_CANARY","status":"PASS" if c3 else "FAIL","execution_identity":execid,"evidence":{"synthetic_non_scientific":True,"seconds":(q.get("canary") or {}).get("seconds")}},
+ {"stage":"C4_DOMAIN","status":"PASS" if c4 else "FAIL","execution_identity":execid,"evidence":{"scientific_calls":q.get("scientific_inference_calls"),"seconds":(q.get("domain") or {}).get("seconds")}},
 ]
 runtime_certified=all(x["status"]=="PASS" for x in stages[:5])
+cert={
+ "schema_version":1,
+ "execution_identity":execid,
+ "package_identity":pkgid,
+ "compatibility_predicates":{"cuda_runtime":"12.9","sampling_backend":"vllm_native"},
+ "runtime_certified":runtime_certified,
+ "stage_receipts":stages,
+ "reuse_layers":{
+  "R0_ENVIRONMENT":"VERIFIED_REUSE",
+  "R1_CERTIFICATION":"VERIFIED_HIT",
+  "R2_COMPILED_CACHE":shared_r2,
+  "R3_LIVE_SESSION":"HEALTHY_REUSE" if c3 and c4 else "NOT_APPLICABLE",
+ },
+}
 freeze=runtime_certified and shared_r2=="VERIFIED_HIT"
-out={"schema_version":1,"execution_identity":identity,"package_identity":"qwen35-cu129-vllm0.30.0","compatibility_predicates":{"cuda_runtime":"12.9","sampling_backend":"vllm_native"},"stage_receipts":stages,"runtime_certified":runtime_certified,"reuse_layers":{"R0_ENVIRONMENT":"VERIFIED_REUSE","R1_CERTIFICATION":"VERIFIED_HIT","R2_COMPILED_CACHE":shared_r2,"R3_LIVE_SESSION":"HEALTHY_REUSE" if c3 and c4 else "NOT_APPLICABLE"},"project_local_r2_detail":local_r2,"timings_seconds":r.get("timings_seconds"),"comparison_to_successful_cold_v3":r.get("comparison_to_successful_cold_v3"),"WAVE_3_FREEZE_READY":freeze,"freeze_rationale":"R2 explicit verified reuse and C3 passed under one live identity." if freeze else "C3 may pass, but R2 lacks explicit VERIFIED_HIT evidence."}
-pathlib.Path(sys.argv[3]).write_text(json.dumps(out,indent=2,sort_keys=True)+"\n",encoding="utf-8")
-print(json.dumps(out,indent=2,sort_keys=True))
+detail={
+ "schema_version":1,
+ "execution_identity":execid,
+ "package_identity":pkgid,
+ "project_local_r2_detail":local_r2,
+ "timings_seconds":r.get("timings_seconds"),
+ "comparison_to_successful_cold_v3":r.get("comparison_to_successful_cold_v3"),
+ "WAVE_3_FREEZE_READY":freeze,
+ "freeze_rationale":"R2 explicit verified reuse and C3 passed under one live identity." if freeze else "C3 may pass, but R2 lacks explicit VERIFIED_HIT evidence.",
+}
+pathlib.Path(sys.argv[3]).write_text(json.dumps(cert,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+pathlib.Path(sys.argv[4]).write_text(json.dumps(detail,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+print(json.dumps({"certification":cert,"adoption_detail":detail},indent=2,sort_keys=True))
 PY
 
-echo
 echo "=== FINAL OPERATION RECEIPT ==="
-"$core_venv/bin/python" - "$opstate" "$operation_receipt" "$opid" "$git_sha" "$out" "$report" "$wave3" "$qwen" "$codex" "$plan" "$sidecar" <<'PY'
+"$core_venv/bin/python" - "$opstate" "$operation_receipt" "$opdetailstate" "$operation_detail" "$opid" "$execid" "$git_sha" "$out" "$report" "$certification" "$wave3" "$qwen" "$codex" "$plan" "$sidecar" <<'PY'
 import json,pathlib,sys
-state,out,opid,sha,root,report,wave3,qwen,codex,plan,sidecar=sys.argv[1:]
+state,out,detail_state,detail_out,opid,execid,sha,root,report,cert,wave3,qwen,codex,plan,sidecar=sys.argv[1:]
 decision=json.load(open(report,encoding="utf-8"))["decision"]
-p={"schema_version":1,"operation_id":opid,"task_id":"research-engine-local-document-pipeline-v1","git_sha":sha,"operation_type":"QWEN35_GROUNDED_CANDIDATE_EXTRACT_CALIBRATION","execution_identity":"qwen35-vllm-cu129-image-native-sampler-v3","status":"PASS","terminal_stage":"C4_DOMAIN","result_decision":decision,"owner_process":None,"artifacts":{"output_root":root,"scientific_report":report,"wave3_adoption":wave3,"qwen_result":qwen,"codex_control":codex,"candidate_plan":plan,"sidecar_receipt":sidecar},"expensive_stages_repeated":[]}
-for dest in (state,out): pathlib.Path(dest).write_text(json.dumps(p,indent=2,sort_keys=True)+"\n",encoding="utf-8")
-print(json.dumps(p,indent=2,sort_keys=True))
+receipt={
+ "schema_version":1,
+ "operation_id":opid,
+ "task_id":"research-engine-local-document-pipeline-v1",
+ "git_sha":sha,
+ "operation_type":"QWEN35_GROUNDED_CANDIDATE_EXTRACT_CALIBRATION",
+ "execution_identity":execid,
+ "status":"PASS",
+ "terminal_stage":"C4_DOMAIN",
+}
+detail={
+ "schema_version":1,
+ "operation_id":opid,
+ "status":"PASS",
+ "result_decision":decision,
+ "artifacts":{
+  "output_root":root,
+  "scientific_report":report,
+  "runtime_certification":cert,
+  "wave3_adoption":wave3,
+  "qwen_result":qwen,
+  "codex_control":codex,
+  "candidate_plan":plan,
+  "sidecar_receipt":sidecar,
+ },
+ "expensive_stages_repeated":[],
+}
+for dest in (state,out):
+ pathlib.Path(dest).write_text(json.dumps(receipt,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+for dest in (detail_state,detail_out):
+ pathlib.Path(dest).write_text(json.dumps(detail,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+print(json.dumps({"receipt":receipt,"detail":detail},indent=2,sort_keys=True))
 PY
 
-echo
 echo "=== COMPACT RESULT ==="
-"$core_venv/bin/python" - "$report" "$wave3" "$sidecar" "$plan" <<'PY'
+"$core_venv/bin/python" - "$report" "$certification" "$wave3" "$sidecar" "$plan" <<'PY'
 import json,sys
-r=json.load(open(sys.argv[1],encoding="utf-8")); w=json.load(open(sys.argv[2],encoding="utf-8")); s=json.load(open(sys.argv[3],encoding="utf-8")); p=json.load(open(sys.argv[4],encoding="utf-8"))
-print(json.dumps({"decision":r["decision"],"c3_canary_pass":r["c3_canary_pass"],"guard_status":r["guard"]["status"],"guard_reasons":r["guard"]["reasons"],"promotion_thresholds_pass":r["promotion_thresholds_pass"],"codex_agreement":r["codex_agreement"],"candidate_summary":p["candidate_summary"],"sidecar_status":s.get("status"),"sidecar_cache_hit":s.get("cache_hit"),"wave3_reuse_layers":w["reuse_layers"],"runtime_certified":w["runtime_certified"],"WAVE_3_FREEZE_READY":w["WAVE_3_FREEZE_READY"],"wave3_timings_seconds":w.get("timings_seconds")},indent=2,sort_keys=True))
+r=json.load(open(sys.argv[1],encoding="utf-8"))
+c=json.load(open(sys.argv[2],encoding="utf-8"))
+w=json.load(open(sys.argv[3],encoding="utf-8"))
+s=json.load(open(sys.argv[4],encoding="utf-8"))
+p=json.load(open(sys.argv[5],encoding="utf-8"))
+print(json.dumps({
+ "decision":r["decision"],
+ "c3_canary_pass":r["c3_canary_pass"],
+ "guard_status":r["guard"]["status"],
+ "guard_reasons":r["guard"]["reasons"],
+ "promotion_thresholds_pass":r["promotion_thresholds_pass"],
+ "codex_agreement":r["codex_agreement"],
+ "candidate_summary":p["candidate_summary"],
+ "sidecar_status":s.get("status"),
+ "sidecar_cache_hit":s.get("cache_hit"),
+ "wave3_reuse_layers":c["reuse_layers"],
+ "runtime_certified":c["runtime_certified"],
+ "WAVE_3_FREEZE_READY":w["WAVE_3_FREEZE_READY"],
+ "wave3_timings_seconds":w.get("timings_seconds"),
+},indent=2,sort_keys=True))
 PY
 
-echo
 echo "=== FINAL SAFETY STATE ==="
 systemctl --user stop "$unit" >/dev/null 2>&1 || true
 require_stopped
@@ -349,5 +431,7 @@ echo "C3_CALLS=1"
 echo "C4_SCIENTIFIC_CALLS=1"
 echo "OUTPUT_ROOT=$out"
 echo "GROUNDED_EXTRACT_REPORT=$report"
+echo "RUNTIME_CERTIFICATION=$certification"
 echo "WAVE3_ADOPTION=$wave3"
 echo "OPERATION_RECEIPT=$operation_receipt"
+echo "OPERATION_DETAIL=$operation_detail"
