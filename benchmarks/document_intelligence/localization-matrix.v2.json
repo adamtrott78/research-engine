@@ -2,7 +2,7 @@
   "schema_version": 2,
   "title": "Research-engine measured localization matrix v2",
   "baseline_research_engine_sha": "8c875a62d44e91ed91207cdc78d715acb0909346",
-  "status": "VALIDATED_POLICY",
+  "status": "MEASURED_LOCALIZATION_WITH_BOUNDED_QWEN_VERIFY_PROMOTION",
   "principle": "Localize deterministic transport, parsing, provenance, accounting, and measured specialized-model residuals; retain authoritative-PDF semantic hydration and remote semantic reasoning unless a controlled benchmark demonstrates equivalent quality with a material resource or allowance benefit.",
   "global_invariants": [
     "The original PDF/source artifact remains scientific authority.",
@@ -72,16 +72,20 @@
     {
       "job_type": "VERIFY",
       "executor_tier": "STANDARD",
-      "production_placement": "REMOTE_SEMANTIC_AUTHORITATIVE_PDF_CITED_PAGES",
-      "localization_decision": "RETAIN_BASELINE",
+      "production_placement": "BOUNDED_LOCAL_QWEN_PRIMARY_WITH_REMOTE_CODEX_FALLTHROUGH",
+      "localization_decision": "PROMOTE_BOUNDED_LOCAL_VERIFY",
       "local_support": [
         "evidence-id lookup",
         "locator validation",
         "radius-0 cited-page selection",
-        "fail-closed missing-page checks"
+        "exact-one-page bounded eligibility",
+        "quote-preserving <=20000-character window",
+        "Qwen3.5-4B local VERIFY over authoritative evidence IDs",
+        "deterministic accepted-evidence guard",
+        "fail-closed Codex STANDARD fallthrough"
       ],
-      "authority": "verification event over authoritative evidence/source page",
-      "rationale": "Paper-package VERIFY looked quality-promising but demonstrated no compelling contemporaneous efficiency advantage; existing cited-page PDF hydration remains simpler and safer."
+      "authority": "verification event over authoritative evidence/source page; original PDF/evidence remain scientific authority",
+      "rationale": "Guarded Qwen3.5-4B calibration matched contemporaneous STANDARD Codex on verified boolean and accepted authoritative evidence IDs for the promoted one-page radius-0 class. Production routing is intentionally narrower than all VERIFY: only exact one-page bounded jobs use Qwen as primary; ineligible, backpressured, runtime-failed, or guard-failed jobs fall through to Codex STANDARD."
     },
     {
       "job_type": "CHECKPOINT",
