@@ -33,7 +33,19 @@
       "source_sha256"
     ],
     "max_selections": 12,
-    "provenance_resolved_by_system_from_candidate_id": true
+    "provenance_resolved_by_system_from_candidate_id": true,
+    "candidate_reuse_policy": {
+      "candidate_id_is_provenance_locator_not_claim_id": true,
+      "distinct_claims_may_reuse_candidate_id": true,
+      "exact_semantic_duplicate_key": [
+        "candidate_id",
+        "type",
+        "normalized_form"
+      ],
+      "exact_semantic_duplicates": "collapse deterministically before agreement",
+      "duplicate_confidence_policy": "retain minimum confidence conservatively",
+      "claim_evidence_id": "candidate ID plus deterministic claim hash"
+    }
   },
   "call_budget": {
     "c3_synthetic_canary": 1,
