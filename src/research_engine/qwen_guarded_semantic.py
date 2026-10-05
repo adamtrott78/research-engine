@@ -178,7 +178,7 @@ class GuardedQwenCalibrationPlanner:
         *,
         store: PostgresStore,
         artifact_root: str | Path,
-        max_context_chars: int = 26_000,
+        max_context_chars: int = 20_000,
     ):
         self.store = store
         self.queue = OrchestratorStore(store)
@@ -454,7 +454,7 @@ def main() -> int:
     plan_p = sub.add_parser("plan")
     plan_p.add_argument("run_id")
     plan_p.add_argument("--output", required=True)
-    plan_p.add_argument("--max-context-chars", type=int, default=26_000)
+    plan_p.add_argument("--max-context-chars", type=int, default=20_000)
 
     control_p = sub.add_parser("control")
     control_p.add_argument("--plan", required=True)
