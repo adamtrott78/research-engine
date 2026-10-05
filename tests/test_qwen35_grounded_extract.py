@@ -249,3 +249,75 @@ def test_retry_reuses_passing_c3_for_same_execution_identity():
     assert 'receipt.get("execution_identity") != execid' in runner
     assert 'qwen_args+=(--reuse-canary-from "$reuse_c3_from")' in runner
     assert "live_engine_reused_for_domain_calls=(c3_calls==1 and c3_pass and c4_completed==1)" in runner
+
+
+def test_guard_allows_one_candidate_to_support_distinct_claims():
+    plan={"candidates":[{
+        "candidate_id":"pdf:p2:0006",
+        "source_layer":"AUTHORITATIVE_PDF_TEXT",
+        "candidate_kind":"TEXT_SPAN",
+        "page_number":2,
+        "pdf_bbox":None,
+        "raw_source_form":"one source passage with multiple supported facts",
+        "display_text":"one source passage with multiple supported facts",
+        "derivation":{"processor":"test"},
+    }]}
+    result=guard_and_canonicalize(plan,{"selections":[
+        {
+            "candidate_id":"pdf:p2:0006",
+            "type":"method",
+            "normalized_form":"method fact",
+            "confidence":0.9,
+        },
+        {
+            "candidate_id":"pdf:p2:0006",
+            "type":"result",
+            "normalized_form":"result fact",
+            "confidence":0.8,
+        },
+    ]})
+    assert result["status"]=="PASS_GROUNDED"
+    evidence=result["canonical_result"]["evidence"]
+    assert len(evidence)==2
+    assert len({row["id"] for row in evidence})==2
+    assert {row["raw_source_form"] for row in evidence}=={
+        "one source passage with multiple supported facts"
+    }
+    assert result["canonicalization"]=={
+        "input_selection_count":2,
+        "canonical_selection_count":2,
+        "exact_semantic_duplicates_collapsed":0,
+        "candidate_reuse_allowed_for_distinct_claims":True,
+    }
+
+
+def test_guard_collapses_exact_semantic_duplicates_conservatively():
+    plan={"candidates":[{
+        "candidate_id":"pdf:p2:0010",
+        "source_layer":"AUTHORITATIVE_PDF_TEXT",
+        "candidate_kind":"TEXT_SPAN",
+        "page_number":2,
+        "pdf_bbox":None,
+        "raw_source_form":"exact source",
+        "display_text":"exact source",
+        "derivation":{"processor":"test"},
+    }]}
+    result=guard_and_canonicalize(plan,{"selections":[
+        {
+            "candidate_id":"pdf:p2:0010",
+            "type":"result",
+            "normalized_form":"same claim",
+            "confidence":0.95,
+        },
+        {
+            "candidate_id":"pdf:p2:0010",
+            "type":"result",
+            "normalized_form":"same claim",
+            "confidence":0.70,
+        },
+    ]})
+    assert result["status"]=="PASS_GROUNDED"
+    evidence=result["canonical_result"]["evidence"]
+    assert len(evidence)==1
+    assert evidence[0]["confidence"]==0.70
+    assert result["canonicalization"]["exact_semantic_duplicates_collapsed"]==1
