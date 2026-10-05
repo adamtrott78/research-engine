@@ -85,7 +85,7 @@ require_stopped
 
 echo
 echo "=== BUILD BOUNDED TWO-JOB PLAN ==="
-PYTHONPATH="$root/src" "$core_venv/bin/python" -m research_engine.qwen_guarded_semantic plan "$run_id" --output "$plan" --max-context-chars 26000
+PYTHONPATH="$root/src" "$core_venv/bin/python" -m research_engine.qwen_guarded_semantic plan "$run_id" --output "$plan" --max-context-chars 20000
 require_stopped
 
 echo
