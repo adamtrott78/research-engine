@@ -2,22 +2,26 @@
   "schema_version": 1,
   "task": "research-engine-local-document-pipeline-v1",
   "component": "shared_local_document_inference_service",
-  "status": "CI_GATE_BEFORE_LAMBDA",
+  "status": "CI_GATE_BEFORE_QWEN_VERIFY_LAMBDA",
   "ownership": {
-    "scope": "one broker per research-engine daemon process",
+    "scope": "one broker per research-engine daemon process shared by deterministic and semantic workers",
     "formula_owner": "one long-lived subprocess in isolated Docling/CodeFormulaV2 runtime",
     "table_owner": "one long-lived subprocess in isolated PaddleOCR/PP-TableMagic runtime",
     "deterministic_workers": "all deterministic workers receive the same broker instance",
-    "duplicate_model_instances_per_family": "forbidden"
+    "duplicate_model_instances_per_family": "forbidden",
+    "qwen_verify_owner": "optional one long-lived Qwen3.5-4B subprocess under the exact certified native-sampler-v3 runtime when bounded VERIFY is enabled"
   },
   "scheduling": {
     "queue": "bounded FIFO per model family",
     "default_max_pending": 8,
     "overflow": "fail immediately with LocalInferenceBackpressureError",
     "per_family_execution": "serialized",
-    "cross_family_execution": "concurrent when assigned distinct GPUs",
+    "cross_family_execution": "formula on GPU 0 may run concurrently with the active GPU 1 family; table and qwen_verify are mutually exclusive residents on GPU 1",
     "default_formula_gpu_index": 0,
-    "default_table_gpu_index": 1
+    "default_table_gpu_index": 1,
+    "default_qwen_verify_gpu_index": 1,
+    "qwen_table_residency": "table and qwen_verify share GPU 1 by default but are never resident/active simultaneously; family switching waits for current-family requests to drain, evicts the idle resident subprocess, then starts/reuses the requested family",
+    "same_family_queueing": "requests for the currently resident family continue through that LocalModelOwner bounded FIFO and are not serialized outside the owner queue"
   },
   "runtime_boundaries": {
     "formula": {
@@ -34,7 +38,16 @@
     },
     "protocol": "newline JSON requests with prefixed JSON responses over subprocess stdin/stdout",
     "server_logs": "stderr redirected to per-family log files",
-    "model_downloads_during_concurrency_gate": false
+    "model_downloads_during_concurrency_gate": false,
+    "qwen_verify": {
+      "runtime": "~/.research-engine/residual-runtimes/qwen3.5-4b-vllm-0.30.0",
+      "model_cache": "~/.research-engine/residual-models/qwen3.5-4b/851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+      "model": "Qwen/Qwen3.5-4B@851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+      "runtime_contract": "qwen35-vllm-cu129-image-native-sampler-v3",
+      "protocol_server": "benchmarks/document_intelligence/runtimes/qwen35_verify_server.py",
+      "enabled_for": "radius-0 exact-one-authoritative-page VERIFY only",
+      "fallthrough": "STANDARD Codex on ineligibility, local backpressure/runtime failure, or deterministic guard failure"
+    }
   },
   "lambda_acceptance": {
     "first_wave": "3 formula page requests + 3 table crop requests submitted concurrently",
@@ -50,13 +63,17 @@
       "GPU peak memory/utilization and host memory are sampled"
     ],
     "daemon_state": "inactive/dead throughout benchmark",
-    "human_facing_output_root": "~/adamArchives/Adam/workspace-control-tmp/"
+    "human_facing_output_root": "~/adamArchives/Adam/workspace-control-tmp/",
+    "qwen_verify_gate": "separate stopped-daemon one-call gate must prove exact runtime identity, one real eligible historical VERIFY served locally with zero Codex calls, strict agreement with its existing Codex result, no document-owner spawn, no process leak, and no scientific-state materialization before production enablement"
   },
   "production_enablement": {
     "environment_flag": "RESEARCH_ENGINE_LOCAL_INFERENCE_ENABLED=1",
     "default": "disabled until Lambda concurrency gate passes",
     "shutdown": "daemon owns broker lifecycle and closes both model-owner subprocesses",
     "scientific_authority": "ORIGINAL_PDF",
-    "oracle_dependency": false
+    "oracle_dependency": false,
+    "qwen_verify_environment_flag": "RESEARCH_ENGINE_QWEN_VERIFY_ENABLED=1",
+    "qwen_verify_default": "disabled in code until explicit production env enablement after Lambda gate",
+    "qwen_verify_authority": "authoritative PDF page and pre-existing authoritative evidence IDs"
   }
 }
