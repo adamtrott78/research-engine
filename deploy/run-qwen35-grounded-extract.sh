@@ -308,31 +308,55 @@ PYTHONPATH="$root/src" "$core_venv/bin/python" -m research_engine.qwen_grounded_
 require_stopped
 
 echo
-echo "=== WORKSPACE-CONTROL WAVE-3 ADOPTION RECEIPT ==="
-"$core_venv/bin/python" - "$qwen" "$reuse" "$wave3" "$git_sha" <<'PY'
-import hashlib,json,pathlib,sys
-q=json.load(open(sys.argv[1],encoding="utf-8")); r=json.load(open(sys.argv[2],encoding="utf-8"))
-identity_payload={"model_revision":"851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a","runtime_contract":"qwen35-vllm-cu129-image-native-sampler-v3","sampling_backend":"vllm_native"}
-identity="sha256:"+hashlib.sha256(json.dumps(identity_payload,sort_keys=True,separators=(",",":")).encode()).hexdigest()
+echo "=== WORKSPACE-CONTROL WAVE-3 CERTIFICATION + ADOPTION DETAIL ==="
+"$core_venv/bin/python" - "$qwen" "$reuse" "$certification" "$wave3" "$execid" "$pkgid" "$git_sha" <<'PY'
+import json,pathlib,sys
+q=json.load(open(sys.argv[1],encoding="utf-8"))
+r=json.load(open(sys.argv[2],encoding="utf-8"))
+execid,pkgid,git_sha=sys.argv[5],sys.argv[6],sys.argv[7]
 local_r2=r["reuse_layers"]["R2_compiled_jit_runtime_cache"]["state"]
 shared_r2="VERIFIED_HIT" if local_r2=="VERIFIED_HIT" else ("MISS" if local_r2=="MISS" else "PRESENT_UNVERIFIED")
-c3=bool((q.get("canary") or {}).get("pass")); c4=bool((q.get("domain") or {}).get("structured_output_valid")) and q.get("scientific_inference_calls")==1
+c3=bool((q.get("canary") or {}).get("pass"))
+c4=bool((q.get("domain") or {}).get("structured_output_valid")) and q.get("scientific_inference_calls")==1
 stages=[
- {"stage":"C0_STATIC","status":"PASS","execution_identity":identity,"evidence":{"git_sha":sys.argv[4]}},
- {"stage":"C1_IMPORT_ACCELERATOR","status":"PASS","execution_identity":identity,"evidence":{"package_reuse":True}},
- {"stage":"C2A_BACKEND_TOOLCHAIN","status":"PASS","execution_identity":identity,"evidence":{"sampling_backend":"vllm_native"}},
- {"stage":"C2B_ENGINE_BOOT","status":"PASS" if q.get("model_init_seconds") is not None and q.get("failure") is None else "FAIL","execution_identity":identity,"evidence":{"model_init_seconds":q.get("model_init_seconds")}},
- {"stage":"C3_CANARY","status":"PASS" if c3 else "FAIL","execution_identity":identity,"evidence":{"synthetic_non_scientific":True,"seconds":(q.get("canary") or {}).get("seconds")}},
- {"stage":"C4_DOMAIN","status":"PASS" if c4 else "FAIL","execution_identity":identity,"evidence":{"scientific_calls":q.get("scientific_inference_calls"),"seconds":(q.get("domain") or {}).get("seconds")}},
+ {"stage":"C0_STATIC","status":"PASS","execution_identity":execid,"evidence":{"git_sha":git_sha}},
+ {"stage":"C1_IMPORT_ACCELERATOR","status":"PASS","execution_identity":execid,"evidence":{"package_reuse":True}},
+ {"stage":"C2A_BACKEND_TOOLCHAIN","status":"PASS","execution_identity":execid,"evidence":{"sampling_backend":"vllm_native"}},
+ {"stage":"C2B_ENGINE_BOOT","status":"PASS" if q.get("model_init_seconds") is not None and q.get("failure") is None else "FAIL","execution_identity":execid,"evidence":{"model_init_seconds":q.get("model_init_seconds")}},
+ {"stage":"C3_CANARY","status":"PASS" if c3 else "FAIL","execution_identity":execid,"evidence":{"synthetic_non_scientific":True,"seconds":(q.get("canary") or {}).get("seconds")}},
+ {"stage":"C4_DOMAIN","status":"PASS" if c4 else "FAIL","execution_identity":execid,"evidence":{"scientific_calls":q.get("scientific_inference_calls"),"seconds":(q.get("domain") or {}).get("seconds")}},
 ]
 runtime_certified=all(x["status"]=="PASS" for x in stages[:5])
+cert={
+ "schema_version":1,
+ "execution_identity":execid,
+ "package_identity":pkgid,
+ "compatibility_predicates":{"cuda_runtime":"12.9","sampling_backend":"vllm_native"},
+ "runtime_certified":runtime_certified,
+ "stage_receipts":stages,
+ "reuse_layers":{
+  "R0_ENVIRONMENT":"VERIFIED_REUSE",
+  "R1_CERTIFICATION":"VERIFIED_HIT",
+  "R2_COMPILED_CACHE":shared_r2,
+  "R3_LIVE_SESSION":"HEALTHY_REUSE" if c3 and c4 else "NOT_APPLICABLE",
+ },
+}
 freeze=runtime_certified and shared_r2=="VERIFIED_HIT"
-out={"schema_version":1,"execution_identity":identity,"package_identity":"qwen35-cu129-vllm0.30.0","compatibility_predicates":{"cuda_runtime":"12.9","sampling_backend":"vllm_native"},"stage_receipts":stages,"runtime_certified":runtime_certified,"reuse_layers":{"R0_ENVIRONMENT":"VERIFIED_REUSE","R1_CERTIFICATION":"VERIFIED_HIT","R2_COMPILED_CACHE":shared_r2,"R3_LIVE_SESSION":"HEALTHY_REUSE" if c3 and c4 else "NOT_APPLICABLE"},"project_local_r2_detail":local_r2,"timings_seconds":r.get("timings_seconds"),"comparison_to_successful_cold_v3":r.get("comparison_to_successful_cold_v3"),"WAVE_3_FREEZE_READY":freeze,"freeze_rationale":"R2 explicit verified reuse and C3 passed under one live identity." if freeze else "C3 may pass, but R2 lacks explicit VERIFIED_HIT evidence."}
-pathlib.Path(sys.argv[3]).write_text(json.dumps(out,indent=2,sort_keys=True)+"\n",encoding="utf-8")
-print(json.dumps(out,indent=2,sort_keys=True))
+detail={
+ "schema_version":1,
+ "execution_identity":execid,
+ "package_identity":pkgid,
+ "project_local_r2_detail":local_r2,
+ "timings_seconds":r.get("timings_seconds"),
+ "comparison_to_successful_cold_v3":r.get("comparison_to_successful_cold_v3"),
+ "WAVE_3_FREEZE_READY":freeze,
+ "freeze_rationale":"R2 explicit verified reuse and C3 passed under one live identity." if freeze else "C3 may pass, but R2 lacks explicit VERIFIED_HIT evidence.",
+}
+pathlib.Path(sys.argv[3]).write_text(json.dumps(cert,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+pathlib.Path(sys.argv[4]).write_text(json.dumps(detail,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+print(json.dumps({"certification":cert,"adoption_detail":detail},indent=2,sort_keys=True))
 PY
 
-echo
 echo "=== FINAL OPERATION RECEIPT ==="
 "$core_venv/bin/python" - "$opstate" "$operation_receipt" "$opid" "$git_sha" "$out" "$report" "$wave3" "$qwen" "$codex" "$plan" "$sidecar" <<'PY'
 import json,pathlib,sys
