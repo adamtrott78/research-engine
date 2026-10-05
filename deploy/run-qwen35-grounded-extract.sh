@@ -230,10 +230,62 @@ echo "SELECTED_GPU_UUID=$gpu_uuid"
 echo "VLLM_COMPILE_CACHE_PRESENT_BEFORE=$cache_present"
 
 echo
-echo "=== ONE QWEN BOOT: C3 CANARY -> C4 GROUNDED EXTRACT ==="
+echo "=== RECOVER REUSABLE C3 CERTIFICATION ==="
+reuse_c3_from="$("$core_venv/bin/python" - "$state/runtime-operations/qwen35-grounded-extract" "$execid" <<'PY'
+import json,pathlib,sys
+root=pathlib.Path(sys.argv[1]); execid=sys.argv[2]
+matches=[]
+if root.is_dir():
+    for receipt_path in sorted(root.glob("*.json")):
+        if receipt_path.name.endswith(".detail.json"):
+            continue
+        try:
+            receipt=json.loads(receipt_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if receipt.get("execution_identity") != execid:
+            continue
+        artifacts=dict((receipt.get("failure_envelope") or {}).get("artifacts") or {})
+        qpath=artifacts.get("qwen_result")
+        if not qpath:
+            continue
+        qfile=pathlib.Path(qpath)
+        if not qfile.is_file():
+            continue
+        try:
+            q=json.loads(qfile.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        canary=dict(q.get("canary") or {})
+        if (
+            canary.get("pass") is True
+            and list(canary.get("expected_selected_candidate_ids") or [])
+                == ["synthetic:beta"]
+        ):
+            matches.append((receipt_path.stat().st_mtime, str(qfile)))
+print(matches[-1][1] if matches else "")
+PY
+)"
+qwen_args=(
+  --plan "$plan"
+  --model-dir "$model"
+  --gpu-uuid "$gpu_uuid"
+  --baseline-gpu-used-mib "$gpu_used"
+  --output "$qwen"
+)
+if [ -n "$reuse_c3_from" ]; then
+  echo "C3_CERTIFICATION=VERIFIED_REUSE"
+  echo "C3_REUSE_SOURCE=$reuse_c3_from"
+  qwen_args+=(--reuse-canary-from "$reuse_c3_from")
+else
+  echo "C3_CERTIFICATION=EXECUTE"
+fi
+
+echo
+echo "=== ONE QWEN BOOT: RECOVERED C3 -> C4 GROUNDED EXTRACT ==="
 set +e
 PYTHONPATH="$root/src" "$runtime/bin/python" "$root/benchmarks/document_intelligence/run_qwen35_grounded_extract.py" \
-  --plan "$plan" --model-dir "$model" --gpu-uuid "$gpu_uuid" --baseline-gpu-used-mib "$gpu_used" --output "$qwen" 2>&1 | tee "$helper_log"
+  "${qwen_args[@]}" 2>&1 | tee "$helper_log"
 qwen_rc="${PIPESTATUS[0]}"
 set -e
 
@@ -251,7 +303,7 @@ r=make_runtime_reuse_report(
  cache_present_before=sys.argv[3].lower()=="true",
  package_environment_reused=True,
  execution_certification_reused=True,
- live_engine_reused_for_domain_calls=(c3_pass and c4_completed==1),
+ live_engine_reused_for_domain_calls=(c3_calls==1 and c3_pass and c4_completed==1),
 )
 r["c3_same_modality_canary_calls"]=c3_calls
 r["c4_scientific_domain_calls_started"]=c4_started
@@ -275,7 +327,7 @@ stages=[
  {"stage":"C1_IMPORT_ACCELERATOR","status":"PASS","execution_identity":execid,"evidence":{"package_reuse":True}},
  {"stage":"C2A_BACKEND_TOOLCHAIN","status":"PASS","execution_identity":execid,"evidence":{"sampling_backend":"vllm_native"}},
  {"stage":"C2B_ENGINE_BOOT","status":"PASS" if q.get("model_init_seconds") is not None else "FAIL","execution_identity":execid,"evidence":{"model_init_seconds":q.get("model_init_seconds")}},
- {"stage":"C3_CANARY","status":"PASS" if c3 else "FAIL","execution_identity":execid,"evidence":{"synthetic_non_scientific":True,"seconds":(q.get("canary") or {}).get("seconds")}},
+ {"stage":"C3_CANARY","status":"PASS" if c3 else "FAIL","execution_identity":execid,"evidence":{"synthetic_non_scientific":True,"seconds":(q.get("canary") or {}).get("seconds"),"new_calls":int(q.get("c3_canary_calls") or 0),"reused":bool(q.get("c3_canary_reused")),"reuse_source":q.get("c3_canary_reuse_source")}},
  {"stage":"C4_DOMAIN","status":"PASS" if c4 else "FAIL","execution_identity":execid,"evidence":{"scientific_calls_started":int(q.get("scientific_inference_calls_started") or 0),"scientific_calls_completed":int(q.get("scientific_inference_calls_completed") or q.get("scientific_inference_calls") or 0),"seconds":(q.get("domain") or {}).get("seconds")}},
 ]
 runtime_certified=all(x["status"]=="PASS" for x in stages[:5])
@@ -436,8 +488,14 @@ require_stopped
 echo "DAEMON=inactive/dead PID=0"
 echo "SCIENTIFIC_STATE_MATERIALIZED=false"
 echo "PRODUCTION_ROUTING_CHANGED=false"
-echo "C3_CALLS=1"
-echo "C4_SCIENTIFIC_CALLS=1"
+"$core_venv/bin/python" - "$qwen" <<'PY'
+import json,sys
+q=json.load(open(sys.argv[1],encoding="utf-8"))
+print(f"C3_CALLS={int(q.get('c3_canary_calls') or 0)}")
+print(f"C3_REUSED={str(bool(q.get('c3_canary_reused'))).lower()}")
+print(f"C4_SCIENTIFIC_CALLS_STARTED={int(q.get('scientific_inference_calls_started') or 0)}")
+print(f"C4_SCIENTIFIC_CALLS_COMPLETED={int(q.get('scientific_inference_calls_completed') or q.get('scientific_inference_calls') or 0)}")
+PY
 echo "OUTPUT_ROOT=$out"
 echo "GROUNDED_EXTRACT_REPORT=$report"
 echo "RUNTIME_CERTIFICATION=$certification"
