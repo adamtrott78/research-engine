@@ -59,14 +59,17 @@ execute-now finding remains, the required decision is
 The production default remains `RESEARCH_ENGINE_SEMANTIC_BACKEND=codex`
 for general semantic work and for EXTRACT.
 
-When `RESEARCH_ENGINE_QWEN_VERIFY_ENABLED=1`, one narrowly promoted VERIFY
-class is routed to the validated local Qwen3.5-4B runtime first: radius-0 jobs
-whose authoritative evidence already resolves to exactly one PDF page and fits
-the bounded quote-preserving context limit. Qwen may only verify the supplied
-authoritative evidence IDs. A deterministic guard rejects unknown IDs or other
-contract violations, and any ineligible, backpressured, runtime-failed, or
-guard-failed VERIFY falls through to STANDARD Codex. The original PDF/evidence
-remain scientific authority and the existing semantic materializer is unchanged.
+When `RESEARCH_ENGINE_QWEN_VERIFY_ENABLED=1`, radius-0 VERIFY is decomposed
+into page-scoped units that match the calibrated local Qwen3.5-4B boundary.
+Each cited PDF page receives only the authoritative evidence IDs located on that
+page plus a quote-preserving <=20k-character context window. Qwen may only
+verify those supplied IDs. The original multi-page job is accepted locally only
+when every page unit passes the deterministic guard, returns `verified=true`,
+returns no issues, and accepts every authoritative evidence ID assigned to that
+page. Any page that is ineligible, backpressured, runtime-failed, guard-failed,
+negative, partial, or issue-bearing causes the untouched original VERIFY job to
+fall through to STANDARD Codex. The original PDF/evidence remain scientific
+authority and the existing semantic materializer is unchanged.
 
 Codex must be signed in with the operator's ChatGPT account on the host. The
 research engine invokes `codex exec` non-interactively with structured output,
@@ -179,12 +182,13 @@ validated, where remote/web/human reasoning is retained, and where candidate
 localization was rejected or deferred.
 
 EXTRACT remains a STANDARD Codex semantic job over authoritative-PDF
-context. VERIFY also remains STANDARD-tier work, but the measured bounded
-radius-0/exact-one-page residual class is now eligible for local Qwen3.5-4B as
-the primary semantic verifier with deterministic guard and STANDARD Codex
-fallthrough. Multi-page or otherwise ineligible VERIFY continues directly to
-Codex. Specialized local document models remain targeted sidecar/escalation
-components rather than a silent semantic-context substitute.
+context. VERIFY also remains STANDARD-tier work, but radius-0 cited pages can
+now be verified as independent bounded Qwen3.5-4B units using the same
+page-scoped boundary that passed calibration. A multi-page VERIFY completes
+locally only if every page unit unanimously verifies and fully accepts all of
+its authoritative evidence with no issues; otherwise the entire original job
+falls through to Codex. Specialized local document models remain targeted
+sidecar/escalation components rather than a silent semantic-context substitute.
 
 
 ### Lambda production acceptance
