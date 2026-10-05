@@ -70,7 +70,13 @@
       "C3_CANARY",
       "C4_DOMAIN"
     ],
-    "freeze_ready_condition": "R2 verified reuse plus C3 PASS under the same execution identity with no new shared control-plane mechanism"
+    "freeze_ready_condition": "R2 verified reuse plus C3 PASS under the same execution identity with no new shared control-plane mechanism",
+    "c3_retry_recovery": {
+      "reuse_passing_canary_for_same_execution_identity": true,
+      "source": "durable prior grounded-extract operation receipt plus referenced qwen result",
+      "duplicate_canary_call_on_recovery": false,
+      "new_canary_call_only_when_no_compatible_pass_exists": true
+    }
   },
   "boundaries": {
     "production_routing_changed": false,
