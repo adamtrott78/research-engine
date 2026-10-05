@@ -397,13 +397,30 @@ print(json.dumps({"receipt":receipt,"detail":detail},indent=2,sort_keys=True))
 PY
 
 echo "=== COMPACT RESULT ==="
-"$core_venv/bin/python" - "$report" "$wave3" "$sidecar" "$plan" <<'PY'
+"$core_venv/bin/python" - "$report" "$certification" "$wave3" "$sidecar" "$plan" <<'PY'
 import json,sys
-r=json.load(open(sys.argv[1],encoding="utf-8")); w=json.load(open(sys.argv[2],encoding="utf-8")); s=json.load(open(sys.argv[3],encoding="utf-8")); p=json.load(open(sys.argv[4],encoding="utf-8"))
-print(json.dumps({"decision":r["decision"],"c3_canary_pass":r["c3_canary_pass"],"guard_status":r["guard"]["status"],"guard_reasons":r["guard"]["reasons"],"promotion_thresholds_pass":r["promotion_thresholds_pass"],"codex_agreement":r["codex_agreement"],"candidate_summary":p["candidate_summary"],"sidecar_status":s.get("status"),"sidecar_cache_hit":s.get("cache_hit"),"wave3_reuse_layers":w["reuse_layers"],"runtime_certified":w["runtime_certified"],"WAVE_3_FREEZE_READY":w["WAVE_3_FREEZE_READY"],"wave3_timings_seconds":w.get("timings_seconds")},indent=2,sort_keys=True))
+r=json.load(open(sys.argv[1],encoding="utf-8"))
+c=json.load(open(sys.argv[2],encoding="utf-8"))
+w=json.load(open(sys.argv[3],encoding="utf-8"))
+s=json.load(open(sys.argv[4],encoding="utf-8"))
+p=json.load(open(sys.argv[5],encoding="utf-8"))
+print(json.dumps({
+ "decision":r["decision"],
+ "c3_canary_pass":r["c3_canary_pass"],
+ "guard_status":r["guard"]["status"],
+ "guard_reasons":r["guard"]["reasons"],
+ "promotion_thresholds_pass":r["promotion_thresholds_pass"],
+ "codex_agreement":r["codex_agreement"],
+ "candidate_summary":p["candidate_summary"],
+ "sidecar_status":s.get("status"),
+ "sidecar_cache_hit":s.get("cache_hit"),
+ "wave3_reuse_layers":c["reuse_layers"],
+ "runtime_certified":c["runtime_certified"],
+ "WAVE_3_FREEZE_READY":w["WAVE_3_FREEZE_READY"],
+ "wave3_timings_seconds":w.get("timings_seconds"),
+},indent=2,sort_keys=True))
 PY
 
-echo
 echo "=== FINAL SAFETY STATE ==="
 systemctl --user stop "$unit" >/dev/null 2>&1 || true
 require_stopped
@@ -414,5 +431,7 @@ echo "C3_CALLS=1"
 echo "C4_SCIENTIFIC_CALLS=1"
 echo "OUTPUT_ROOT=$out"
 echo "GROUNDED_EXTRACT_REPORT=$report"
+echo "RUNTIME_CERTIFICATION=$certification"
 echo "WAVE3_ADOPTION=$wave3"
 echo "OPERATION_RECEIPT=$operation_receipt"
+echo "OPERATION_DETAIL=$operation_detail"
