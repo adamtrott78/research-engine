@@ -90,8 +90,10 @@ def test_helper_has_single_engine_boot_c3_before_c4():
     assert text.index("C3_CANARY_START") < text.index("C4_DOMAIN_START")
     assert 'report["scientific_inference_calls"] = 1' in text
     prompt=text.split("def domain_prompt",1)[1].split("def main",1)[0]
-    assert "raw_source_form" in prompt  # forbidden field is explicitly named
-    assert "Do not output" in prompt
+    assert "source quotes" in prompt
+    assert "page numbers" in prompt
+    assert "bboxes" in prompt
+    assert "source SHA" in prompt
 
 
 def test_runner_reuses_sidecar_and_has_no_materialization_or_install():
