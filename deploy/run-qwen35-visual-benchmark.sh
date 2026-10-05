@@ -124,6 +124,7 @@ payload={
     "setup_mode":setup_mode,
     "verified_identity_reused":os.environ.get("RECEIPT_RUNTIME_IDENTITY_REUSED")=="true",
     "installation_or_download_performed":setup_mode in {"full_rebuild","torchcodec_repair"},
+    "exact_execution_path_smoke_passed":isinstance(read_json(runtime),dict) and read_json(runtime).get("vllm_multimodal_import_probe")=="PASS" and read_json(runtime).get("cuda_allocation_probe")=="PASS",
     "host_build":read_json(host),
     "verified_receipt":read_json(runtime),
   },
@@ -384,9 +385,10 @@ payload = {
     "vllm_multimodal_import_probe": "PASS",
     "engine": "native_qwen3.5_multimodal",
 }
-pathlib.Path(sys.argv[1]).write_text(
-    json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-)
+path = pathlib.Path(sys.argv[1])
+tmp = path.with_suffix(path.suffix + ".tmp")
+tmp.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+tmp.replace(path)
 print(json.dumps(payload, sort_keys=True))
 PY
 runtime_smoke_rc=$?
@@ -395,7 +397,7 @@ runtime_smoke_end_ns="$(now_ns)"
 runtime_smoke_seconds="$(elapsed_seconds "$runtime_smoke_start_ns" "$runtime_smoke_end_ns")"
 cat "$runtime_log"
 if [ "$runtime_smoke_rc" -ne 0 ]; then
-    if grep -Eq 'libav(util|device|codec|format|filter|resample|scale)\\.so' "$runtime_log"; then
+    if grep -Eq 'libav(util|device|codec|format|filter|resample|scale)\.so' "$runtime_log"; then
         fail "RUNTIME_MULTIMODAL_NATIVE_LIBRARY_FAILURE" 50 "TorchCodec/vLLM native-library smoke failed; inspect targeted runtime log"
     elif grep -q 'libnvrtc.so' "$runtime_log"; then
         fail "RUNTIME_CUDA_NVRTC_INCOMPATIBILITY" 51 "TorchCodec/vLLM requested an incompatible NVRTC shared library; inspect targeted runtime log"
@@ -407,6 +409,7 @@ require_stopped
 
 echo
 echo "=== VERIFY PREFETCHED QWEN ==="
+terminal_stage="model_weight_verification"
 for spec in \
   "model.safetensors-00001-of-00002.safetensors:26a93f066e1916adb13453dae5a0c707c0fbc71299ed98779571a907b8e74c61" \
   "model.safetensors-00002-of-00002.safetensors:cb544bd9bfae93dc59b0f22b292f5933573854a7f9b97835c67060d7d910e188"
