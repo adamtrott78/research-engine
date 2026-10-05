@@ -77,5 +77,13 @@
     "scientific_state_materialized": false,
     "semantic_materializer_invoked": false,
     "no_new_model_family": true
+  },
+  "prompt_budget": {
+    "model_max_tokens": 8192,
+    "reserved_output_tokens": 1024,
+    "max_input_tokens": 7000,
+    "preflight": "exact local Qwen tokenizer chat-template count before model initialization",
+    "compaction": "compact [candidate_id,text] rows; if needed deterministically shorten model-visible excerpts while preserving every immutable candidate ID",
+    "provenance_unchanged": true
   }
 }
