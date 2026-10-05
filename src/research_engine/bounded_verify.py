@@ -290,6 +290,12 @@ class BoundedVerifySemanticDelegate:
         ]
         authoritative_order = [str(item["id"]) for item in all_authoritative]
         expected_item_id = str((job.payload.get("item") or {}).get("id") or "")
+        if not expected_item_id:
+            return self._fallback(
+                job,
+                reason="VERIFY_ITEM_ID_MISSING",
+                local_attempted=False,
+            )
         total_input_tokens = 0
         total_output_tokens = 0
         page_receipts: list[dict[str, Any]] = []
@@ -405,9 +411,7 @@ class BoundedVerifySemanticDelegate:
 
         result = {
             "verified": True,
-            "item_id": expected_item_id or str(
-                page_receipts and job.payload.get("item", {}).get("id") or ""
-            ),
+            "item_id": expected_item_id,
             "accepted_evidence_ids": authoritative_order,
             "issues": [],
         }
