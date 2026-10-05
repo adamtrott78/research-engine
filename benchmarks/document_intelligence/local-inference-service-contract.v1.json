@@ -45,8 +45,8 @@
       "model": "Qwen/Qwen3.5-4B@851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
       "runtime_contract": "qwen35-vllm-cu129-image-native-sampler-v3",
       "protocol_server": "benchmarks/document_intelligence/runtimes/qwen35_verify_server.py",
-      "enabled_for": "radius-0 exact-one-authoritative-page VERIFY only",
-      "fallthrough": "STANDARD Codex on ineligibility, local backpressure/runtime failure, or deterministic guard failure"
+      "enabled_for": "radius-0 VERIFY, partitioned into independently bounded cited-page units; whole-job local success requires unanimous verified=true, no issues, and full authoritative-ID acceptance across every page",
+      "fallthrough": "untouched whole VERIFY job goes to STANDARD Codex if any page is ineligible, backpressured, runtime-failed, guard-failed, negative, partial, or issue-bearing"
     }
   },
   "lambda_acceptance": {
@@ -64,7 +64,7 @@
     ],
     "daemon_state": "inactive/dead throughout benchmark",
     "human_facing_output_root": "~/adamArchives/Adam/workspace-control-tmp/",
-    "qwen_verify_gate": "separate stopped-daemon one-call gate must prove exact runtime identity, one real eligible historical VERIFY served locally with zero Codex calls, strict agreement with its existing Codex result, no document-owner spawn, no process leak, and no scientific-state materialization before production enablement"
+    "qwen_verify_gate": "separate stopped-daemon gate must prove exact runtime identity on one real multi-page historical VERIFY: deterministic page-scoped units, one resident Qwen model boot reused across all page calls, zero Codex calls, unanimous local full acceptance, strict agreement with the existing full-job Codex result, no document-owner spawn, no process leak, and no scientific-state materialization before production enablement"
   },
   "production_enablement": {
     "environment_flag": "RESEARCH_ENGINE_LOCAL_INFERENCE_ENABLED=1",
