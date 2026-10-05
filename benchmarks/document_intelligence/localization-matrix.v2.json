@@ -78,14 +78,15 @@
         "evidence-id lookup",
         "locator validation",
         "radius-0 cited-page selection",
-        "exact-one-page bounded eligibility",
-        "quote-preserving <=20000-character window",
-        "Qwen3.5-4B local VERIFY over authoritative evidence IDs",
-        "deterministic accepted-evidence guard",
-        "fail-closed Codex STANDARD fallthrough"
+        "deterministic page-scoped evidence partitioning",
+        "quote-preserving <=20000-character window per cited page",
+        "Qwen3.5-4B local VERIFY over each page's authoritative evidence IDs",
+        "deterministic accepted-evidence guard per page",
+        "whole-job local acceptance only when every page verifies true with no issues and full evidence acceptance",
+        "fail-closed whole-job Codex STANDARD fallthrough on any page failure"
       ],
       "authority": "verification event over authoritative evidence/source page; original PDF/evidence remain scientific authority",
-      "rationale": "Guarded Qwen3.5-4B calibration matched contemporaneous STANDARD Codex on verified boolean and accepted authoritative evidence IDs for the promoted one-page radius-0 class. Production routing is intentionally narrower than all VERIFY: only exact one-page bounded jobs use Qwen as primary; ineligible, backpressured, runtime-failed, or guard-failed jobs fall through to Codex STANDARD."
+      "rationale": "Guarded Qwen3.5-4B calibration matched contemporaneous STANDARD Codex on a radius-0 page-scoped VERIFY unit derived from a real multi-page job. Production mirrors that calibrated unit: cited pages are independently bounded and verified, but the original job is locally accepted only when every page passes, reports verified=true with no issues, and accepts all authoritative IDs on that page. Any page failure falls through the untouched whole job to Codex STANDARD."
     },
     {
       "job_type": "CHECKPOINT",
@@ -258,9 +259,9 @@
     {
       "component": "verify_semantic_offload",
       "decision": "PROMOTE_BOUNDED_LOCAL_QWEN_VERIFY",
-      "production_path": "STANDARD semantic VERIFY over authoritative cited pages",
-      "evidence": "Quality acceptable in sample but no compelling controlled efficiency gain or local-model benchmark.",
-      "rationale": "Measured guarded Qwen3.5-4B bounded VERIFY matched STANDARD Codex on the calibrated radius-0 exact-one-page class. Promote only that class to local Qwen primary with deterministic evidence-ID guard and STANDARD Codex fallthrough; retain remote baseline for all ineligible VERIFY."
+      "production_path": "STANDARD VERIFY with radius-0 page-scoped Qwen units and whole-job STANDARD Codex fallthrough",
+      "evidence": "Guarded Qwen3.5-4B matched STANDARD Codex on the calibrated page-scoped radius-0 VERIFY unit; production reuses that unit inside multi-page jobs and fails the whole job closed unless all pages fully pass.",
+      "rationale": "Guarded Qwen3.5-4B calibration matched contemporaneous STANDARD Codex on a radius-0 page-scoped VERIFY unit derived from a real multi-page job. Production mirrors that calibrated unit: cited pages are independently bounded and verified, but the original job is locally accepted only when every page passes, reports verified=true with no issues, and accepts all authoritative IDs on that page. Any page failure falls through the untouched whole job to Codex STANDARD."
     },
     {
       "component": "shared_heavy_model_ownership",

@@ -142,7 +142,7 @@ echo "QWEN_VERIFY_GPU_UUID=$gpu_uuid"
 echo "QWEN_VERIFY_GPU_FREE_MIB=$gpu_free"
 
 echo
-echo "=== REAL ONE-PAGE VERIFY / NO-CODEX NON-MATERIALIZING GATE ==="
+echo "=== REAL MULTI-PAGE VERIFY / PAGE-SCOPED QWEN / NO-CODEX GATE ==="
 PYTHONPATH="$root/src" "$core" - "$run_id" "$report" <<'PY'
 from __future__ import annotations
 import json,os,sys
@@ -150,7 +150,7 @@ from pathlib import Path
 
 from research_engine.bounded_verify import (
     BoundedVerifySemanticDelegate,
-    prepare_bounded_verify_job,
+    prepare_bounded_verify_pages,
 )
 from research_engine.local_inference import local_inference_service_from_env
 from research_engine.orchestration import ExecutorTier, JobType
@@ -174,33 +174,87 @@ for source in planner.completed_jobs(run_id,JobType.VERIFY):
     try:
         hydrated=hydrator.hydrate(source)
     except Exception as exc:
-        rejections.append({"job_id":source.id,"reason":f"HYDRATE:{type(exc).__name__}"})
+        rejections.append({
+            "job_id":source.id,
+            "reason":f"HYDRATE:{type(exc).__name__}",
+        })
         continue
-    bounded,reason=prepare_bounded_verify_job(
+
+    historical=dict(source.result or {})
+    context=dict(hydrated.payload.get("_research_context") or {})
+    authoritative_ids=[
+        str(item.get("id"))
+        for item in context.get("authoritative_evidence") or []
+    ]
+    historical_ids=[
+        str(x) for x in historical.get("accepted_evidence_ids") or []
+    ]
+    historical_issues=[
+        str(x) for x in historical.get("issues") or []
+    ]
+    if (
+        not bool(historical.get("verified"))
+        or historical_issues
+        or set(historical_ids) != set(authoritative_ids)
+    ):
+        rejections.append({
+            "job_id":source.id,
+            "reason":"HISTORICAL_CODEX_NOT_FULL_POSITIVE_ACCEPTANCE",
+        })
+        continue
+
+    page_scoped_units,reason=prepare_bounded_verify_pages(
         hydrated,
         max_context_chars=20000,
     )
-    if bounded is None:
+    if page_scoped_units is None:
         rejections.append({"job_id":source.id,"reason":reason})
         continue
-    selected=(source,hydrated,bounded)
+    if len(page_scoped_units) < 2:
+        rejections.append({
+            "job_id":source.id,
+            "reason":"GATE_REQUIRES_REAL_MULTI_PAGE_VERIFY",
+        })
+        continue
+    selected=(source,hydrated,page_scoped_units)
     break
 
 if selected is None:
     raise SystemExit(
-        "NO_COMPLETED_PRODUCTION_VERIFY_JOB_FITS_BOUNDED_CLASS:"
+        "NO_COMPLETED_MULTI_PAGE_VERIFY_FITS_PAGE_SCOPED_CLASS:"
         + json.dumps(rejections,sort_keys=True)
     )
 
-source,hydrated,bounded=selected
+source,hydrated,page_scoped_units=selected
+page_numbers=[page for page,_job,_ids in page_scoped_units]
+page_evidence_ids={
+    str(page):ids for page,_job,ids in page_scoped_units
+}
 
-class ForbiddenFallback:
-    calls=0
+class NoCodexFallback:
+    def __init__(self):
+        self.calls=0
     def execute(self,_job):
         self.calls+=1
-        raise RuntimeError("CODEX_FALLBACK_CALLED")
+        return {
+            "verified":False,
+            "item_id":"__NO_CODEX_FALLBACK__",
+            "accepted_evidence_ids":[],
+            "issues":["LOCAL_ROUTE_FELL_THROUGH"],
+            "_execution":{
+                "provider":"forbidden-fallback-sentinel",
+                "model":None,
+                "reasoning_effort":None,
+                "usage":{
+                    "input_tokens":0,
+                    "cached_input_tokens":0,
+                    "output_tokens":0,
+                    "reasoning_output_tokens":0,
+                },
+            },
+        }
 
-fallback=ForbiddenFallback()
+fallback=NoCodexFallback()
 service=local_inference_service_from_env(require_enabled=True)
 try:
     pre=service.health()
@@ -221,18 +275,36 @@ try:
 finally:
     service.close()
 
-if fallback.calls:
-    raise SystemExit("CODEX_FALLBACK_CALLED")
 execution=dict(result.get("_execution") or {})
 routing=dict(execution.get("routing") or {})
+if fallback.calls:
+    raise SystemExit(
+        "LOCAL_PAGE_SCOPED_VERIFY_FELL_THROUGH_WITHOUT_CODEX_CALL:"
+        + json.dumps(routing,sort_keys=True)
+    )
 if execution.get("provider") != "local-qwen-vllm":
-    raise SystemExit("VERIFY_NOT_SERVED_BY_LOCAL_QWEN")
+    raise SystemExit(
+        "VERIFY_NOT_SERVED_BY_LOCAL_QWEN:"
+        + json.dumps(execution,sort_keys=True)
+    )
 if routing.get("decision") != "LOCAL_QWEN_ACCEPTED":
-    raise SystemExit("LOCAL_QWEN_RESULT_NOT_GUARD_ACCEPTED")
+    raise SystemExit(
+        "LOCAL_QWEN_RESULT_NOT_GUARD_ACCEPTED:"
+        + json.dumps(routing,sort_keys=True)
+    )
+expected_calls=len(page_scoped_units)
+if int(routing.get("page_count") or 0) != expected_calls:
+    raise SystemExit("ROUTING_PAGE_COUNT_MISMATCH")
+if int(routing.get("qwen_calls") or 0) != expected_calls:
+    raise SystemExit("ROUTING_QWEN_CALL_COUNT_MISMATCH")
 if post["qwen_verify"]["spawn_count"] != 1:
     raise SystemExit("QWEN_OWNER_SPAWN_COUNT_NOT_ONE")
-if post["qwen_verify"]["requests_completed"] != 1:
-    raise SystemExit("QWEN_REQUEST_COUNT_NOT_ONE")
+if post["qwen_verify"]["requests_completed"] != expected_calls:
+    raise SystemExit(
+        f"QWEN_REQUEST_COUNT_MISMATCH:"
+        f"expected={expected_calls}:"
+        f"actual={post['qwen_verify']['requests_completed']}"
+    )
 if post["formula"]["spawn_count"] != 0 or post["table"]["spawn_count"] != 0:
     raise SystemExit("DOCUMENT_MODEL_OWNER_SPAWNED_DURING_VERIFY")
 
@@ -244,20 +316,40 @@ strict_agreement=bool(
 )
 if not strict_agreement:
     raise SystemExit(
-        "QWEN_VERIFY_DISAGREES_WITH_EXISTING_CODEX_RESULT:"
-        + json.dumps(agreement,sort_keys=True)
+        "PAGE_SCOPED_QWEN_VERIFY_DISAGREES_WITH_EXISTING_CODEX_RESULT:"
+        + json.dumps(
+            {
+                "agreement":agreement,
+                "qwen_result":{
+                    k:v for k,v in result.items() if k != "_execution"
+                },
+                "historical_result":{
+                    k:v for k,v in (source.result or {}).items()
+                    if k != "_execution"
+                },
+            },
+            sort_keys=True,
+        )
     )
 
-context=dict(bounded.payload.get("_research_context") or {})
+context=dict(hydrated.payload.get("_research_context") or {})
 payload={
-  "schema_version":1,
+  "schema_version":2,
   "decision":"PASS",
-  "route":"QWEN35_BOUNDED_VERIFY_PRIMARY",
+  "route":"QWEN35_PAGE_SCOPED_VERIFY_PRIMARY",
   "source_run_id":run_id,
   "source_job_id":source.id,
-  "context_page_numbers":[int(x["page_number"]) for x in context.get("pages") or []],
-  "context_chars":sum(len(str(x.get("text") or "")) for x in context.get("pages") or []),
-  "authoritative_evidence_count":len(context.get("authoritative_evidence") or []),
+  "source_context_page_numbers":[
+      int(x["page_number"]) for x in context.get("pages") or []
+  ],
+  "page_scoped_unit_count":len(page_scoped_units),
+  "page_scoped_unit_numbers":page_numbers,
+  "page_scoped_evidence_ids":page_evidence_ids,
+  "authoritative_evidence_count":len(
+      context.get("authoritative_evidence") or []
+  ),
+  "qwen_calls":expected_calls,
+  "qwen_model_boots":post["qwen_verify"]["spawn_count"],
   "qwen_result":{k:v for k,v in result.items() if k != "_execution"},
   "qwen_execution":execution,
   "historical_codex_agreement":agreement,
@@ -268,7 +360,10 @@ payload={
   "broker_health_before":pre,
   "broker_health_after":post,
 }
-Path(out).write_text(json.dumps(payload,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+Path(out).write_text(
+    json.dumps(payload,indent=2,sort_keys=True)+"\n",
+    encoding="utf-8",
+)
 print(json.dumps(payload,indent=2,sort_keys=True))
 PY
 require_stopped

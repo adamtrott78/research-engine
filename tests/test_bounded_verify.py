@@ -6,6 +6,7 @@ from pathlib import Path
 from research_engine.bounded_verify import (
     BoundedVerifySemanticDelegate,
     prepare_bounded_verify_job,
+    prepare_bounded_verify_pages,
 )
 from research_engine.local_inference import LocalInferenceError
 from research_engine.orchestration import ExecutorTier, JobType, ResearchJob
@@ -91,7 +92,7 @@ class _Fallback:
 
 
 class _Local:
-    def __init__(self, result=None, error=None):
+    def __init__(self, result=None, error=None, results_by_page=None):
         self.qwen_verify = object()
         self.calls = 0
         self.result = result or {
@@ -100,16 +101,19 @@ class _Local:
             "accepted_evidence_ids": ["evidence:1", "evidence:2"],
             "issues": [],
         }
+        self.results_by_page = dict(results_by_page or {})
         self.error = error
 
     def qwen_verify_request(self, *, messages, job_id, timeout_seconds=None):
         self.calls += 1
-        assert job_id == "job:verify"
+        assert job_id.startswith("job:verify:page:")
         assert messages
         if self.error is not None:
             raise self.error
+        page_number = int(job_id.rsplit(":", 1)[1])
+        result = self.results_by_page.get(page_number, self.result)
         return {
-            "result": self.result,
+            "result": result,
             "usage": {"input_tokens": 321, "output_tokens": 17},
             "family": "qwen_verify",
             "server_pid": 123,
@@ -129,11 +133,11 @@ def test_prepare_bounded_verify_accepts_exact_one_page_radius_zero():
     assert len(context["pages"]) == 1
     assert context["verification_scope"]["page_radius"] == 0
     assert context["verification_scope"]["bounded_local_verify"]["eligibility"] == (
-        "RADIUS_0_EXACT_ONE_AUTHORITATIVE_PAGE"
+        "RADIUS_0_PAGE_SCOPED_AUTHORITATIVE_EVIDENCE"
     )
 
 
-def test_prepare_bounded_verify_rejects_multi_page_context():
+def test_prepare_bounded_verify_splits_multi_page_context_into_calibrated_units():
     job = _job(
         pages=[
             {"page_number": 2, "text": "quote two"},
@@ -155,9 +159,23 @@ def test_prepare_bounded_verify_rejects_multi_page_context():
         ],
         supplied=[2, 3],
     )
-    bounded, reason = prepare_bounded_verify_job(job)
+    units, reason = prepare_bounded_verify_pages(job)
+    assert reason == "PASS"
+    assert units is not None
+    assert [page for page, _bounded, _ids in units] == [2, 3]
+    assert [ids for _page, _bounded, ids in units] == [
+        ["evidence:1"],
+        ["evidence:2"],
+    ]
+    for page, bounded, ids in units:
+        context = bounded.payload["_research_context"]
+        assert [row["page_number"] for row in context["pages"]] == [page]
+        assert [row["id"] for row in context["authoritative_evidence"]] == ids
+        assert context["verification_scope"]["supplied_page_numbers"] == [page]
+
+    bounded, one_reason = prepare_bounded_verify_job(job)
     assert bounded is None
-    assert reason.startswith("VERIFY_EXACT_ONE_PAGE_REQUIRED")
+    assert one_reason.startswith("VERIFY_EXACT_ONE_PAGE_REQUIRED")
 
 
 def test_bounded_verify_uses_qwen_without_codex_on_guarded_success():
@@ -204,7 +222,7 @@ def test_bounded_verify_falls_through_on_guard_failure():
     assert fallback.calls == 1
     routing = result["_execution"]["routing"]
     assert routing["decision"] == "FALLTHROUGH"
-    assert routing["reason"] == "QWEN_VERIFY_GUARD_FAILURE"
+    assert routing["reason"] == "QWEN_VERIFY_PAGE_2_GUARD_FAILURE"
     assert "UNKNOWN_ACCEPTED_EVIDENCE_IDS:invented:evidence" in (
         routing["local_detail"]["guard_reasons"]
     )
@@ -225,13 +243,28 @@ def test_bounded_verify_falls_through_on_local_runtime_failure():
     assert local.calls == 1
     assert fallback.calls == 1
     assert result["_execution"]["routing"]["reason"] == (
-        "QWEN_VERIFY_RUNTIME_FAILURE"
+        "QWEN_VERIFY_PAGE_2_RUNTIME_FAILURE"
     )
 
 
-def test_bounded_verify_falls_through_without_local_call_when_ineligible():
+def test_bounded_verify_aggregates_multi_page_full_acceptance_without_codex():
     fallback = _Fallback()
-    local = _Local()
+    local = _Local(
+        results_by_page={
+            2: {
+                "verified": True,
+                "item_id": "item:1",
+                "accepted_evidence_ids": ["evidence:1"],
+                "issues": [],
+            },
+            3: {
+                "verified": True,
+                "item_id": "item:1",
+                "accepted_evidence_ids": ["evidence:2"],
+                "issues": [],
+            },
+        }
+    )
     delegate = BoundedVerifySemanticDelegate(
         tier=ExecutorTier.STANDARD,
         fallback=fallback,
@@ -262,11 +295,92 @@ def test_bounded_verify_falls_through_without_local_call_when_ineligible():
 
     result = delegate.execute(job)
 
+    assert fallback.calls == 0
+    assert local.calls == 2
+    assert result["verified"] is True
+    assert result["accepted_evidence_ids"] == ["evidence:1", "evidence:2"]
+    assert result["issues"] == []
+    routing = result["_execution"]["routing"]
+    assert routing["decision"] == "LOCAL_QWEN_ACCEPTED"
+    assert routing["page_count"] == 2
+    assert routing["qwen_calls"] == 2
+    assert result["_execution"]["usage"]["input_tokens"] == 642
+
+
+def test_bounded_verify_falls_through_whole_job_on_partial_page_acceptance():
+    fallback = _Fallback()
+    local = _Local(
+        results_by_page={
+            2: {
+                "verified": True,
+                "item_id": "item:1",
+                "accepted_evidence_ids": ["evidence:1"],
+                "issues": [],
+            },
+            3: {
+                "verified": False,
+                "item_id": "item:1",
+                "accepted_evidence_ids": [],
+                "issues": ["not supported"],
+            },
+        }
+    )
+    delegate = BoundedVerifySemanticDelegate(
+        tier=ExecutorTier.STANDARD,
+        fallback=fallback,
+        local_inference=local,
+        enabled=True,
+    )
+    job = _job(
+        pages=[
+            {"page_number": 2, "text": "quote two"},
+            {"page_number": 3, "text": "quote three"},
+        ],
+        evidence=[
+            {
+                "id": "evidence:1",
+                "page_number": 2,
+                "raw_source_form": "quote two",
+                "normalized_form": "two",
+            },
+            {
+                "id": "evidence:2",
+                "page_number": 3,
+                "raw_source_form": "quote three",
+                "normalized_form": "three",
+            },
+        ],
+        supplied=[2, 3],
+    )
+
+    result = delegate.execute(job)
+
+    assert local.calls == 2
+    assert fallback.calls == 1
+    assert result["_execution"]["routing"]["decision"] == "FALLTHROUGH"
+    assert result["_execution"]["routing"]["reason"] == (
+        "QWEN_VERIFY_PAGE_3_NOT_VERIFIED"
+    )
+
+
+def test_bounded_verify_falls_through_without_local_call_on_scope_mismatch():
+    fallback = _Fallback()
+    local = _Local()
+    delegate = BoundedVerifySemanticDelegate(
+        tier=ExecutorTier.STANDARD,
+        fallback=fallback,
+        local_inference=local,
+        enabled=True,
+    )
+    job = _job(supplied=[99])
+
+    result = delegate.execute(job)
+
     assert local.calls == 0
     assert fallback.calls == 1
     assert result["_execution"]["routing"]["local_attempted"] is False
     assert result["_execution"]["routing"]["reason"].startswith(
-        "VERIFY_EXACT_ONE_PAGE_REQUIRED"
+        "VERIFY_PAGE_SCOPE_MISMATCH"
     )
 
 
@@ -277,14 +391,17 @@ def test_production_gate_is_non_materializing_and_forbids_codex():
     ).read_text(encoding="utf-8")
 
     assert "RESEARCH_ENGINE_DAEMON_MUST_REMAIN_STOPPED" in text
-    assert "class ForbiddenFallback" in text
-    assert "CODEX_FALLBACK_CALLED" in text
+    assert "class NoCodexFallback" in text
+    assert "forbidden-fallback-sentinel" in text
+    assert "LOCAL_PAGE_SCOPED_VERIFY_FELL_THROUGH_WITHOUT_CODEX_CALL" in text
     assert "codex_calls_performed" in text
     assert 'SCIENTIFIC_STATE_MATERIALIZED=false' in text
     assert 'PRODUCTION_ENV_MUTATED=false' in text
     assert "SemanticResultMaterializer" not in text
     assert "CodexExecExecutor" not in text
     assert "pip install" not in text
+    assert "prepare_bounded_verify_pages" in text
+    assert "page_scoped_units" in text
     assert "QWEN_BOUNDED_VERIFY_PRODUCTION_GATE=PASS" in text
     assert "workspace-control-tmp" in text
 
