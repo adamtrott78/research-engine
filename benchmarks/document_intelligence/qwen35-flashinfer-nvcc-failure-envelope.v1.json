@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "certification_stage": "engine_initialization",
+  "parent_failure": "RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}",
+  "child": {
+    "role": "flashinfer_sampling_jit",
+    "exit": {
+      "pid": 20507,
+      "exit_code": null,
+      "status": "ENGINE_CORE_FAILED_TO_START"
+    }
+  },
+  "first_causal_exception": {
+    "type": "RuntimeError",
+    "message": "Could not find nvcc and default cuda_home='/usr/local/cuda' doesn't exist"
+  },
+  "selected_backend": "flashinfer_top_k_top_p_sampler",
+  "missing_external_requirement": {
+    "name": "nvcc",
+    "kind": "CUDA_TOOLKIT_COMPILER_DISCOVERY",
+    "default_cuda_home": "/usr/local/cuda",
+    "required_by": "FlashInfer sampling-kernel JIT",
+    "later_bounded_resolution": "VLLM_USE_FLASHINFER_SAMPLER=0"
+  },
+  "artifacts": {
+    "targeted_traceback_log": "/home/atrott/adamArchives/Adam/workspace-control-tmp/qwen35-visual-benchmark-20261005T012502Z/qwen35-helper.log",
+    "full_log": "/home/atrott/adamArchives/Adam/workspace-control-tmp/qwen35-visual-benchmark-20261005T012502Z/qwen35-benchmark-console.log"
+  },
+  "completion": {
+    "model_init_completed": false,
+    "inference_calls_started": 0,
+    "inference_calls_completed": 0
+  },
+  "scientific_state_materialized": false,
+  "production_routing_changed": false,
+  "source_evidence": {
+    "research_engine_sha": "58305fe7484a15ee2ad4f20c91d2e4f4aa477b9f",
+    "output_root": "/home/atrott/adamArchives/Adam/workspace-control-tmp/qwen35-visual-benchmark-20261005T012502Z"
+  }
+}
