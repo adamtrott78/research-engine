@@ -237,19 +237,25 @@ PYTHONPATH="$root/src" "$runtime/bin/python" "$root/benchmarks/document_intellig
 qwen_rc="${PIPESTATUS[0]}"
 set -e
 
-PYTHONPATH="$root/src" "$core_venv/bin/python" - "$helper_log" "$reuse" "$cache_present" <<'PY'
+PYTHONPATH="$root/src" "$core_venv/bin/python" - "$helper_log" "$reuse" "$cache_present" "$qwen" <<'PY'
 import json,pathlib,sys
 from research_engine.qwen_runtime_certification import make_runtime_reuse_report
 log=pathlib.Path(sys.argv[1]); out=pathlib.Path(sys.argv[2])
+q=json.load(open(sys.argv[4],encoding="utf-8"))
+c3_calls=int(q.get("c3_canary_calls") or 0)
+c3_pass=bool((q.get("canary") or {}).get("pass"))
+c4_started=int(q.get("scientific_inference_calls_started") or 0)
+c4_completed=int(q.get("scientific_inference_calls_completed") or q.get("scientific_inference_calls") or 0)
 r=make_runtime_reuse_report(
  log_text=log.read_text(encoding="utf-8",errors="replace"),
  cache_present_before=sys.argv[3].lower()=="true",
  package_environment_reused=True,
  execution_certification_reused=True,
- live_engine_reused_for_domain_calls=True,
+ live_engine_reused_for_domain_calls=(c3_pass and c4_completed==1),
 )
-r["c3_same_modality_canary_calls"]=1
-r["c4_scientific_domain_calls"]=1
+r["c3_same_modality_canary_calls"]=c3_calls
+r["c4_scientific_domain_calls_started"]=c4_started
+r["c4_scientific_domain_calls_completed"]=c4_completed
 r["second_heavyweight_boot"]=False
 out.write_text(json.dumps(r,indent=2,sort_keys=True)+"\n",encoding="utf-8")
 print(json.dumps(r,indent=2,sort_keys=True))
@@ -263,10 +269,12 @@ try: result=json.load(open(qwen,encoding="utf-8"))
 except Exception: pass
 engine_init=1 if result.get("model_init_seconds") is not None else 0
 c3=result.get("canary") or {}
-domain=result.get("domain") or {}
-started=int(bool(c3))+int(bool(domain))
-completed=int(bool(c3.get("parsed")))+int(bool(domain.get("parsed")))
-stage="C3_CANARY" if engine_init and not c3.get("pass") else "C2B_ENGINE_BOOT"
+c3_calls=int(result.get("c3_canary_calls") or 0)
+c4_started=int(result.get("scientific_inference_calls_started") or 0)
+c4_completed=int(result.get("scientific_inference_calls_completed") or result.get("scientific_inference_calls") or 0)
+started=c3_calls+c4_started
+completed=(1 if c3.get("pass") else 0)+c4_completed
+stage=str(result.get("failure_stage") or ("C3_CANARY" if engine_init and not c3.get("pass") else ("C4_DOMAIN" if engine_init and c3.get("pass") else "C2B_ENGINE_BOOT")))
 receipt={
  "schema_version":1,
  "operation_id":opid,
