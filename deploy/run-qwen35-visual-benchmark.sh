@@ -198,7 +198,7 @@ except importlib.metadata.PackageNotFoundError:
 PY
 )"
 if [ "$installed_torchcodec" != "$expected_torchcodec" ]; then
-    echo "TORCHCODEC_RECONCILE=\${installed_torchcodec:-missing}->$expected_torchcodec"
+    echo "TORCHCODEC_RECONCILE=${installed_torchcodec:-missing}->$expected_torchcodec"
     "$runtime/bin/python" -m pip install --force-reinstall --no-deps \
         "torchcodec==$expected_torchcodec" \
         --index-url "$pytorch_cu129_index"
@@ -249,8 +249,6 @@ pathlib.Path(sys.argv[1]).write_text(
 )
 print(json.dumps(payload, sort_keys=True))
 PY
-require_stopped
-
 require_stopped
 
 echo
