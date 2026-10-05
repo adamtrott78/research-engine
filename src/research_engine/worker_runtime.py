@@ -66,12 +66,29 @@ def _semantic_metadata(
     }
 
 
-def _semantic_delegate(tier: ExecutorTier):
+def _semantic_delegate(
+    tier: ExecutorTier,
+    *,
+    local_inference=None,
+):
     backend = os.getenv("RESEARCH_ENGINE_SEMANTIC_BACKEND", "codex").strip().lower()
     if backend == "codex":
         from .codex_executor import CodexExecExecutor
 
-        return CodexExecExecutor(tier=tier)
+        fallback = CodexExecExecutor(tier=tier)
+        if tier == ExecutorTier.STANDARD:
+            from .bounded_verify import (
+                BoundedVerifySemanticDelegate,
+                qwen_verify_enabled_from_env,
+            )
+
+            if qwen_verify_enabled_from_env():
+                return BoundedVerifySemanticDelegate(
+                    tier=tier,
+                    fallback=fallback,
+                    local_inference=local_inference,
+                )
+        return fallback
     if backend == "openai_api":
         from .openai_executor import OpenAIResponsesExecutor
 
@@ -89,6 +106,7 @@ def semantic_worker_from_env(
     worker_id: str | None = None,
     logical_agent_id: str | None = None,
     lease_seconds: int = 300,
+    local_inference=None,
 ) -> AgentWorker:
     dsn = os.environ["RESEARCH_ENGINE_DATABASE_URL"]
     artifact_root = os.environ["RESEARCH_ENGINE_ARTIFACT_ROOT"]
@@ -113,7 +131,10 @@ def semantic_worker_from_env(
     materializer = SemanticResultMaterializer(store=store)
     executors = {
         tier: AuthoritativeSemanticExecutor(
-            delegate=_semantic_delegate(tier),
+            delegate=_semantic_delegate(
+                tier,
+                local_inference=local_inference,
+            ),
             hydrator=hydrator,
             materializer=materializer,
         )
@@ -121,6 +142,13 @@ def semantic_worker_from_env(
         if tier in {ExecutorTier.CHEAP, ExecutorTier.STANDARD, ExecutorTier.STRONG}
     }
     backend = os.getenv("RESEARCH_ENGINE_SEMANTIC_BACKEND", "codex").strip().lower()
+    metadata_backend = backend
+    if (
+        backend == "codex"
+        and os.getenv("RESEARCH_ENGINE_QWEN_VERIFY_ENABLED", "0").strip() == "1"
+        and ExecutorTier.STANDARD in selected
+    ):
+        metadata_backend = "codex+qwen-bounded-verify"
     if logical_agent_id is None:
         tier_name = "+".join(str(tier).lower() for tier in selected) or "none"
         logical_agent_id = f"semantic:{tier_name}:standalone"
@@ -137,7 +165,7 @@ def semantic_worker_from_env(
         worker_metadata=_semantic_metadata(
             selected,
             logical_agent_id=logical_agent_id,
-            backend=backend,
+            backend=metadata_backend,
         ),
     )
 
