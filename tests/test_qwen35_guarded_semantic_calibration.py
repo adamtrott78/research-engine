@@ -159,3 +159,11 @@ def test_planner_diagnostics_are_not_opaque():
     assert "rejections=" in text
     assert "SOURCE_JOB_NOT_COMPLETED" in text
     assert "VERIFY_WINDOW:" in text
+
+
+def test_verify_planner_supports_page_scoped_control_derivation():
+    text=(ROOT/"src"/"research_engine"/"qwen_guarded_semantic.py").read_text()
+    assert "LOWEST_CITED_PAGE_THAT_FITS_BOUND" in text
+    assert "derived_page_scoped_control" in text
+    assert 'scoped_materialized["evidence_ids"] = page_evidence_ids' in text
+    assert "VERIFY_NO_PAGE_CLUSTER_FITS:" in text
