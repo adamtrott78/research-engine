@@ -235,7 +235,7 @@ def test_runner_persists_certification_before_failure_exit_and_uses_actual_count
     assert cert < failure
     assert 'c4_scientific_domain_calls_started' in text
     assert 'c4_scientific_domain_calls_completed' in text
-    assert 'live_engine_reused_for_domain_calls=(c3_pass and c4_completed==1)' in text
+    assert 'live_engine_reused_for_domain_calls=(c3_calls==1 and c3_pass and c4_completed==1)' in text
     assert 'stage=str(result.get("failure_stage")' in text
 
 
