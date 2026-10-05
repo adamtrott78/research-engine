@@ -1,0 +1,144 @@
+name: Lambda CI P2-B No-Op
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  lambda-noop:
+    if: >-
+      github.event.issue.pull_request &&
+      github.actor == 'adamtrott78' &&
+      github.event.comment.author_association == 'OWNER' &&
+      startsWith(github.event.comment.body, '/lambda-ci-noop ')
+    runs-on: [self-hosted, lambda-research-engine, cpu-test]
+    timeout-minutes: 10
+
+    steps:
+      - name: Verify exact PR head
+        id: gate
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          expected_sha="$(printf '%s\n' "$COMMENT_BODY" | awk '{print $2}')"
+          [[ "$expected_sha" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "Invalid /lambda-ci-noop SHA" >&2
+            exit 20
+          }
+
+          pr_json="$(
+            curl -fsSL \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$REPOSITORY/pulls/$PR_NUMBER"
+          )"
+
+          actual_sha="$(
+            python3 -c 'import json,sys; print(json.load(sys.stdin)["head"]["sha"])' \
+              <<<"$pr_json"
+          )"
+
+          [[ "$actual_sha" == "$expected_sha" ]] || {
+            echo "Requested SHA does not match current PR head" >&2
+            echo "requested=$expected_sha" >&2
+            echo "actual=$actual_sha" >&2
+            exit 21
+          }
+
+          echo "expected_sha=$expected_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Prove isolated no-op execution
+        env:
+          EXPECTED_SHA: ${{ steps.gate.outputs.expected_sha }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          ACTOR: ${{ github.actor }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          [[ "$(id -un)" == "ci-research-engine" ]]
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+
+          if [[ -n "${ACTIONS_RUNNER_INPUT_JITCONFIG:-}" ]]; then
+            echo "JIT bootstrap secret leaked into workflow environment" >&2
+            exit 30
+          fi
+
+          [[ ! -r /home/atrott ]]
+          [[ ! -r /home/atrott/.ssh ]]
+
+          if [[ -e /var/run/docker.sock ]]; then
+            [[ ! -r /var/run/docker.sock ]]
+            [[ ! -w /var/run/docker.sock ]]
+          fi
+
+          if command -v sudo >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1; then
+            echo "Runner unexpectedly has passwordless sudo" >&2
+            exit 31
+          fi
+
+          if timeout 2 bash -c '</dev/tcp/127.0.0.1/5432' 2>/dev/null; then
+            echo "Runner can reach production PostgreSQL on loopback" >&2
+            exit 32
+          fi
+
+          curl -fsSL --max-time 15 https://api.github.com/meta >/dev/null
+
+          if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then
+            echo "CPU-only runner unexpectedly has NVIDIA device access" >&2
+            exit 33
+          fi
+
+          python3 - <<'PY'
+          import json
+          import os
+          import pathlib
+          import platform
+          import socket
+
+          receipt = {
+              "schema_version": 1,
+              "phase": "P2-B",
+              "decision": "PASS",
+              "runner_user": os.getlogin() if False else os.environ.get("USER"),
+              "uid": os.getuid(),
+              "gid": os.getgid(),
+              "hostname": socket.gethostname(),
+              "kernel": platform.release(),
+              "pr_number": int(os.environ["PR_NUMBER"]),
+              "expected_sha": os.environ["EXPECTED_SHA"],
+              "actor": os.environ["ACTOR"],
+              "home_atrott_readable": os.access("/home/atrott", os.R_OK),
+              "docker_socket_readable": os.access("/var/run/docker.sock", os.R_OK),
+              "docker_socket_writable": os.access("/var/run/docker.sock", os.W_OK),
+              "jit_config_visible_to_step": bool(
+                  os.environ.get("ACTIONS_RUNNER_INPUT_JITCONFIG")
+              ),
+              "production_postgres_loopback_reachable": False,
+              "nvidia_visible": False,
+              "public_github_egress": True,
+          }
+
+          out = pathlib.Path(os.environ["RUNNER_TEMP"]) / "lambda-ci-p2b-receipt.json"
+          out.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+          print(json.dumps(receipt, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload P2-B receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: lambda-ci-p2b-receipt
+          path: ${{ runner.temp }}/lambda-ci-p2b-receipt.json
+          if-no-files-found: error
+          retention-days: 7
