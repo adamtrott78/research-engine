@@ -422,52 +422,96 @@ class GuardedQwenCalibrationPlanner:
             return None, "VERIFY_NO_EVIDENCE_IDS"
 
         authoritative = self.hydrator._evidence(evidence_ids)
-        cited_pages = sorted(
-            {
-                int(item["page_number"])
-                for item in authoritative
-                if item.get("page_number") is not None
-            }
-        )
-        if len(cited_pages) != 1:
-            return None, f"VERIFY_CITED_PAGE_COUNT:{len(cited_pages)}"
+        by_page: dict[int, list[dict[str, Any]]] = {}
+        for item in authoritative:
+            page_number = item.get("page_number")
+            if page_number is None:
+                continue
+            by_page.setdefault(int(page_number), []).append(dict(item))
+        if not by_page:
+            return None, "VERIFY_NO_CITED_PAGES"
 
-        hydrated = self._hydrator_for_pages(cited_pages).hydrate(job)
-        payload = copy.deepcopy(hydrated.payload)
-        context = dict(payload.get("_research_context") or {})
-        pages = [dict(page) for page in context.get("pages") or []]
-        scope = dict(context.get("verification_scope") or {})
-        if int(scope.get("page_radius", -1)) != 0:
-            return None, "VERIFY_RADIUS_NOT_ZERO"
-        if len(pages) != 1 or len(scope.get("supplied_page_numbers") or []) != 1:
-            return None, (
-                "VERIFY_SINGLE_PAGE_REQUIRED:"
-                f"pages={len(pages)}:"
-                f"supplied={scope.get('supplied_page_numbers') or []}"
+        page_rejections: list[str] = []
+        for page_number in sorted(by_page):
+            page_evidence = by_page[page_number]
+            page_evidence_ids = [str(item["id"]) for item in page_evidence]
+
+            scoped_payload = copy.deepcopy(job.payload)
+            scoped_materialized = (
+                scoped_payload.setdefault("extraction", {})
+                .setdefault("_materialization", {})
             )
+            scoped_materialized["evidence_ids"] = page_evidence_ids
+            scoped_job = replace(job, payload=scoped_payload)
 
-        window, window_meta = bounded_verification_page(
-            page_text=str(pages[0].get("text") or ""),
-            authoritative_evidence=[
-                dict(item)
-                for item in context.get("authoritative_evidence") or []
-            ],
-            max_chars=self.max_context_chars,
+            try:
+                hydrated = self._hydrator_for_pages([page_number]).hydrate(
+                    scoped_job
+                )
+            except JobExecutionError as exc:
+                page_rejections.append(
+                    f"page={page_number}:HYDRATION:{exc.code}"
+                )
+                continue
+
+            payload = copy.deepcopy(hydrated.payload)
+            context = dict(payload.get("_research_context") or {})
+            pages = [dict(page) for page in context.get("pages") or []]
+            scope = dict(context.get("verification_scope") or {})
+            if int(scope.get("page_radius", -1)) != 0:
+                page_rejections.append(
+                    f"page={page_number}:VERIFY_RADIUS_NOT_ZERO"
+                )
+                continue
+            if (
+                len(pages) != 1
+                or len(scope.get("supplied_page_numbers") or []) != 1
+            ):
+                page_rejections.append(
+                    f"page={page_number}:VERIFY_SINGLE_PAGE_REQUIRED"
+                )
+                continue
+
+            window, window_meta = bounded_verification_page(
+                page_text=str(pages[0].get("text") or ""),
+                authoritative_evidence=[
+                    dict(item)
+                    for item in context.get("authoritative_evidence") or []
+                ],
+                max_chars=self.max_context_chars,
+            )
+            if window is None:
+                page_rejections.append(
+                    f"page={page_number}:VERIFY_WINDOW:"
+                    f"{window_meta.get('reason')}"
+                )
+                continue
+
+            pages[0]["text"] = window
+            context["pages"] = pages
+            scope["text_window"] = window_meta
+            scope["source_extraction"] = "SELECTED_PAGE_ONLY"
+            scope["derived_page_scoped_control"] = {
+                "source_job_id": job.id,
+                "source_evidence_ids": evidence_ids,
+                "selected_page_number": page_number,
+                "selected_evidence_ids": page_evidence_ids,
+                "selection_rule": "LOWEST_CITED_PAGE_THAT_FITS_BOUND",
+            }
+            context["verification_scope"] = scope
+            payload["_research_context"] = context
+            bounded = replace(hydrated, payload=payload)
+            chars = self._context_chars(bounded)
+            if chars > self.max_context_chars:
+                page_rejections.append(
+                    f"page={page_number}:VERIFY_CONTEXT_CHARS:{chars}"
+                )
+                continue
+            return bounded, "PASS"
+
+        return None, "VERIFY_NO_PAGE_CLUSTER_FITS:" + "|".join(
+            page_rejections
         )
-        if window is None:
-            return None, f"VERIFY_WINDOW:{window_meta.get('reason')}"
-
-        pages[0]["text"] = window
-        context["pages"] = pages
-        scope["text_window"] = window_meta
-        scope["source_extraction"] = "SELECTED_PAGE_ONLY"
-        context["verification_scope"] = scope
-        payload["_research_context"] = context
-        bounded = replace(hydrated, payload=payload)
-        chars = self._context_chars(bounded)
-        if chars > self.max_context_chars:
-            return None, f"VERIFY_CONTEXT_CHARS:{chars}"
-        return bounded, "PASS"
 
     def build(self, *, run_id: str) -> dict[str, Any]:
         records: list[dict[str, Any]] = []
