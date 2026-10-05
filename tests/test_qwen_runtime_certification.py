@@ -106,3 +106,34 @@ def test_c3_contract_is_separate_and_reuses_live_engine():
     assert contract["engine_lifecycle"]["reuse_same_live_engine_for_domain_work"] is True
     assert contract["scientific_state_materialized"] is False
     assert contract["production_routing_changed"] is False
+
+
+def test_wave3_runner_instrumentation_adds_no_scientific_calls():
+    text = (ROOT / "deploy" / "run-qwen35-visual-benchmark.sh").read_text()
+    assert "CERTIFICATION_TRANSITION=" in text
+    assert "qwen35-runtime-reuse-evidence.json" in text
+    assert "VLLM_COMPILE_CACHE_PRESENT_BEFORE=" in text
+    assert "scientific_call_count_added_for_wave3" in text
+    assert "make_runtime_reuse_report" in text
+    assert text.count("QWEN_CALL_START") == 0  # helper owns the exact three calls
+    helper = (BENCH / "run_qwen35_visual_benchmark.py").read_text()
+    assert helper.count('"QWEN_CALL_START"') == 1
+    assert '("figure6_first", args.figure6, FIGURE6_PROMPT, False)' in helper
+    assert '("figure3_warm", args.figure3, FIGURE3_PROMPT, True)' in helper
+    assert '("figure6_warm_repeat", args.figure6, FIGURE6_PROMPT, True)' in helper
+
+
+def test_completed_operation_probe_is_dry_run_only():
+    text = (BENCH / "probe_qwen35_completed_operation.py").read_text()
+    assert '"NON_DESTRUCTIVE_DRY_RUN"' in text
+    assert '"benchmark_launch_attempted"] = False' in text
+    assert '"package_install_or_download_attempted"] = False' in text
+    assert '"model_initialization_attempted"] = False' in text
+    assert '"inference_attempted"] = False' in text
+    for forbidden in [
+        "subprocess.run",
+        "pip install",
+        "LLM(",
+        "run-qwen35-visual-benchmark.sh",
+    ]:
+        assert forbidden not in text
