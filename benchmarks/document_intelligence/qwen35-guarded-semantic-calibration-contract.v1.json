@@ -17,8 +17,8 @@
       "EXTRACT",
       "VERIFY"
     ],
-    "extract_context": "historical evidence page numbers only for benchmark case selection; answers are not supplied to Qwen; <=4 authoritative pages and <=26000 chars",
-    "verify_context": "radius-0 exact cited authoritative page; exactly one page and <=26000 chars"
+    "extract_context": "historical evidence page numbers only for benchmark case selection; answers are not supplied to Qwen; <=4 authoritative pages and <=20000 chars",
+    "verify_context": "radius-0 exact cited authoritative page; exactly one page and <=20000 chars"
   },
   "qwen_execution": {
     "one_model_boot": true,
