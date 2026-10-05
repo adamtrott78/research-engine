@@ -18,7 +18,14 @@
       "VERIFY"
     ],
     "extract_context": "historical evidence page numbers only for benchmark case selection; answers are not supplied to Qwen; <=4 authoritative pages and <=20000 chars",
-    "verify_context": "radius-0 exact cited authoritative page; only the cited PDF page is extracted; if that page exceeds 20000 chars, a deterministic window preserving all authoritative evidence quotes is supplied identically to Qwen and Codex"
+    "verify_context": "radius-0 exact cited authoritative page; only the cited PDF page is extracted; if that page exceeds 20000 chars, a deterministic window preserving all authoritative evidence quotes is supplied identically to Qwen and Codex",
+    "verify_scope_derivation": {
+      "source_job": "preserved current-PDF VERIFY control",
+      "derived_unit": "single cited-page evidence cluster",
+      "selection_rule": "lowest cited page whose authoritative evidence cluster can be preserved within the bound",
+      "original_source_job_identity_preserved": true,
+      "selected_evidence_ids_recorded": true
+    }
   },
   "qwen_execution": {
     "one_model_boot": true,
@@ -54,7 +61,7 @@
   "control": {
     "model_tier": "STANDARD",
     "provider": "codex-chatgpt-plan",
-    "context": "same bounded authoritative-PDF context supplied to Qwen",
+    "context": "same derived bounded authoritative-PDF page/evidence cluster supplied to Qwen and STANDARD Codex",
     "required_for_every_calibration_job": true,
     "promotion_requires": "both guarded Qwen jobs pass contemporaneous Codex agreement"
   },
