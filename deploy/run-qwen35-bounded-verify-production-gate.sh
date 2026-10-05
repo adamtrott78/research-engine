@@ -179,6 +179,30 @@ for source in planner.completed_jobs(run_id,JobType.VERIFY):
             "reason":f"HYDRATE:{type(exc).__name__}",
         })
         continue
+
+    historical=dict(source.result or {})
+    context=dict(hydrated.payload.get("_research_context") or {})
+    authoritative_ids=[
+        str(item.get("id"))
+        for item in context.get("authoritative_evidence") or []
+    ]
+    historical_ids=[
+        str(x) for x in historical.get("accepted_evidence_ids") or []
+    ]
+    historical_issues=[
+        str(x) for x in historical.get("issues") or []
+    ]
+    if (
+        not bool(historical.get("verified"))
+        or historical_issues
+        or set(historical_ids) != set(authoritative_ids)
+    ):
+        rejections.append({
+            "job_id":source.id,
+            "reason":"HISTORICAL_CODEX_NOT_FULL_POSITIVE_ACCEPTANCE",
+        })
+        continue
+
     page_scoped_units,reason=prepare_bounded_verify_pages(
         hydrated,
         max_context_chars=20000,
