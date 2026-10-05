@@ -194,7 +194,7 @@ def qwen_verify_messages(job: ResearchJob) -> list[dict[str, str]]:
 
 
 class BoundedVerifySemanticDelegate:
-    """Qwen-primary semantic delegate for the calibrated bounded VERIFY class."""
+    """Page-scoped Qwen-primary VERIFY with whole-job fail-closed fallthrough."""
 
     def __init__(
         self,
@@ -230,7 +230,7 @@ class BoundedVerifySemanticDelegate:
         result = self.fallback.execute(job)
         execution = dict(result.get("_execution") or {})
         execution["routing"] = {
-            "policy": "QWEN35_BOUNDED_VERIFY_PRIMARY_CODEX_FALLTHROUGH",
+            "policy": "QWEN35_PAGE_SCOPED_VERIFY_PRIMARY_CODEX_FALLTHROUGH",
             "decision": "FALLTHROUGH",
             "reason": reason,
             "local_attempted": bool(local_attempted),
