@@ -70,9 +70,17 @@ def test_qwen_helper_forbids_numeric_curve_estimation():
 
 def test_qwen_runner_keeps_daemon_stopped_and_model_offline():
     text = (ROOT / "deploy" / "run-qwen35-visual-benchmark.sh").read_text()
-    assert "vllm==0.30.0" in text
+    assert 'expected_vllm_dist="0.30.0+cu129"' in text
+    assert 'expected_torch="2.13.0+cu129"' in text
+    assert 'expected_torchcodec="0.15.0+cu129"' in text
+    assert "vllm-0.30.0%2Bcu129-cp38-abi3-manylinux_2_28_x86_64.whl" in text
+    assert "https://download.pytorch.org/whl/cu129" in text
+    assert "torchcodec==$expected_torchcodec" in text
+    assert "from vllm import LLM, SamplingParams" in text
+    assert 'assert torch.version.cuda == "12.9"' in text
     assert 'assert torch.cuda.is_available()' in text
     assert '"cuda_allocation_probe": "PASS"' in text
+    assert '"vllm_multimodal_import_probe": "PASS"' in text
     assert "HF_HUB_OFFLINE=1" in text
     assert "TRANSFORMERS_OFFLINE=1" in text
     assert "SELECTED_GPU_HAS_ACTIVE_COMPUTE_PROCESS" in text

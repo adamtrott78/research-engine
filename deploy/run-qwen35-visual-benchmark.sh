@@ -15,6 +15,11 @@ standard_runtime="$state/document-runtimes/docling-standard-no-ocr"
 expected_source_sha="1e0651b6810ecba34a3dbc5b5b0209226f889004607c1f203540a48d64e5a93a"
 helper="$root/benchmarks/document_intelligence/run_qwen35_visual_benchmark.py"
 report="$output_root/qwen35-visual-benchmark-report.json"
+expected_vllm_dist="0.30.0+cu129"
+expected_torch="2.13.0+cu129"
+expected_torchcodec="0.15.0+cu129"
+pytorch_cu129_index="https://download.pytorch.org/whl/cu129"
+vllm_cu129_wheel="https://github.com/vllm-project/vllm/releases/download/v0.30.0/vllm-0.30.0%2Bcu129-cp38-abi3-manylinux_2_28_x86_64.whl"
 
 fail() {
     echo "ERROR=$1" >&2
@@ -153,41 +158,92 @@ PY
 require_stopped
 
 echo
-echo "=== BUILD ISOLATED VLLM RUNTIME ==="
-if [ -f "$runtime_ready" ]; then
-    if ! "$runtime/bin/python" - <<'PY'
-import vllm
-assert vllm.__version__ == "0.30.0", vllm.__version__
+echo "=== RECONCILE ISOLATED VLLM CUDA-12.9 RUNTIME ==="
+[ "$(uname -m)" = "x86_64" ] || fail "QWEN_VLLM_CU129_REQUIRES_X86_64" 47
+
+runtime_rebuild=0
+if [ ! -x "$runtime/bin/python" ]; then
+    runtime_rebuild=1
+else
+    if ! "$runtime/bin/python" - "$expected_vllm_dist" "$expected_torch" <<'PY'
+import importlib.metadata
+import sys
+
+import torch
+
+assert importlib.metadata.version("vllm") == sys.argv[1]
+assert torch.__version__ == sys.argv[2], torch.__version__
+assert torch.version.cuda == "12.9", torch.version.cuda
 PY
     then
-        rm -f "$runtime_ready"
+        runtime_rebuild=1
     fi
 fi
-if [ ! -f "$runtime_ready" ]; then
+
+if [ "$runtime_rebuild" -eq 1 ]; then
     rm -rf "$runtime"
     python3 -m venv "$runtime"
     "$runtime/bin/python" -m pip install --upgrade pip
-    "$runtime/bin/python" -m pip install "vllm==0.30.0"
+    "$runtime/bin/python" -m pip install \
+        "$vllm_cu129_wheel" \
+        "torch==$expected_torch" \
+        "torchcodec==$expected_torchcodec" \
+        --extra-index-url "$pytorch_cu129_index"
 fi
-"$runtime/bin/python" - "$runtime_ready" <<'PY'
+
+installed_torchcodec="$("$runtime/bin/python" - <<'PY'
+import importlib.metadata
+try:
+    print(importlib.metadata.version("torchcodec"))
+except importlib.metadata.PackageNotFoundError:
+    print("")
+PY
+)"
+if [ "$installed_torchcodec" != "$expected_torchcodec" ]; then
+    echo "TORCHCODEC_RECONCILE=${installed_torchcodec:-missing}->$expected_torchcodec"
+    "$runtime/bin/python" -m pip install --force-reinstall --no-deps \
+        "torchcodec==$expected_torchcodec" \
+        --index-url "$pytorch_cu129_index"
+fi
+
+"$runtime/bin/python" -m pip freeze | sort > "$output_root/qwen35-vllm-runtime-freeze.txt"
+rm -f "$runtime_ready"
+
+echo
+echo "=== FULL VLLM MULTIMODAL IMPORT + CUDA PREFLIGHT ==="
+"$runtime/bin/python" - "$runtime_ready" "$expected_vllm_dist" "$expected_torch" "$expected_torchcodec" <<'PY'
+import importlib.metadata
 import json
 import pathlib
 import sys
 
 import torch
+import torchcodec
+from vllm import LLM, SamplingParams
 import vllm
 
+vllm_dist = importlib.metadata.version("vllm")
+torchcodec_dist = importlib.metadata.version("torchcodec")
+assert vllm_dist == sys.argv[2], vllm_dist
+assert torch.__version__ == sys.argv[3], torch.__version__
+assert torch.version.cuda == "12.9", torch.version.cuda
+assert torchcodec_dist == sys.argv[4], torchcodec_dist
 assert vllm.__version__ == "0.30.0", vllm.__version__
+assert LLM is not None
+assert SamplingParams is not None
 assert torch.cuda.is_available(), "vLLM runtime Torch cannot access CUDA"
 assert torch.cuda.device_count() == 1, torch.cuda.device_count()
 probe = torch.empty((32, 32), device="cuda:0")
 del probe
 payload = {
     "vllm": vllm.__version__,
+    "vllm_distribution": vllm_dist,
     "torch": torch.__version__,
     "torch_cuda_runtime": torch.version.cuda,
+    "torchcodec": torchcodec_dist,
     "cuda_device_name": torch.cuda.get_device_name(0),
     "cuda_allocation_probe": "PASS",
+    "vllm_multimodal_import_probe": "PASS",
     "engine": "native_qwen3.5_multimodal",
 }
 pathlib.Path(sys.argv[1]).write_text(
@@ -195,7 +251,6 @@ pathlib.Path(sys.argv[1]).write_text(
 )
 print(json.dumps(payload, sort_keys=True))
 PY
-"$runtime/bin/python" -m pip freeze | sort > "$output_root/qwen35-vllm-runtime-freeze.txt"
 require_stopped
 
 echo
