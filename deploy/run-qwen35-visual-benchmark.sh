@@ -186,6 +186,8 @@ if [ "$runtime_rebuild" -eq 1 ]; then
     "$runtime/bin/python" -m pip install --upgrade pip
     "$runtime/bin/python" -m pip install \
         "$vllm_cu129_wheel" \
+        "torch==$expected_torch" \
+        "torchcodec==$expected_torchcodec" \
         --extra-index-url "$pytorch_cu129_index"
 fi
 
