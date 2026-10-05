@@ -50,10 +50,15 @@
     "result": "UNIT_TESTED"
   },
   "idempotent_recovery": {
-    "source_receipt_fixture": "tests/fixtures/qwen35-success-receipt.v1.json",
-    "expected_result": "COMPLETED_REUSE",
-    "expensive_stage_repeat": false,
-    "probe_wall_seconds": null,
-    "result": "LOGIC_UNIT_TESTED; LAMBDA_DRY_RUN_PENDING_NONDESTRUCTIVE_PROBE"
+    "source_receipt": "exact uploaded successful qwen35-benchmark-receipt from research-engine@a3d80e9329e231889b11430f98c0de342349fe1f",
+    "operation_identity": "b51afb7aa1f1e9b8b8d028971d4135ab92c8cc6f53b72cab18ae53b28fae3f32",
+    "measurement_environment": "non-destructive ChatGPT sandbox probe over the exact uploaded receipt bytes; no Lambda/model/runtime action",
+    "probe_samples": 10,
+    "median_probe_wall_seconds": 0.00005022000004828442,
+    "max_probe_wall_seconds": 0.00009951999982149573,
+    "durable_artifacts_inspected_per_probe": 1,
+    "expensive_stages_repeated": [],
+    "result": "COMPLETED_REUSE",
+    "no_rerun_required": true
   }
 }
