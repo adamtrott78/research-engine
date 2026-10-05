@@ -8,8 +8,12 @@ unit="research-engine-daemon.service"
 visible_tmp_root="${WORKSPACE_CONTROL_TMP_ROOT:-$adam/workspace-control-tmp}"
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 output_root="$visible_tmp_root/qwen35-visual-benchmark-$stamp"
-runtime="$state/residual-runtimes/qwen3.5-4b-vllm-0.30.0"
+runtime="$state/residual-runtimes/qwen3.5-4b-vllm-0.30.0-cu129"
 runtime_ready="$runtime/.workspace-control-ready.json"
+runtime_wheel_cache="$state/residual-runtime-wheels/vllm-0.30.0-cu129"
+vllm_wheel_name="vllm-0.30.0+cu129-cp38-abi3-manylinux_2_28_x86_64.whl"
+vllm_wheel_url="https://github.com/vllm-project/vllm/releases/download/v0.30.0/vllm-0.30.0%2Bcu129-cp38-abi3-manylinux_2_28_x86_64.whl"
+vllm_wheel_sha256="e98cb69659bfcfc849cf11ce0781a7161d40b02b51a6c3636924a5909f2aabcc"
 model="$state/residual-models/qwen3.5-4b/851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a"
 standard_runtime="$state/document-runtimes/docling-standard-no-ocr"
 expected_source_sha="1e0651b6810ecba34a3dbc5b5b0209226f889004607c1f203540a48d64e5a93a"
@@ -165,9 +169,24 @@ PY
 fi
 if [ ! -f "$runtime_ready" ]; then
     rm -rf "$runtime"
+    mkdir -p "$runtime_wheel_cache"
+    wheel_path="$runtime_wheel_cache/$vllm_wheel_name"
+    if [ ! -f "$wheel_path" ] || [ "$(sha256sum "$wheel_path" | awk '{print $1}')" != "$vllm_wheel_sha256" ]; then
+        rm -f "$wheel_path"
+        python3 -m pip download --no-deps "$vllm_wheel_url" -d "$runtime_wheel_cache"
+    fi
+    [ -f "$wheel_path" ] || fail "VLLM_CU129_WHEEL_NOT_FOUND_AFTER_DOWNLOAD" 47
+    [ "$(sha256sum "$wheel_path" | awk '{print $1}')" = "$vllm_wheel_sha256" ] \
+        || fail "VLLM_CU129_WHEEL_SHA_MISMATCH" 48
+
     python3 -m venv "$runtime"
     "$runtime/bin/python" -m pip install --upgrade pip
-    "$runtime/bin/python" -m pip install "vllm==0.30.0"
+    "$runtime/bin/python" -m pip install \
+        --index-url "https://download.pytorch.org/whl/cu129" \
+        "torch==2.13.0+cu129"
+    "$runtime/bin/python" -m pip install \
+        --extra-index-url "https://download.pytorch.org/whl/cu129" \
+        "$wheel_path"
 fi
 "$runtime/bin/python" - "$runtime_ready" <<'PY'
 import json
@@ -178,12 +197,16 @@ import torch
 import vllm
 
 assert vllm.__version__ == "0.30.0", vllm.__version__
-assert torch.cuda.is_available(), "vLLM runtime Torch cannot access CUDA"
+assert torch.__version__ == "2.13.0+cu129", torch.__version__
+assert torch.version.cuda is not None and torch.version.cuda.startswith("12.9"), torch.version.cuda
+assert torch.cuda.is_available(), "vLLM cu129 runtime Torch cannot access CUDA"
 assert torch.cuda.device_count() == 1, torch.cuda.device_count()
 probe = torch.empty((32, 32), device="cuda:0")
 del probe
 payload = {
     "vllm": vllm.__version__,
+    "vllm_cuda_build": "cu129",
+    "vllm_wheel_sha256": "e98cb69659bfcfc849cf11ce0781a7161d40b02b51a6c3636924a5909f2aabcc",
     "torch": torch.__version__,
     "torch_cuda_runtime": torch.version.cuda,
     "cuda_device_name": torch.cuda.get_device_name(0),
