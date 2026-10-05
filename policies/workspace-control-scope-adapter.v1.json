@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "policy_id": "research-engine-workspace-control-scope-adapter-v1",
+  "shared_contract": {
+    "repository": "adamtrott78/workspace-control",
+    "checkpoint_sha": "1295477546c802029d7c52755beeacdef31b5346",
+    "root_route": "README.md",
+    "procedure": "procedures/scope_closure.md",
+    "envelope_schema": "schemas/scope_envelope.v1.schema.json",
+    "control_cli": "scripts/scope_control.py"
+  },
+  "envelope_derivation": {
+    "authority": "owning_workspace_control_task_capsule",
+    "task_id_source": "task_id",
+    "objective_source": "owning task goal/current stage and current bounded user instruction",
+    "next_safe_action_source": "next_safe_action",
+    "explicit_authorizations_source": "owning task plus explicit current user authorization",
+    "rule": "derived execution view only; never becomes independent project authority"
+  },
+  "allowed_now": [
+    "the exact recorded next_safe_action and validation required to complete it",
+    "corrections required for correctness, provenance, safety, or durability of the owning objective",
+    "the smallest bounded change that directly unblocks the next_safe_action or required validation",
+    "work explicitly authorized by the owning task or current user instruction"
+  ],
+  "defer_by_default": [
+    "new model-family comparisons not required by the current gate",
+    "generalized extraction redesigns not required by the current gate",
+    "adjacent runner hardening outside the blocking path",
+    "receipt or schema polish beyond current correctness and durability requirements",
+    "new benchmark variants not required by the owning gate",
+    "cleanup or refactors unrelated to the current failing path",
+    "extra scientific experiments not required by the owning gate",
+    "improvements to neighboring deployment scripts discovered incidentally"
+  ],
+  "protected_authority": [
+    "scientific source bytes and provenance",
+    "scientific evidence, verification, and supersession state",
+    "production routing and materialization decisions",
+    "daemon and Codex execution authority",
+    "model, prompt, threshold, and benchmark scientific contracts",
+    "repository checkpoints and owning workspace-control task state"
+  ],
+  "closure_policy": {
+    "stop_when_objective_satisfied": true,
+    "defer_nonblocking_findings": true,
+    "require_validation_pass": true,
+    "require_durable_checkpoint": true
+  },
+  "followup_record_fields": [
+    "summary",
+    "why_it_matters",
+    "evidence",
+    "suggested_owner",
+    "urgency"
+  ]
+}
