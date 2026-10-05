@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "task": "research-engine-local-document-pipeline-v1",
+  "stage": "residual_escalation_and_local_semantic_fallbacks",
+  "operation": "QWEN35_SAME_MODALITY_RUNTIME_CERTIFICATION_C3",
+  "status": "DESIGNED_NOT_EXECUTED",
+  "requires_separate_authorization": true,
+  "scientific_benchmark_call_budget_impact": 0,
+  "execution_identity": {
+    "runtime_contract_version": "qwen35-vllm-cu129-image-native-sampler-v3",
+    "model_revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+    "sampling_backend": "vllm_native",
+    "VLLM_USE_FLASHINFER_SAMPLER": "0"
+  },
+  "input": {
+    "modality": "image+text",
+    "source": "deterministic synthetic non-scientific canary",
+    "must_not_use_scientific_pdf_or_benchmark_crop": true,
+    "purpose": "prove the initialized multimodal execution path can accept one bounded image+text request"
+  },
+  "engine_lifecycle": {
+    "boot_for_certification_only": false,
+    "accept_preinitialized_engine_handle": true,
+    "reuse_same_live_engine_for_domain_work": true,
+    "second_heavyweight_boot_for_post_certification_work": "FORBIDDEN"
+  },
+  "result_boundary": {
+    "certification_only": true,
+    "does_not_establish_scientific_quality": true,
+    "does_not_change_production_routing": true,
+    "does_not_materialize_scientific_state": true
+  },
+  "scientific_state_materialized": false,
+  "production_routing_changed": false
+}
