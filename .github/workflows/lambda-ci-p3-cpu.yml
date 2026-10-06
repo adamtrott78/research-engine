@@ -256,7 +256,10 @@ jobs:
               -v ON_ERROR_STOP=1 -Atc \
               "CREATE EXTENSION IF NOT EXISTS vector; SELECT extversion FROM pg_extension WHERE extname='vector';"
           )"
-          [[ -n "$VECTOR_VERSION" ]]
+          [[ "$VECTOR_VERSION" == "0.8.6" ]] || {
+            echo "Expected pgvector 0.8.6, found: $VECTOR_VERSION" >&2
+            exit 34
+          }
 
           encoded_sock="$(
             python -c 'import os,urllib.parse; print(urllib.parse.quote(os.environ["PGSOCK"], safe=""))'
