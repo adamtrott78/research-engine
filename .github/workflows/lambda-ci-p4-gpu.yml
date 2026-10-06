@@ -67,20 +67,22 @@ jobs:
           persist-credentials: false
           clean: true
 
-      - name: Execute bounded GPU0 validation
+      - name: Execute bounded selected-GPU validation
         id: validate
         env:
           EXPECTED_SHA: ${{ steps.gate.outputs.expected_sha }}
           PR_NUMBER: ${{ github.event.issue.number }}
           ACTOR: ${{ github.actor }}
-          EXPECTED_GPU_UUID: GPU-a333e68b-d1dc-6d25-1678-97b527bf55ea
         shell: bash
         run: |
           set -Eeuo pipefail
 
           [[ "$(id -un)" == "ci-research-engine" ]]
           [[ "$(git rev-parse HEAD)" == "$EXPECTED_SHA" ]]
-          [[ "${CUDA_VISIBLE_DEVICES:-}" == "0" ]]
+          [[ -n "${P4_TARGET_GPU_UUID:-}" ]]
+          [[ -n "${P4_SELECTED_GPU_DEVICE:-}" ]]
+          [[ -n "${P4_DENIED_GPU_DEVICES:-}" ]]
+          [[ "${CUDA_VISIBLE_DEVICES:-}" == "$P4_TARGET_GPU_UUID" ]]
 
           if git config --local --get-regexp '^http\..*\.extraheader$' >/dev/null 2>&1; then
             echo "Checkout credentials remained in candidate git config" >&2
@@ -107,162 +109,21 @@ jobs:
           import os
           import pathlib
           import subprocess
+          import traceback
 
-          expected_uuid = os.environ["EXPECTED_GPU_UUID"]
-          expected_sha = os.environ["EXPECTED_SHA"]
-
-          denied_gpu1 = False
-          try:
-              fd = os.open("/dev/nvidia1", os.O_RDWR)
-          except OSError:
-              denied_gpu1 = True
-          else:
-              os.close(fd)
-
-          if not denied_gpu1:
-              raise SystemExit("GPU1 device unexpectedly openable")
-
-          def query_gpu0():
-              out = subprocess.check_output(
-                  [
-                      "nvidia-smi",
-                      "-i",
-                      "0",
-                      "--query-gpu=index,uuid,name,memory.total,memory.free,memory.used,driver_version",
-                      "--format=csv,noheader,nounits",
-                  ],
-                  text=True,
-              ).strip()
-              parts = [p.strip() for p in out.split(",")]
-              if len(parts) != 7:
-                  raise SystemExit(f"unexpected nvidia-smi row: {out!r}")
-              return {
-                  "index": int(parts[0]),
-                  "uuid": parts[1],
-                  "name": parts[2],
-                  "memory_total_mib": int(parts[3]),
-                  "memory_free_mib": int(parts[4]),
-                  "memory_used_mib": int(parts[5]),
-                  "driver_version": parts[6],
-              }
-
-          before = query_gpu0()
-          if before["uuid"] != expected_uuid:
-              raise SystemExit(
-                  f"wrong GPU0 UUID: {before['uuid']} != {expected_uuid}"
-              )
-
-          libname = ctypes.util.find_library("cuda") or "libcuda.so.1"
-          cuda = ctypes.CDLL(libname)
-
-          CUdevice = ctypes.c_int
-          CUcontext = ctypes.c_void_p
-          CUdeviceptr = ctypes.c_uint64
-
-          cuda.cuInit.argtypes = [ctypes.c_uint]
-          cuda.cuInit.restype = ctypes.c_int
-          cuda.cuDeviceGetCount.argtypes = [ctypes.POINTER(ctypes.c_int)]
-          cuda.cuDeviceGetCount.restype = ctypes.c_int
-          cuda.cuDeviceGet.argtypes = [ctypes.POINTER(CUdevice), ctypes.c_int]
-          cuda.cuDeviceGet.restype = ctypes.c_int
-          cuda.cuDeviceGetUuid_v2.argtypes = [ctypes.c_void_p, CUdevice]
-          cuda.cuDeviceGetUuid_v2.restype = ctypes.c_int
-          cuda.cuCtxCreate_v2.argtypes = [ctypes.POINTER(CUcontext), ctypes.c_uint, CUdevice]
-          cuda.cuCtxCreate_v2.restype = ctypes.c_int
-          cuda.cuCtxDestroy_v2.argtypes = [CUcontext]
-          cuda.cuCtxDestroy_v2.restype = ctypes.c_int
-          cuda.cuMemAlloc_v2.argtypes = [ctypes.POINTER(CUdeviceptr), ctypes.c_size_t]
-          cuda.cuMemAlloc_v2.restype = ctypes.c_int
-          cuda.cuMemFree_v2.argtypes = [CUdeviceptr]
-          cuda.cuMemFree_v2.restype = ctypes.c_int
-          cuda.cuMemGetInfo_v2.argtypes = [
-              ctypes.POINTER(ctypes.c_size_t),
-              ctypes.POINTER(ctypes.c_size_t),
+          receipt_path = pathlib.Path(os.environ["RUNNER_TEMP"]) / "lambda-ci-p4-gpu-receipt.json"
+          expected_uuid = os.environ["P4_TARGET_GPU_UUID"]
+          selected_device = os.environ["P4_SELECTED_GPU_DEVICE"]
+          denied_devices = [
+              item for item in os.environ["P4_DENIED_GPU_DEVICES"].split(",") if item
           ]
-          cuda.cuMemGetInfo_v2.restype = ctypes.c_int
-
-          def check(rc, name):
-              if rc != 0:
-                  raise SystemExit(f"{name} failed rc={rc}")
-
-          check(cuda.cuInit(0), "cuInit")
-
-          count = ctypes.c_int()
-          check(cuda.cuDeviceGetCount(ctypes.byref(count)), "cuDeviceGetCount")
-          if count.value != 1:
-              raise SystemExit(f"expected exactly one CUDA-visible GPU, got {count.value}")
-
-          device = CUdevice()
-          check(cuda.cuDeviceGet(ctypes.byref(device), 0), "cuDeviceGet")
-
-          uuid_buf = (ctypes.c_ubyte * 16)()
-          check(
-              cuda.cuDeviceGetUuid_v2(ctypes.byref(uuid_buf), device),
-              "cuDeviceGetUuid_v2",
-          )
-          raw = bytes(uuid_buf)
-          actual_uuid = "GPU-" + (
-              f"{raw[0:4].hex()}-{raw[4:6].hex()}-{raw[6:8].hex()}-"
-              f"{raw[8:10].hex()}-{raw[10:16].hex()}"
-          )
-          if actual_uuid.lower() != expected_uuid.lower():
-              raise SystemExit(
-                  f"CUDA device UUID mismatch: {actual_uuid} != {expected_uuid}"
-              )
-
-          ctx = CUcontext()
-          check(cuda.cuCtxCreate_v2(ctypes.byref(ctx), 0, device), "cuCtxCreate_v2")
-
-          ptr = CUdeviceptr()
-          allocation_bytes = 256 * 1024 * 1024
-          free_before = ctypes.c_size_t()
-          total_before = ctypes.c_size_t()
-          free_during = ctypes.c_size_t()
-          total_during = ctypes.c_size_t()
-          free_after = ctypes.c_size_t()
-          total_after = ctypes.c_size_t()
-
-          try:
-              check(
-                  cuda.cuMemGetInfo_v2(
-                      ctypes.byref(free_before), ctypes.byref(total_before)
-                  ),
-                  "cuMemGetInfo_v2(before)",
-              )
-              check(
-                  cuda.cuMemAlloc_v2(ctypes.byref(ptr), allocation_bytes),
-                  "cuMemAlloc_v2",
-              )
-              check(
-                  cuda.cuMemGetInfo_v2(
-                      ctypes.byref(free_during), ctypes.byref(total_during)
-                  ),
-                  "cuMemGetInfo_v2(during)",
-              )
-              consumed = free_before.value - free_during.value
-              if consumed < 200 * 1024 * 1024:
-                  raise SystemExit(
-                      f"GPU allocation did not consume expected VRAM: {consumed} bytes"
-                  )
-              check(cuda.cuMemFree_v2(ptr), "cuMemFree_v2")
-              ptr = CUdeviceptr()
-              check(
-                  cuda.cuMemGetInfo_v2(
-                      ctypes.byref(free_after), ctypes.byref(total_after)
-                  ),
-                  "cuMemGetInfo_v2(after)",
-              )
-          finally:
-              if ptr.value:
-                  cuda.cuMemFree_v2(ptr)
-              cuda.cuCtxDestroy_v2(ctx)
-
-          after = query_gpu0()
+          expected_sha = os.environ["EXPECTED_SHA"]
 
           receipt = {
               "schema_version": 1,
               "phase": "P4-GPU",
-              "decision": "PASS",
+              "decision": "FAIL",
+              "failure_stage": "device-boundary",
               "expected_sha": expected_sha,
               "actual_sha": subprocess.check_output(
                   ["git", "rev-parse", "HEAD"], text=True
@@ -273,16 +134,9 @@ jobs:
               "uid": os.getuid(),
               "gid": os.getgid(),
               "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES"),
-              "gpu0": before,
-              "gpu0_after": after,
-              "expected_gpu_uuid": expected_uuid,
-              "cuda_device_count": count.value,
-              "gpu1_device_open_denied": denied_gpu1,
-              "allocation_bytes": allocation_bytes,
-              "cuda_free_before_bytes": free_before.value,
-              "cuda_free_during_bytes": free_during.value,
-              "cuda_free_after_bytes": free_after.value,
-              "cuda_total_bytes": total_before.value,
+              "target_gpu_uuid": expected_uuid,
+              "selected_gpu_device": selected_device,
+              "denied_gpu_devices": denied_devices,
               "production_postgres_used": False,
               "docker_used": False,
               "scientific_state_materialized": False,
@@ -290,12 +144,214 @@ jobs:
               "checkout_credentials_persisted": False,
           }
 
-          out = pathlib.Path(os.environ["RUNNER_TEMP"]) / "lambda-ci-p4-gpu-receipt.json"
-          out.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
-          print(json.dumps(receipt, indent=2, sort_keys=True))
+          def write_receipt():
+              receipt_path.write_text(
+                  json.dumps(receipt, indent=2, sort_keys=True) + "\n",
+                  encoding="utf-8",
+              )
+              print(json.dumps(receipt, indent=2, sort_keys=True))
+
+          try:
+              fd = os.open(selected_device, os.O_RDWR)
+              os.close(fd)
+
+              denied_results = {}
+              for path in denied_devices:
+                  try:
+                      fd = os.open(path, os.O_RDWR)
+                  except OSError as exc:
+                      denied_results[path] = {
+                          "denied": True,
+                          "errno": exc.errno,
+                      }
+                  else:
+                      os.close(fd)
+                      denied_results[path] = {
+                          "denied": False,
+                          "errno": None,
+                      }
+
+              if not denied_results or not all(
+                  row["denied"] for row in denied_results.values()
+              ):
+                  raise RuntimeError(
+                      f"non-selected GPU device unexpectedly openable: {denied_results}"
+                  )
+
+              receipt["selected_gpu_device_open"] = True
+              receipt["denied_gpu_device_results"] = denied_results
+              receipt["failure_stage"] = "cuda-init"
+
+              libname = ctypes.util.find_library("cuda") or "libcuda.so.1"
+              cuda = ctypes.CDLL(libname)
+
+              CUdevice = ctypes.c_int
+              CUcontext = ctypes.c_void_p
+              CUdeviceptr = ctypes.c_uint64
+
+              cuda.cuInit.argtypes = [ctypes.c_uint]
+              cuda.cuInit.restype = ctypes.c_int
+              cuda.cuDriverGetVersion.argtypes = [ctypes.POINTER(ctypes.c_int)]
+              cuda.cuDriverGetVersion.restype = ctypes.c_int
+              cuda.cuDeviceGetCount.argtypes = [ctypes.POINTER(ctypes.c_int)]
+              cuda.cuDeviceGetCount.restype = ctypes.c_int
+              cuda.cuDeviceGet.argtypes = [ctypes.POINTER(CUdevice), ctypes.c_int]
+              cuda.cuDeviceGet.restype = ctypes.c_int
+              cuda.cuDeviceGetName.argtypes = [ctypes.c_char_p, ctypes.c_int, CUdevice]
+              cuda.cuDeviceGetName.restype = ctypes.c_int
+              cuda.cuDeviceGetUuid_v2.argtypes = [ctypes.c_void_p, CUdevice]
+              cuda.cuDeviceGetUuid_v2.restype = ctypes.c_int
+              cuda.cuDeviceTotalMem_v2.argtypes = [ctypes.POINTER(ctypes.c_size_t), CUdevice]
+              cuda.cuDeviceTotalMem_v2.restype = ctypes.c_int
+              cuda.cuCtxCreate_v2.argtypes = [
+                  ctypes.POINTER(CUcontext), ctypes.c_uint, CUdevice
+              ]
+              cuda.cuCtxCreate_v2.restype = ctypes.c_int
+              cuda.cuCtxDestroy_v2.argtypes = [CUcontext]
+              cuda.cuCtxDestroy_v2.restype = ctypes.c_int
+              cuda.cuMemAlloc_v2.argtypes = [
+                  ctypes.POINTER(CUdeviceptr), ctypes.c_size_t
+              ]
+              cuda.cuMemAlloc_v2.restype = ctypes.c_int
+              cuda.cuMemFree_v2.argtypes = [CUdeviceptr]
+              cuda.cuMemFree_v2.restype = ctypes.c_int
+              cuda.cuMemGetInfo_v2.argtypes = [
+                  ctypes.POINTER(ctypes.c_size_t),
+                  ctypes.POINTER(ctypes.c_size_t),
+              ]
+              cuda.cuMemGetInfo_v2.restype = ctypes.c_int
+
+              def check(rc, name):
+                  if rc != 0:
+                      raise RuntimeError(f"{name} failed rc={rc}")
+
+              check(cuda.cuInit(0), "cuInit")
+
+              driver_api_version = ctypes.c_int()
+              check(
+                  cuda.cuDriverGetVersion(ctypes.byref(driver_api_version)),
+                  "cuDriverGetVersion",
+              )
+
+              count = ctypes.c_int()
+              check(cuda.cuDeviceGetCount(ctypes.byref(count)), "cuDeviceGetCount")
+              if count.value != 1:
+                  raise RuntimeError(
+                      f"expected exactly one CUDA-visible GPU, got {count.value}"
+                  )
+
+              device = CUdevice()
+              check(cuda.cuDeviceGet(ctypes.byref(device), 0), "cuDeviceGet")
+
+              uuid_buf = (ctypes.c_ubyte * 16)()
+              check(
+                  cuda.cuDeviceGetUuid_v2(ctypes.byref(uuid_buf), device),
+                  "cuDeviceGetUuid_v2",
+              )
+              raw = bytes(uuid_buf)
+              actual_uuid = "GPU-" + (
+                  f"{raw[0:4].hex()}-{raw[4:6].hex()}-{raw[6:8].hex()}-"
+                  f"{raw[8:10].hex()}-{raw[10:16].hex()}"
+              )
+              if actual_uuid.lower() != expected_uuid.lower():
+                  raise RuntimeError(
+                      f"CUDA UUID mismatch: {actual_uuid} != {expected_uuid}"
+                  )
+
+              name_buf = ctypes.create_string_buffer(256)
+              check(
+                  cuda.cuDeviceGetName(name_buf, len(name_buf), device),
+                  "cuDeviceGetName",
+              )
+
+              total_device_bytes = ctypes.c_size_t()
+              check(
+                  cuda.cuDeviceTotalMem_v2(ctypes.byref(total_device_bytes), device),
+                  "cuDeviceTotalMem_v2",
+              )
+
+              receipt.update(
+                  {
+                      "failure_stage": "cuda-allocation",
+                      "cuda_device_count": count.value,
+                      "cuda_device_uuid": actual_uuid,
+                      "cuda_device_name": name_buf.value.decode(
+                          "utf-8", errors="replace"
+                      ),
+                      "cuda_driver_api_version": driver_api_version.value,
+                      "cuda_device_total_bytes": total_device_bytes.value,
+                  }
+              )
+
+              ctx = CUcontext()
+              check(cuda.cuCtxCreate_v2(ctypes.byref(ctx), 0, device), "cuCtxCreate_v2")
+
+              ptr = CUdeviceptr()
+              allocation_bytes = 256 * 1024 * 1024
+              free_before = ctypes.c_size_t()
+              total_before = ctypes.c_size_t()
+              free_during = ctypes.c_size_t()
+              total_during = ctypes.c_size_t()
+              free_after = ctypes.c_size_t()
+              total_after = ctypes.c_size_t()
+
+              try:
+                  check(
+                      cuda.cuMemGetInfo_v2(
+                          ctypes.byref(free_before), ctypes.byref(total_before)
+                      ),
+                      "cuMemGetInfo_v2(before)",
+                  )
+                  check(
+                      cuda.cuMemAlloc_v2(ctypes.byref(ptr), allocation_bytes),
+                      "cuMemAlloc_v2",
+                  )
+                  check(
+                      cuda.cuMemGetInfo_v2(
+                          ctypes.byref(free_during), ctypes.byref(total_during)
+                      ),
+                      "cuMemGetInfo_v2(during)",
+                  )
+                  consumed = free_before.value - free_during.value
+                  if consumed < 200 * 1024 * 1024:
+                      raise RuntimeError(
+                          "GPU allocation did not consume expected VRAM: "
+                          f"{consumed} bytes"
+                      )
+                  check(cuda.cuMemFree_v2(ptr), "cuMemFree_v2")
+                  ptr = CUdeviceptr()
+                  check(
+                      cuda.cuMemGetInfo_v2(
+                          ctypes.byref(free_after), ctypes.byref(total_after)
+                      ),
+                      "cuMemGetInfo_v2(after)",
+                  )
+              finally:
+                  if ptr.value:
+                      cuda.cuMemFree_v2(ptr)
+                  cuda.cuCtxDestroy_v2(ctx)
+
+              receipt.update(
+                  {
+                      "decision": "PASS",
+                      "failure_stage": None,
+                      "allocation_bytes": allocation_bytes,
+                      "cuda_free_before_bytes": free_before.value,
+                      "cuda_free_during_bytes": free_during.value,
+                      "cuda_free_after_bytes": free_after.value,
+                      "cuda_total_bytes": total_before.value,
+                  }
+              )
+              write_receipt()
+          except BaseException as exc:
+              receipt["failure_reason"] = f"{type(exc).__name__}: {exc}"
+              receipt["traceback"] = traceback.format_exc(limit=8)
+              write_receipt()
+              raise
           PY
 
       - name: Upload P4 GPU receipt
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: lambda-ci-p4-gpu-receipt
