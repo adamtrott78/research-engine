@@ -87,8 +87,9 @@ jobs:
           PG_STARTED=0
           PG_CLEANUP="NOT_STARTED"
           PGDATA="$RUNNER_TEMP/p3-postgres-data"
-          PGSOCK="$RUNNER_TEMP/p3-postgres-socket"
+          PGSOCK="/tmp/p3pg-${GITHUB_RUN_ID:-$}"
           export PGSOCK
+          PGLOG="$RUNNER_TEMP/p3-postgres.log"
           PGPORT="55432"
           RECEIPT="$RUNNER_TEMP/lambda-ci-p3-receipt.json"
           START_EPOCH="$(date +%s)"
@@ -245,7 +246,13 @@ jobs:
           }
 
           STAGE="postgres-init"
-          rm -rf "$PGDATA" "$PGSOCK"
+          echo "::notice::P3 stage=postgres-init socket_dir=$PGSOCK"
+          SOCKET_PATH="$PGSOCK/.s.PGSQL.$PGPORT"
+          if (( ${#SOCKET_PATH} >= 108 )); then
+            echo "Unix socket path too long (${#SOCKET_PATH} bytes): $SOCKET_PATH" >&2
+            exit 38
+          fi
+          rm -rf "$PGDATA" "$PGSOCK" "$PGLOG"
           install -d -m 0700 "$PGDATA" "$PGSOCK"
           "$PGBIN/initdb" \
             -D "$PGDATA" \
@@ -262,7 +269,7 @@ jobs:
           port = $PGPORT
           EOF
 
-          "$PGBIN/pg_ctl" -D "$PGDATA" -w start >/dev/null
+          "$PGBIN/pg_ctl" -D "$PGDATA" -l "$PGLOG" -w start >/dev/null
           PG_STARTED=1
 
           "$PGBIN/createdb" \
@@ -286,28 +293,34 @@ jobs:
           export RESEARCH_ENGINE_DATABASE_URL="postgresql://research_engine@/research_engine?host=$encoded_sock&port=$PGPORT"
 
           STAGE="install"
+          echo "::notice::P3 stage=install"
           t0="$(date +%s)"
           python -m pip install -e ".[dev]"
           PIP_INSTALL_SECONDS="$(( $(date +%s) - t0 ))"
 
           STAGE="compile"
+          echo "::notice::P3 stage=compile"
           t0="$(date +%s)"
           python -m compileall -q src tests
           COMPILE_SECONDS="$(( $(date +%s) - t0 ))"
 
           STAGE="pytest"
+          echo "::notice::P3 stage=pytest"
           t0="$(date +%s)"
           python -m pytest -q
           PYTEST_SECONDS="$(( $(date +%s) - t0 ))"
 
           STAGE="complete"
+          echo "::notice::P3 stage=complete"
 
       - name: Upload P3 receipt
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: lambda-ci-p3-receipt
-          path: ${{ runner.temp }}/lambda-ci-p3-receipt.json
+          path: |
+            ${{ runner.temp }}/lambda-ci-p3-receipt.json
+            ${{ runner.temp }}/p3-postgres.log
           if-no-files-found: error
           retention-days: 7
 
