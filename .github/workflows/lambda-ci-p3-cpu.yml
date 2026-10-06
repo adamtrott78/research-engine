@@ -1,0 +1,302 @@
+name: Lambda CI P3 CPU Validation
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  lambda-cpu:
+    if: >-
+      github.event.issue.pull_request &&
+      github.actor == 'adamtrott78' &&
+      github.event.comment.author_association == 'OWNER' &&
+      startsWith(github.event.comment.body, '/lambda-ci-cpu ')
+    runs-on: [self-hosted, lambda-research-engine, cpu-test]
+    timeout-minutes: 30
+
+    steps:
+      - name: Verify exact PR head
+        id: gate
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          expected_sha="$(printf '%s\n' "$COMMENT_BODY" | awk '{print $2}')"
+          [[ "$expected_sha" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "Invalid /lambda-ci-cpu SHA" >&2
+            exit 20
+          }
+
+          pr_json="$(
+            curl -fsSL \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$REPOSITORY/pulls/$PR_NUMBER"
+          )"
+
+          actual_sha="$(
+            python3 -c 'import json,sys; print(json.load(sys.stdin)["head"]["sha"])' \
+              <<<"$pr_json"
+          )"
+
+          [[ "$actual_sha" == "$expected_sha" ]] || {
+            echo "Requested SHA does not match current PR head" >&2
+            echo "requested=$expected_sha" >&2
+            echo "actual=$actual_sha" >&2
+            exit 21
+          }
+
+          echo "expected_sha=$expected_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout exact candidate SHA
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ steps.gate.outputs.expected_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          clean: true
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Execute isolated CPU validation
+        id: validate
+        continue-on-error: true
+        env:
+          EXPECTED_SHA: ${{ steps.gate.outputs.expected_sha }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          ACTOR: ${{ github.actor }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          STAGE="preflight"
+          PG_STARTED=0
+          PG_CLEANUP="NOT_STARTED"
+          PGDATA="$RUNNER_TEMP/p3-postgres-data"
+          PGSOCK="$RUNNER_TEMP/p3-postgres-socket"
+          export PGSOCK
+          PGPORT="55432"
+          RECEIPT="$RUNNER_TEMP/lambda-ci-p3-receipt.json"
+          START_EPOCH="$(date +%s)"
+          PGBIN=""
+          VECTOR_CONTROL=""
+          VECTOR_VERSION=""
+          PYTHON_VERSION="$(python --version 2>&1)"
+          PIP_INSTALL_SECONDS=""
+          COMPILE_SECONDS=""
+          PYTEST_SECONDS=""
+
+          finish() {
+            rc=$?
+            set +e
+
+            if [[ "$PG_STARTED" == "1" && -n "$PGBIN" ]]; then
+              "$PGBIN/pg_ctl" -D "$PGDATA" -m fast -w stop >/dev/null 2>&1
+              if [[ $? -eq 0 ]]; then
+                PG_CLEANUP="PASS"
+              else
+                PG_CLEANUP="FAIL"
+              fi
+            fi
+
+            END_EPOCH="$(date +%s)"
+            WALL_SECONDS="$((END_EPOCH - START_EPOCH))"
+
+            export P3_RC="$rc" P3_STAGE="$STAGE" P3_PG_CLEANUP="$PG_CLEANUP"
+            export P3_PGBIN="$PGBIN" P3_VECTOR_CONTROL="$VECTOR_CONTROL"
+            export P3_VECTOR_VERSION="$VECTOR_VERSION" P3_PYTHON_VERSION="$PYTHON_VERSION"
+            export P3_PIP_INSTALL_SECONDS="$PIP_INSTALL_SECONDS"
+            export P3_COMPILE_SECONDS="$COMPILE_SECONDS" P3_PYTEST_SECONDS="$PYTEST_SECONDS"
+            export P3_WALL_SECONDS="$WALL_SECONDS" P3_RECEIPT="$RECEIPT"
+            export P3_EXPECTED_SHA="$EXPECTED_SHA" P3_PR_NUMBER="$PR_NUMBER"
+            export P3_ACTOR="$ACTOR"
+
+            python - <<'PY'
+          import json
+          import os
+          import pathlib
+          import platform
+          import socket
+          import subprocess
+
+          def opt_int(name):
+              value = os.environ.get(name, "")
+              return int(value) if value else None
+
+          actual_sha = subprocess.run(
+              ["git", "rev-parse", "HEAD"],
+              check=False,
+              text=True,
+              capture_output=True,
+          ).stdout.strip()
+
+          receipt = {
+              "schema_version": 1,
+              "phase": "P3-CPU",
+              "decision": "PASS" if os.environ["P3_RC"] == "0" else "FAIL",
+              "failure_stage": None if os.environ["P3_RC"] == "0" else os.environ["P3_STAGE"],
+              "exit_code": int(os.environ["P3_RC"]),
+              "expected_sha": os.environ["P3_EXPECTED_SHA"],
+              "actual_sha": actual_sha,
+              "pr_number": int(os.environ["P3_PR_NUMBER"]),
+              "actor": os.environ["P3_ACTOR"],
+              "runner_user": os.environ.get("USER"),
+              "uid": os.getuid(),
+              "gid": os.getgid(),
+              "hostname": socket.gethostname(),
+              "kernel": platform.release(),
+              "python_version": os.environ["P3_PYTHON_VERSION"],
+              "postgres_bindir": os.environ["P3_PGBIN"],
+              "pgvector_control": os.environ["P3_VECTOR_CONTROL"],
+              "pgvector_version": os.environ["P3_VECTOR_VERSION"] or None,
+              "database_transport": "unix_socket",
+              "database_tcp_listen": False,
+              "database_cleanup": os.environ["P3_PG_CLEANUP"],
+              "production_postgres_used": False,
+              "docker_used": False,
+              "nvidia_visible": False,
+              "checkout_credentials_persisted": False,
+              "pip_install_seconds": opt_int("P3_PIP_INSTALL_SECONDS"),
+              "compile_seconds": opt_int("P3_COMPILE_SECONDS"),
+              "pytest_seconds": opt_int("P3_PYTEST_SECONDS"),
+              "wall_seconds": opt_int("P3_WALL_SECONDS"),
+          }
+          pathlib.Path(os.environ["P3_RECEIPT"]).write_text(
+              json.dumps(receipt, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps(receipt, indent=2, sort_keys=True))
+          PY
+
+            exit "$rc"
+          }
+          trap finish EXIT
+
+          [[ "$(id -un)" == "ci-research-engine" ]]
+          [[ "$(git rev-parse HEAD)" == "$EXPECTED_SHA" ]]
+
+          if git config --local --get-regexp '^http\..*\.extraheader$' >/dev/null 2>&1; then
+            echo "Checkout credentials remained in candidate git config" >&2
+            exit 30
+          fi
+
+          [[ ! -r /home/atrott ]]
+          [[ ! -r /home/atrott/.ssh ]]
+
+          if [[ -e /var/run/docker.sock ]]; then
+            [[ ! -r /var/run/docker.sock ]]
+            [[ ! -w /var/run/docker.sock ]]
+          fi
+
+          if timeout 2 bash -c '</dev/tcp/127.0.0.1/5432' 2>/dev/null; then
+            echo "Production PostgreSQL reachable from CPU job" >&2
+            exit 31
+          fi
+
+          if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then
+            echo "CPU job unexpectedly has NVIDIA device access" >&2
+            exit 32
+          fi
+
+          STAGE="postgres-discovery"
+          PGBIN="$(pg_config --bindir)"
+          PGSHARE="$(pg_config --sharedir)"
+          [[ -x "$PGBIN/initdb" ]]
+          [[ -x "$PGBIN/pg_ctl" ]]
+          [[ -x "$PGBIN/createdb" ]]
+          [[ -x "$PGBIN/psql" ]]
+          VECTOR_CONTROL="$PGSHARE/extension/vector.control"
+          [[ -r "$VECTOR_CONTROL" ]] || {
+            echo "pgvector server extension is not installed for host PostgreSQL" >&2
+            exit 33
+          }
+
+          STAGE="postgres-init"
+          rm -rf "$PGDATA" "$PGSOCK"
+          install -d -m 0700 "$PGDATA" "$PGSOCK"
+          "$PGBIN/initdb" \
+            -D "$PGDATA" \
+            --username=research_engine \
+            --auth-local=trust \
+            --auth-host=reject \
+            --no-locale \
+            --encoding=UTF8 \
+            >/dev/null
+
+          cat >> "$PGDATA/postgresql.conf" <<EOF
+          listen_addresses = ''
+          unix_socket_directories = '$PGSOCK'
+          port = $PGPORT
+          EOF
+
+          "$PGBIN/pg_ctl" -D "$PGDATA" -w start >/dev/null
+          PG_STARTED=1
+
+          "$PGBIN/createdb" \
+            -h "$PGSOCK" -p "$PGPORT" -U research_engine \
+            research_engine
+
+          VECTOR_VERSION="$(
+            "$PGBIN/psql" \
+              -h "$PGSOCK" -p "$PGPORT" -U research_engine -d research_engine \
+              -v ON_ERROR_STOP=1 -Atc \
+              "CREATE EXTENSION IF NOT EXISTS vector; SELECT extversion FROM pg_extension WHERE extname='vector';"
+          )"
+          [[ -n "$VECTOR_VERSION" ]]
+
+          encoded_sock="$(
+            python -c 'import os,urllib.parse; print(urllib.parse.quote(os.environ["PGSOCK"], safe=""))'
+          )"
+          export RESEARCH_ENGINE_DATABASE_URL="postgresql://research_engine@/research_engine?host=$encoded_sock&port=$PGPORT"
+
+          STAGE="install"
+          t0="$(date +%s)"
+          python -m pip install -e ".[dev]"
+          PIP_INSTALL_SECONDS="$(( $(date +%s) - t0 ))"
+
+          STAGE="compile"
+          t0="$(date +%s)"
+          python -m compileall -q src tests
+          COMPILE_SECONDS="$(( $(date +%s) - t0 ))"
+
+          STAGE="pytest"
+          t0="$(date +%s)"
+          python -m pytest -q
+          PYTEST_SECONDS="$(( $(date +%s) - t0 ))"
+
+          STAGE="complete"
+
+      - name: Upload P3 receipt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: lambda-ci-p3-receipt
+          path: ${{ runner.temp }}/lambda-ci-p3-receipt.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Enforce P3 validation result
+        if: always()
+        env:
+          VALIDATION_OUTCOME: ${{ steps.validate.outcome }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$VALIDATION_OUTCOME" == "success" ]] || {
+            echo "P3 candidate validation failed: $VALIDATION_OUTCOME" >&2
+            exit 40
+          }
