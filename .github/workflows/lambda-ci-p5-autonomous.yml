@@ -1,0 +1,210 @@
+name: Lambda CI P5 Autonomous Acceptance
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  autonomous-cpu:
+    if: >-
+      github.event.issue.pull_request &&
+      github.actor == 'adamtrott78' &&
+      github.event.comment.author_association == 'OWNER' &&
+      startsWith(github.event.comment.body, '/lambda-ci-p5 ')
+    runs-on: lambda-research-engine
+    timeout-minutes: 15
+
+    steps:
+      - name: Verify exact PR head
+        id: gate
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          expected_sha="$(printf '%s\n' "$COMMENT_BODY" | awk '{print $2}')"
+          [[ "$expected_sha" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "Invalid /lambda-ci-p5 SHA" >&2
+            exit 20
+          }
+
+          pr_json="$(
+            curl -fsSL \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$REPOSITORY/pulls/$PR_NUMBER"
+          )"
+
+          actual_sha="$(
+            python3 -c 'import json,sys; print(json.load(sys.stdin)["head"]["sha"])' \
+              <<<"$pr_json"
+          )"
+
+          [[ "$actual_sha" == "$expected_sha" ]] || {
+            echo "Requested SHA does not match current PR head" >&2
+            echo "requested=$expected_sha" >&2
+            echo "actual=$actual_sha" >&2
+            exit 21
+          }
+
+          echo "expected_sha=$expected_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Prove fresh bounded P5 runner
+        id: preflight
+        env:
+          EXPECTED_SHA: ${{ steps.gate.outputs.expected_sha }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          [[ "$(id -un)" == "ci-research-engine" ]]
+          [[ -n "${RUNNER_NAME:-}" ]]
+          [[ -n "${RUNNER_TEMP:-}" ]]
+          [[ -n "${XDG_CACHE_HOME:-}" ]]
+
+          runner_dir="$(dirname "$(dirname "$RUNNER_TEMP")")"
+          job_dir="$(dirname "$runner_dir")"
+          job_root="/srv/workspace-ci/research-engine/jobs"
+          staging_root="/srv/workspace-ci/research-engine/staging-cache"
+          staging_dir="$XDG_CACHE_HOME"
+
+          [[ "$job_dir" == "$job_root"/p5-* ]]
+          [[ "$staging_dir" == "$staging_root"/p5-* ]]
+          [[ -d "$job_dir" ]]
+          [[ -d "$staging_dir" ]]
+
+          mapfile -t job_dirs < <(
+            find "$job_root" -mindepth 1 -maxdepth 1 -type d -name 'p5-*' -printf '%f\n' | sort
+          )
+          mapfile -t staging_dirs < <(
+            find "$staging_root" -mindepth 1 -maxdepth 1 -type d -name 'p5-*' -printf '%f\n' | sort
+          )
+
+          [[ "${#job_dirs[@]}" -eq 1 ]]
+          [[ "${#staging_dirs[@]}" -eq 1 ]]
+          [[ "${job_dirs[0]}" == "$(basename "$job_dir")" ]]
+          [[ "${staging_dirs[0]}" == "$(basename "$staging_dir")" ]]
+
+          if find "$job_root" "$staging_root" -name '.p5-autonomous-marker-*' -print -quit | grep -q .; then
+            echo "Stale P5 marker survived a prior runner cleanup" >&2
+            exit 30
+          fi
+
+          [[ ! -r /home/atrott ]]
+          [[ ! -r /home/atrott/.ssh ]]
+          [[ ! -r /home/atrott/adamArchives/Adam/workspace-control ]]
+          [[ ! -r /home/atrott/adamArchives/Adam/PADataset ]]
+          [[ ! -r /var/lib/workspace-ci/controller/github-token ]]
+
+          if [[ -e /var/run/docker.sock ]]; then
+            [[ ! -r /var/run/docker.sock ]]
+            [[ ! -w /var/run/docker.sock ]]
+          fi
+
+          if timeout 2 bash -c '</dev/tcp/127.0.0.1/5432' 2>/dev/null; then
+            echo "Production PostgreSQL reachable from P5 CPU job" >&2
+            exit 31
+          fi
+
+          if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi -L >/dev/null 2>&1; then
+            echo "P5 CPU job unexpectedly has NVIDIA device access" >&2
+            exit 32
+          fi
+
+          marker=".p5-autonomous-marker-${GITHUB_RUN_ID}"
+          printf '%s\n' "$EXPECTED_SHA" > "$job_dir/$marker"
+          printf '%s\n' "$EXPECTED_SHA" > "$staging_dir/$marker"
+
+          {
+            echo "runner_name=$RUNNER_NAME"
+            echo "job_dir_id=$(basename "$job_dir")"
+            echo "staging_dir_id=$(basename "$staging_dir")"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Checkout exact candidate SHA
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ steps.gate.outputs.expected_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          clean: true
+
+      - name: Write P5 autonomous receipt
+        env:
+          EXPECTED_SHA: ${{ steps.gate.outputs.expected_sha }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          ACTOR: ${{ github.actor }}
+          RUNNER_NAME_VALUE: ${{ steps.preflight.outputs.runner_name }}
+          JOB_DIR_ID: ${{ steps.preflight.outputs.job_dir_id }}
+          STAGING_DIR_ID: ${{ steps.preflight.outputs.staging_dir_id }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          actual_sha="$(git rev-parse HEAD)"
+          [[ "$actual_sha" == "$EXPECTED_SHA" ]]
+
+          if git config --local --get-regexp '^http\..*\.extraheader$' >/dev/null 2>&1; then
+            echo "Checkout credentials remained in candidate git config" >&2
+            exit 40
+          fi
+
+          receipt="$RUNNER_TEMP/lambda-ci-p5-autonomous-receipt.json"
+          export RECEIPT_PATH="$receipt" ACTUAL_SHA="$actual_sha"
+
+          python3 - <<'PY'
+          import json
+          import os
+          import pathlib
+
+          payload = {
+              "schema_version": 1,
+              "phase": "P5-autonomous-scale-set",
+              "decision": "PASS",
+              "expected_sha": os.environ["EXPECTED_SHA"],
+              "actual_sha": os.environ["ACTUAL_SHA"],
+              "pr_number": int(os.environ["PR_NUMBER"]),
+              "actor": os.environ["ACTOR"],
+              "runner_name": os.environ["RUNNER_NAME_VALUE"],
+              "runner_user": os.environ.get("USER"),
+              "uid": os.getuid(),
+              "gid": os.getgid(),
+              "job_dir_id": os.environ["JOB_DIR_ID"],
+              "staging_dir_id": os.environ["STAGING_DIR_ID"],
+              "stale_job_workspace_absent": True,
+              "stale_staging_workspace_absent": True,
+              "stale_marker_absent": True,
+              "personal_home_readable": False,
+              "workspace_control_readable": False,
+              "controller_credential_readable": False,
+              "docker_access": False,
+              "production_postgres_reachable": False,
+              "nvidia_visible": False,
+              "checkout_credentials_persisted": False,
+              "scale_set_target": "lambda-research-engine",
+              "profile_expected": "cpu-test",
+          }
+          pathlib.Path(os.environ["RECEIPT_PATH"]).write_text(
+              json.dumps(payload, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps(payload, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload P5 autonomous receipt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: lambda-ci-p5-autonomous-receipt
+          path: ${{ runner.temp }}/lambda-ci-p5-autonomous-receipt.json
+          if-no-files-found: error
+          retention-days: 7
