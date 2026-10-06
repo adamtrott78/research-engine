@@ -1,0 +1,116 @@
+name: Lambda CI Acceptance Control
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  actions: write
+  contents: read
+  pull-requests: read
+
+jobs:
+  cancel-acceptance:
+    if: >-
+      github.event.issue.pull_request &&
+      github.actor == 'adamtrott78' &&
+      github.event.comment.author_association == 'OWNER' &&
+      startsWith(github.event.comment.body, '/lambda-ci-cancel ')
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - name: Validate owner-only cancellation request
+        id: gate
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          read -r command run_id extra <<<"$COMMENT_BODY"
+          [[ "$command" == "/lambda-ci-cancel" ]]
+          [[ "$run_id" =~ ^[1-9][0-9]*$ ]]
+          [[ -z "${extra:-}" ]] || {
+            echo "Cancellation command must contain exactly one workflow run id" >&2
+            exit 20
+          }
+
+          run_json="$(
+            curl -fsSL               -H "Accept: application/vnd.github+json"               -H "Authorization: Bearer $GH_TOKEN"               -H "X-GitHub-Api-Version: 2022-11-28"               "https://api.github.com/repos/$REPOSITORY/actions/runs/$run_id"
+          )"
+
+          export RUN_JSON="$run_json"
+          python3 - <<'PY' >>"$GITHUB_OUTPUT"
+          import json
+          import os
+
+          run = json.loads(os.environ["RUN_JSON"])
+          allowed_paths = {
+              ".github/workflows/lambda-ci-p5-autonomous.yml",
+              ".github/workflows/lambda-ci-p5-gpu-autonomous.yml",
+          }
+          path = run.get("path")
+          event = run.get("event")
+          status = run.get("status")
+          if path not in allowed_paths:
+              raise SystemExit(f"refusing to cancel non-acceptance workflow path: {path!r}")
+          if event != "issue_comment":
+              raise SystemExit(f"refusing to cancel non-issue_comment run: {event!r}")
+          if status not in {"queued", "in_progress", "waiting", "requested", "pending", "completed"}:
+              raise SystemExit(f"unexpected workflow status: {status!r}")
+          print(f"run_id={int(run['id'])}")
+          print(f"status={status}")
+          print(f"path={path}")
+          PY
+
+      - name: Cancel target acceptance run
+        if: steps.gate.outputs.status != 'completed'
+        env:
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ steps.gate.outputs.run_id }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          code="$(
+            curl -sS               -o /tmp/cancel-response.txt               -w '%{http_code}'               -X POST               -H "Accept: application/vnd.github+json"               -H "Authorization: Bearer $GH_TOKEN"               -H "X-GitHub-Api-Version: 2022-11-28"               "https://api.github.com/repos/$REPOSITORY/actions/runs/$RUN_ID/cancel"
+          )"
+          [[ "$code" == "202" ]] || {
+            echo "GitHub cancellation returned HTTP $code" >&2
+            cat /tmp/cancel-response.txt >&2 || true
+            exit 21
+          }
+
+      - name: Confirm cancellation
+        if: steps.gate.outputs.status != 'completed'
+        env:
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ steps.gate.outputs.run_id }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          for _ in $(seq 1 30); do
+            run_json="$(
+              curl -fsSL                 -H "Accept: application/vnd.github+json"                 -H "Authorization: Bearer $GH_TOKEN"                 -H "X-GitHub-Api-Version: 2022-11-28"                 "https://api.github.com/repos/$REPOSITORY/actions/runs/$RUN_ID"
+            )"
+            state="$(
+              python3 -c 'import json,sys; r=json.load(sys.stdin); print(f"{r.get("status")}:{r.get("conclusion")}")'                 <<<"$run_json"
+            )"
+            echo "target_state=$state"
+            [[ "$state" == "completed:cancelled" ]] && exit 0
+            sleep 1
+          done
+
+          echo "Target run did not reach completed:cancelled within bounded confirmation window" >&2
+          exit 22
+
+      - name: Report already-terminal target
+        if: steps.gate.outputs.status == 'completed'
+        run: |
+          echo "Target acceptance run is already terminal; no cancellation request was sent."
