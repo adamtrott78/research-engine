@@ -15,7 +15,7 @@ jobs:
       github.actor == 'adamtrott78' &&
       github.event.comment.author_association == 'OWNER' &&
       startsWith(github.event.comment.body, '/lambda-ci-cpu ')
-    runs-on: [self-hosted, lambda-research-engine, cpu-test]
+    runs-on: [self-hosted, lambda-research-engine, cpu-test-v2]
     timeout-minutes: 30
 
     steps:
@@ -161,6 +161,8 @@ jobs:
               "kernel": platform.release(),
               "python_version": os.environ["P3_PYTHON_VERSION"],
               "postgres_bindir": os.environ["P3_PGBIN"],
+              "postgres_runtime": "/opt/workspace-ci/postgresql/postgresql-14.24-pgvector-0.8.6",
+              "postgres_version": "14.24",
               "pgvector_control": os.environ["P3_VECTOR_CONTROL"],
               "pgvector_version": os.environ["P3_VECTOR_VERSION"] or None,
               "database_transport": "unix_socket",
@@ -213,16 +215,33 @@ jobs:
           fi
 
           STAGE="postgres-discovery"
-          PGBIN="$(pg_config --bindir)"
-          PGSHARE="$(pg_config --sharedir)"
+          PGRUNTIME="/opt/workspace-ci/postgresql/postgresql-14.24-pgvector-0.8.6"
+          [[ -d "$PGRUNTIME" ]] || {
+            echo "Trusted isolated PostgreSQL runtime is missing: $PGRUNTIME" >&2
+            exit 33
+          }
+          [[ ! -w "$PGRUNTIME" ]] || {
+            echo "Project runner can write trusted PostgreSQL runtime" >&2
+            exit 37
+          }
+
+          export PATH="$PGRUNTIME/bin:$PATH"
+          export LD_LIBRARY_PATH="$PGRUNTIME/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          PGBIN="$PGRUNTIME/bin"
+          PGSHARE="$("$PGRUNTIME/bin/pg_config" --sharedir)"
+
+          [[ "$("$PGBIN/postgres" --version)" == "postgres (PostgreSQL) 14.24" ]] || {
+            echo "Unexpected isolated PostgreSQL version" >&2
+            exit 35
+          }
           [[ -x "$PGBIN/initdb" ]]
           [[ -x "$PGBIN/pg_ctl" ]]
           [[ -x "$PGBIN/createdb" ]]
           [[ -x "$PGBIN/psql" ]]
           VECTOR_CONTROL="$PGSHARE/extension/vector.control"
           [[ -r "$VECTOR_CONTROL" ]] || {
-            echo "pgvector server extension is not installed for host PostgreSQL" >&2
-            exit 33
+            echo "Trusted isolated pgvector extension is missing" >&2
+            exit 36
           }
 
           STAGE="postgres-init"
