@@ -1,0 +1,6 @@
+Lambda CI admission-v2 live acceptance marker.
+
+Purpose: bind a same-repository, non-scientific candidate SHA to the trusted
+P5 cpu-test and gpu-small acceptance workflows.
+
+This file contains no executable test or scientific workload.
