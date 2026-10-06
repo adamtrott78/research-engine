@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   autonomous-cpu:
+    name: "${{ format('wc-admission-v1|workload=cpu-test|pr={0}|request={1}', github.event.issue.number, github.event.comment.body) }}"
     if: >-
       github.event.issue.pull_request &&
       github.actor == 'adamtrott78' &&
