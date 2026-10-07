@@ -140,6 +140,57 @@ jobs:
           persist-credentials: false
           clean: true
 
+      - name: Verify trusted cache canary is immutable
+        id: cache_canary
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          object_id="5bf1fba5838c38e5ae8e3f69b108d4b3ca9b9090aad435214f55fa30a626c14d"
+          object="/srv/workspace-ci/research-engine/trusted-cache/objects/test-fixture/sha256/$object_id"
+          verifier="/opt/workspace-ci/cache-manager/lambda_ci_trusted_cache.py"
+
+          [[ -x "$verifier" ]]
+          [[ -r "$object/receipt.json" ]]
+          [[ -r "$object/payload/canary.txt" ]]
+          [[ "$(cat "$object/payload/canary.txt")" == "workspace-ci-trusted-cache-canary-v1" ]]
+
+          "$verifier" verify --object "$object" > "$RUNNER_TEMP/trusted-cache-canary-verify.json"
+
+          python3 - "$RUNNER_TEMP/trusted-cache-canary-verify.json" "$object_id" <<'PY'
+          import json
+          import sys
+
+          data = json.load(open(sys.argv[1], encoding="utf-8"))
+          assert data["decision"] == "PASS"
+          assert data["object_id"] == sys.argv[2]
+          assert data["project_id"] == "research-engine"
+          assert data["artifact_kind"] == "test-fixture"
+          assert data["offline_complete"] is True
+          assert data["read_only"] is True
+          PY
+
+          [[ ! -w "$object" ]]
+          [[ ! -w "$object/payload/canary.txt" ]]
+          [[ ! -r /var/lib/workspace-ci/cache-manager/research-engine/quarantine ]]
+          [[ ! -r /var/lib/workspace-ci/cache-manager/research-engine/receipts ]]
+
+          if printf 'tamper\n' >> "$object/payload/canary.txt" 2>/dev/null; then
+            echo "Trusted cache payload unexpectedly writable" >&2
+            exit 50
+          fi
+          if rm -f "$object/payload/canary.txt" 2>/dev/null; then
+            echo "Trusted cache payload unexpectedly deletable" >&2
+            exit 51
+          fi
+          if "$verifier" promote             --project-id research-engine             --quarantine-id 00000000-0000-4000-8000-000000000000             >/dev/null 2>&1
+          then
+            echo "Candidate unexpectedly obtained cache promotion authority" >&2
+            exit 52
+          fi
+
+          echo "object_id=$object_id" >> "$GITHUB_OUTPUT"
+
       - name: Write P5 autonomous receipt
         env:
           EXPECTED_SHA: ${{ steps.gate.outputs.expected_sha }}
@@ -148,6 +199,7 @@ jobs:
           RUNNER_NAME_VALUE: ${{ steps.preflight.outputs.runner_name }}
           JOB_DIR_ID: ${{ steps.preflight.outputs.job_dir_id }}
           STAGING_DIR_ID: ${{ steps.preflight.outputs.staging_dir_id }}
+          CACHE_OBJECT_ID: ${{ steps.cache_canary.outputs.object_id }}
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -194,6 +246,13 @@ jobs:
               "checkout_credentials_persisted": False,
               "scale_set_target": "lambda-research-engine",
               "profile_expected": "cpu-test",
+              "trusted_cache_canary_object_id": os.environ["CACHE_OBJECT_ID"],
+              "trusted_cache_verify_decision": "PASS",
+              "trusted_cache_offline_complete": True,
+              "trusted_cache_read_only": True,
+              "trusted_cache_mutation_denied": True,
+              "trusted_cache_promotion_denied": True,
+              "trusted_cache_quarantine_readable": False,
           }
           pathlib.Path(os.environ["RECEIPT_PATH"]).write_text(
               json.dumps(payload, indent=2, sort_keys=True) + "\n",
