@@ -131,6 +131,245 @@ jobs:
             echo "staging_dir_id=$(basename "$staging_dir")"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Adversarial immutable runtime boundary
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          expected_runtime="/srv/workspace-ci/research-engine/expanded-runtimes/qwen35-vllm-cu129-image-native-sampler-v3/f67ff9a26690c55930232c915e59e826e3cca2dd89012de9e35a852032b38f74"
+          expected_tree="b0cbb4efbe8673bdb421bad8036d29864bffe0687a9a654bbd95f54544659e63"
+          expected_manifest="f67ff9a26690c55930232c915e59e826e3cca2dd89012de9e35a852032b38f74"
+
+          [[ "${P5_EXPANDED_RUNTIME:-}" == "$expected_runtime" ]]
+          [[ "${P5_EXPANDED_RUNTIME_PYTHON:-}" == "$expected_runtime/bin/python" ]]
+          [[ "${P5_EXPANDED_RUNTIME_TREE_SHA256:-}" == "$expected_tree" ]]
+          [[ "${P5_EXPANDED_RUNTIME_MANIFEST_SHA256:-}" == "$expected_manifest" ]]
+          [[ -x "$P5_EXPANDED_RUNTIME_PYTHON" ]]
+
+          staging_dir="$(dirname "$XDG_CACHE_HOME")"
+          [[ "$HOME" == "$staging_dir/home" ]]
+          [[ "$HF_HOME" == "$staging_dir/huggingface" ]]
+          [[ "$TORCH_HOME" == "$staging_dir/torch" ]]
+          [[ "$TRITON_CACHE_DIR" == "$staging_dir/triton" ]]
+          [[ "$TORCHINDUCTOR_CACHE_DIR" == "$staging_dir/inductor" ]]
+          [[ "$CUDA_CACHE_PATH" == "$staging_dir/cuda" ]]
+          [[ "$VLLM_CONFIG_ROOT" == "$staging_dir/vllm-config" ]]
+          [[ "$VLLM_CACHE_ROOT" == "$staging_dir/vllm-cache" ]]
+          [[ "$PYTHONPYCACHEPREFIX" == "$staging_dir/pycache" ]]
+          [[ "${PYTHONDONTWRITEBYTECODE:-}" == "1" ]]
+          [[ "${VLLM_USE_FLASHINFER_SAMPLER:-}" == "0" ]]
+
+          mount_options="$(findmnt -T "$P5_EXPANDED_RUNTIME" -n -o OPTIONS)"
+          case ",$mount_options," in
+            *,ro,*) ;;
+            *)
+              echo "Expanded runtime mount is not read-only: $mount_options" >&2
+              exit 32
+              ;;
+          esac
+
+          "$P5_EXPANDED_RUNTIME_PYTHON" - <<'PY'
+          import errno
+          import importlib.metadata
+          import json
+          import os
+          import pathlib
+          import stat
+
+          runtime = pathlib.Path(os.environ["P5_EXPANDED_RUNTIME"])
+          python = pathlib.Path(os.environ["P5_EXPANDED_RUNTIME_PYTHON"])
+          receipt_path = (
+              pathlib.Path(os.environ["RUNNER_TEMP"])
+              / "lambda-ci-p5-runtime-adversarial-receipt.json"
+          )
+
+          expected = {
+              "runtime":
+                  "/srv/workspace-ci/research-engine/expanded-runtimes/"
+                  "qwen35-vllm-cu129-image-native-sampler-v3/"
+                  "f67ff9a26690c55930232c915e59e826e3cca2dd89012de9e35a852032b38f74",
+              "tree":
+                  "b0cbb4efbe8673bdb421bad8036d29864bffe0687a9a654bbd95f54544659e63",
+              "manifest":
+                  "f67ff9a26690c55930232c915e59e826e3cca2dd89012de9e35a852032b38f74",
+          }
+
+          record = {
+              "schema_version": 1,
+              "phase": "P5-expanded-runtime-adversarial",
+              "decision": "FAIL",
+              "runtime_path": str(runtime),
+              "runtime_python": str(python),
+              "tree_digest_sha256":
+                  os.environ["P5_EXPANDED_RUNTIME_TREE_SHA256"],
+              "manifest_identity_sha256":
+                  os.environ["P5_EXPANDED_RUNTIME_MANIFEST_SHA256"],
+              "model_weights_loaded": False,
+              "model_inference_performed": False,
+          }
+
+          def write_receipt():
+              receipt_path.write_text(
+                  json.dumps(record, indent=2, sort_keys=True) + "\n",
+                  encoding="utf-8",
+              )
+              print(json.dumps(record, indent=2, sort_keys=True))
+
+          try:
+              assert str(runtime) == expected["runtime"]
+              assert str(python) == expected["runtime"] + "/bin/python"
+              assert os.environ["P5_EXPANDED_RUNTIME_TREE_SHA256"] == expected["tree"]
+              assert (
+                  os.environ["P5_EXPANDED_RUNTIME_MANIFEST_SHA256"]
+                  == expected["manifest"]
+              )
+
+              import torch
+              import torchvision
+              import torchcodec
+              import vllm
+
+              from vllm.model_executor.models.qwen3_5 import (
+                  Qwen3_5ForConditionalGeneration,
+              )
+
+              assert importlib.metadata.version("vllm") == "0.30.0+cu129"
+              assert torch.__version__ == "2.13.0+cu129"
+              assert torch.version.cuda == "12.9"
+              assert importlib.metadata.version("torchvision") == "0.28.0+cu129"
+              assert importlib.metadata.version("torchcodec") == "0.16.0+cu129"
+              assert (
+                  Qwen3_5ForConditionalGeneration.__name__
+                  == "Qwen3_5ForConditionalGeneration"
+              )
+
+              target = pathlib.Path(vllm.__file__)
+              assert runtime in target.parents
+              target_stat = target.stat()
+
+              allowed_denials = {
+                  errno.EACCES,
+                  errno.EPERM,
+                  errno.EROFS,
+              }
+              mutation_results = {}
+
+              def expect_denied(name, operation):
+                  try:
+                      operation()
+                  except OSError as exc:
+                      mutation_results[name] = {
+                          "denied": True,
+                          "errno": exc.errno,
+                      }
+                      if exc.errno not in allowed_denials:
+                          raise
+                  else:
+                      mutation_results[name] = {
+                          "denied": False,
+                          "errno": None,
+                      }
+                      raise RuntimeError(
+                          f"runtime mutation unexpectedly permitted: {name}"
+                      )
+
+              expect_denied(
+                  "append_open",
+                  lambda: os.close(
+                      os.open(target, os.O_WRONLY | os.O_APPEND)
+                  ),
+              )
+              expect_denied(
+                  "chmod_same_mode",
+                  lambda: os.chmod(
+                      target,
+                      stat.S_IMODE(target_stat.st_mode),
+                  ),
+              )
+              expect_denied(
+                  "truncate_same_size",
+                  lambda: os.truncate(target, target_stat.st_size),
+              )
+
+              create_probe = target.parent / ".p5-runtime-create-probe"
+              expect_denied(
+                  "create_sibling",
+                  lambda: os.close(
+                      os.open(
+                          create_probe,
+                          os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                          0o600,
+                      )
+                  ),
+              )
+
+              rename_probe = target.with_name(
+                  target.name + ".p5-runtime-rename-probe"
+              )
+              try:
+                  os.rename(target, rename_probe)
+              except OSError as exc:
+                  mutation_results["rename"] = {
+                      "denied": True,
+                      "errno": exc.errno,
+                  }
+                  if exc.errno not in allowed_denials:
+                      raise
+              else:
+                  mutation_results["rename"] = {
+                      "denied": False,
+                      "errno": None,
+                  }
+                  try:
+                      os.rename(rename_probe, target)
+                  finally:
+                      raise RuntimeError(
+                          "runtime rename unexpectedly permitted"
+                      )
+
+              writable_roots = {
+                  "HOME": pathlib.Path(os.environ["HOME"]),
+                  "XDG_CACHE_HOME":
+                      pathlib.Path(os.environ["XDG_CACHE_HOME"]),
+                  "HF_HOME": pathlib.Path(os.environ["HF_HOME"]),
+                  "TORCH_HOME": pathlib.Path(os.environ["TORCH_HOME"]),
+                  "VLLM_CACHE_ROOT":
+                      pathlib.Path(os.environ["VLLM_CACHE_ROOT"]),
+              }
+
+              writable_results = {}
+              for name, root in writable_roots.items():
+                  root.mkdir(parents=True, exist_ok=True)
+                  probe = root / ".p5-write-probe"
+                  probe.write_text("ok\n", encoding="utf-8")
+                  probe.unlink()
+                  writable_results[name] = True
+
+              record.update(
+                  {
+                      "decision": "PASS",
+                      "vllm": importlib.metadata.version("vllm"),
+                      "torch": torch.__version__,
+                      "torch_cuda_runtime": torch.version.cuda,
+                      "torchvision":
+                          importlib.metadata.version("torchvision"),
+                      "torchcodec":
+                          importlib.metadata.version("torchcodec"),
+                      "qwen35_multimodal_class_import":
+                          Qwen3_5ForConditionalGeneration.__name__,
+                      "mutation_results": mutation_results,
+                      "job_local_write_results": writable_results,
+                      "candidate_runtime_mutation_denied": True,
+                      "shared_project_home_used": False,
+                  }
+              )
+              write_receipt()
+          except BaseException as exc:
+              record["failure_reason"] = f"{type(exc).__name__}: {exc}"
+              write_receipt()
+              raise
+          PY
+
       - name: Checkout exact candidate SHA
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -398,6 +637,8 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: lambda-ci-p5-gpu-autonomous-receipt
-          path: ${{ runner.temp }}/lambda-ci-p5-gpu-autonomous-receipt.json
+          path: |
+            ${{ runner.temp }}/lambda-ci-p5-runtime-adversarial-receipt.json
+            ${{ runner.temp }}/lambda-ci-p5-gpu-autonomous-receipt.json
           if-no-files-found: error
           retention-days: 7
