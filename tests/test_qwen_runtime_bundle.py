@@ -48,12 +48,39 @@ def test_freeze_parser_accepts_only_exact_pins_and_certified_vllm_url():
     assert direct["version"] == "0.30.0+cu129"
     assert direct["kind"] == "direct_https"
 
+    observed_local = bundle.parse_lock_line(
+        "vllm @ "
+        "file:///home/atrott/adamArchives/Adam/.research-engine/"
+        "residual-runtime-wheels/vllm-0.30.0-cu129/"
+        "vllm-0.30.0%2Bcu129-cp38-abi3-manylinux_2_28_x86_64.whl"
+        "#sha256="
+        "e98cb69659bfcfc849cf11ce0781a7161d40b02b51a6c3636924a5909f2aabcc"
+    )
+    assert observed_local["canonical_name"] == "vllm"
+    assert observed_local["version"] == "0.30.0+cu129"
+    assert observed_local["kind"] == "direct_file_certified"
+    assert observed_local["download_requirement"].startswith(
+        "vllm @ https://github.com/vllm-project/vllm/releases/"
+    )
+    assert bundle.EXPECTED_VLLM_WHEEL_SHA256 in (
+        observed_local["download_requirement"]
+    )
+
     for rejected in [
         "transformers",
         "foo>=1.0",
         "-e git+https://example.invalid/repo.git",
         "foo @ file:///tmp/foo.whl",
         "foo @ https://example.invalid/foo.whl",
+        (
+            "vllm @ file:///tmp/"
+            "vllm-0.30.0%2Bcu129-cp38-abi3-manylinux_2_28_x86_64.whl"
+            "#sha256=" + "0" * 64
+        ),
+        (
+            "vllm @ file:///tmp/vllm-wrong.whl#sha256="
+            + bundle.EXPECTED_VLLM_WHEEL_SHA256
+        ),
     ]:
         with pytest.raises(bundle.BundleError):
             bundle.parse_lock_line(rejected)
