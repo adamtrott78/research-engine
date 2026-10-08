@@ -81,7 +81,7 @@ jobs:
           job_dir="$(dirname "$runner_dir")"
           job_root="/srv/workspace-ci/research-engine/jobs"
           staging_root="/srv/workspace-ci/research-engine/staging-cache"
-          staging_dir="$XDG_CACHE_HOME"
+          staging_dir="$(dirname "$XDG_CACHE_HOME")"
 
           [[ "$job_dir" == "$job_root"/p5-* ]]
           [[ "$staging_dir" == "$staging_root"/p5-* ]]
