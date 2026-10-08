@@ -213,7 +213,7 @@ print(json.dumps({
     return value
 
 
-def wheel_metadata(path: pathlib.Path) -> tuple[str, str]:
+def wheel_metadata(path: pathlib.Path) -> dict[str, Any]:
     try:
         with zipfile.ZipFile(path) as archive:
             candidates = [
@@ -235,11 +235,33 @@ def wheel_metadata(path: pathlib.Path) -> tuple[str, str]:
     version = message.get("Version")
     if not name or not version:
         raise BundleError(f"wheel METADATA missing Name/Version: {path.name}")
-    return str(name), str(version)
+
+    license_classifiers = [
+        value
+        for value in message.get_all("Classifier", [])
+        if value.startswith("License ::")
+    ]
+    return {
+        "name": str(name),
+        "version": str(version),
+        "license_expression": (
+            str(message.get("License-Expression"))
+            if message.get("License-Expression")
+            else None
+        ),
+        "license": (
+            str(message.get("License")).strip()
+            if message.get("License") and str(message.get("License")).strip()
+            else None
+        ),
+        "license_classifiers": sorted(license_classifiers),
+    }
 
 
 def artifact_record(path: pathlib.Path) -> dict[str, Any]:
-    name, version = wheel_metadata(path)
+    metadata = wheel_metadata(path)
+    name = metadata["name"]
+    version = metadata["version"]
     return {
         "filename": path.name,
         "name": name,
@@ -247,6 +269,11 @@ def artifact_record(path: pathlib.Path) -> dict[str, Any]:
         "version": version,
         "size": path.stat().st_size,
         "sha256": sha256_file(path),
+        "license": {
+            "expression": metadata["license_expression"],
+            "declared": metadata["license"],
+            "classifiers": metadata["license_classifiers"],
+        },
     }
 
 
@@ -417,6 +444,25 @@ def build_bundle(runtime: pathlib.Path, output: pathlib.Path) -> dict[str, Any]:
     requirements_path = output / "requirements.offline.txt"
     write_offline_requirements(requirements_path, entries, wheels)
 
+    license_inventory = {
+        "packages_with_expression": sum(
+            1 for item in wheels if item["license"]["expression"]
+        ),
+        "packages_with_declared_license": sum(
+            1 for item in wheels if item["license"]["declared"]
+        ),
+        "packages_with_license_classifier": sum(
+            1 for item in wheels if item["license"]["classifiers"]
+        ),
+        "packages_without_any_license_metadata": sorted(
+            item["canonical_name"]
+            for item in wheels
+            if not item["license"]["expression"]
+            and not item["license"]["declared"]
+            and not item["license"]["classifiers"]
+        ),
+    }
+
     manifest = {
         "schema_version": 1,
         "runtime_contract_version": RUNTIME_CONTRACT,
@@ -430,6 +476,8 @@ def build_bundle(runtime: pathlib.Path, output: pathlib.Path) -> dict[str, Any]:
         "artifacts": wheels,
         "artifact_count": len(wheels),
         "artifact_bytes": sum(item["size"] for item in wheels),
+        "license_inventory": license_inventory,
+        "license_review_completed": False,
         "offline_requirements_sha256": sha256_file(requirements_path),
         "model_weights_included": False,
         "scientific_state_included": False,
