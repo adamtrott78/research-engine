@@ -40,7 +40,8 @@
       "vllm": "https://github.com/vllm-project/vllm/releases/download/v0.30.0/vllm-0.30.0%2Bcu129-cp38-abi3-manylinux_2_28_x86_64.whl"
     },
     "requirement_policy": "exact installed freeze only; reject unpinned, VCS, editable, local-file, and unknown direct-URL requirements",
-    "dependency_resolution": "download each already-pinned freeze entry with --no-deps and wheel-only policy"
+    "dependency_resolution": "download each already-pinned freeze entry with --no-deps and wheel-only policy",
+    "license_inventory": "Extract License-Expression, License, and License classifiers from every downloaded wheel METADATA; promotion remains blocked until the trusted operator completes the package-set usage/license review."
   },
   "promotion": {
     "trusted_cache_manager": "lambda-ci-trusted-cache-v1",
@@ -48,6 +49,7 @@
       "all outer payload entries are regular files",
       "bundle manifest hashes every wheel",
       "vLLM release wheel hash matches certified evidence",
+      "bundle manifest contains package-level license metadata inventory and promotion descriptor is not marked reviewed until that inventory is reviewed",
       "candidate promotion authority remains false",
       "promoted object is read-only and offline-complete"
     ]
