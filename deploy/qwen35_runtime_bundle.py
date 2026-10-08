@@ -104,18 +104,31 @@ def runtime_freeze(runtime: pathlib.Path) -> tuple[list[str], str, str]:
 def parse_lock_line(line: str) -> dict[str, str]:
     match = PIN_RE.fullmatch(line)
     if match:
-        return {
-            "name": match.group(1),
-            "canonical_name": canonical_name(match.group(1)),
+        name, version = match.groups()
+        entry = {
+            "name": name,
+            "canonical_name": canonical_name(name),
             "kind": "pinned",
-            "version": match.group(2),
+            "version": version,
             "requirement": line,
         }
+        if entry["canonical_name"] == "vllm":
+            if version != EXPECTED_VLLM_DIST:
+                raise BundleError(f"unexpected pinned vLLM version: {line}")
+            entry["download_requirement"] = (
+                f"vllm @ {VLLM_WHEEL_URL}"
+                f"#sha256={EXPECTED_VLLM_WHEEL_SHA256}"
+            )
+        return entry
 
     match = DIRECT_RE.fullmatch(line)
     if match:
         name, url = match.groups()
-        if canonical_name(name) != "vllm" or url != VLLM_WHEEL_URL:
+        allowed_vllm_urls = {
+            VLLM_WHEEL_URL,
+            f"{VLLM_WHEEL_URL}#sha256={EXPECTED_VLLM_WHEEL_SHA256}",
+        }
+        if canonical_name(name) != "vllm" or url not in allowed_vllm_urls:
             raise BundleError(
                 "unsupported direct requirement; only the exact pinned vLLM "
                 f"release wheel is authorized: {line}"
@@ -127,6 +140,10 @@ def parse_lock_line(line: str) -> dict[str, str]:
             "version": EXPECTED_VLLM_DIST,
             "url": url,
             "requirement": line,
+            "download_requirement": (
+                f"vllm @ {VLLM_WHEEL_URL}"
+                f"#sha256={EXPECTED_VLLM_WHEEL_SHA256}"
+            ),
         }
 
     raise BundleError(f"unsupported/unpinned freeze requirement: {line}")
@@ -377,7 +394,7 @@ def build_bundle(runtime: pathlib.Path, output: pathlib.Path) -> dict[str, Any]:
             PYPI_INDEX,
             "--extra-index-url",
             PYTORCH_CU129_INDEX,
-            entry["requirement"],
+            entry.get("download_requirement", entry["requirement"]),
         ]
         print(
             f"BUNDLE_DOWNLOAD {index}/{len(entries)} "
