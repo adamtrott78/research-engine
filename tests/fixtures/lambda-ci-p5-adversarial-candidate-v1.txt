@@ -1,3 +1,4 @@
 Lambda CI gpu-small immutable-runtime adversarial candidate v1
 Purpose: exercise the trusted default-branch adversarial workflow against an exact PR head SHA.
 No model weights or inference are authorized by this candidate.
+Attempt: verifier-fix acceptance run.
