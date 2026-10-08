@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "contract_id": "qwen35-runtime-dependency-bundle-v1",
+  "status": "DESIGNED_FOR_TRUSTED_CACHE_GATE",
+  "owning_runtime_contract": "qwen35-vllm-cu129-image-native-sampler-v3",
+  "source_runtime": {
+    "path": "~/.research-engine/residual-runtimes/qwen3.5-4b-vllm-0.30.0",
+    "freeze_line_count": 196,
+    "freeze_sha256": "198d90f866d032ea8f747dd9d28a1fe5f5ef18c02e5eb64b850124e77a2744d0"
+  },
+  "certified_core": {
+    "vllm_distribution": "0.30.0+cu129",
+    "vllm_release_wheel_sha256": "e98cb69659bfcfc849cf11ce0781a7161d40b02b51a6c3636924a5909f2aabcc",
+    "torch": "2.13.0+cu129",
+    "torch_cuda_runtime": "12.9",
+    "torchvision": "0.28.0+cu129",
+    "torchcodec": "0.16.0+cu129",
+    "sampling_backend": "vllm_native",
+    "VLLM_USE_FLASHINFER_SAMPLER": "0"
+  },
+  "representation": {
+    "artifact_kind": "runtime",
+    "bundle_format": "python-wheelhouse-offline-v1",
+    "persistent_live_venv": false,
+    "wheel_only": true,
+    "source_distributions_allowed": false,
+    "symlinks_allowed": false,
+    "model_weights_included": false,
+    "scientific_state_included": false,
+    "credentials_included": false
+  },
+  "acquisition": {
+    "build_owner": "human-authorized trusted acquisition step",
+    "candidate_build_authority": false,
+    "primary_index": "https://pypi.org/simple",
+    "extra_indexes": [
+      "https://download.pytorch.org/whl/cu129"
+    ],
+    "exact_direct_artifacts": {
+      "vllm": "https://github.com/vllm-project/vllm/releases/download/v0.30.0/vllm-0.30.0%2Bcu129-cp38-abi3-manylinux_2_28_x86_64.whl"
+    },
+    "requirement_policy": "exact installed freeze only; reject unpinned, VCS, editable, local-file, and unknown direct-URL requirements",
+    "dependency_resolution": "download each already-pinned freeze entry with --no-deps and wheel-only policy"
+  },
+  "promotion": {
+    "trusted_cache_manager": "lambda-ci-trusted-cache-v1",
+    "required_properties": [
+      "all outer payload entries are regular files",
+      "bundle manifest hashes every wheel",
+      "vLLM release wheel hash matches certified evidence",
+      "candidate promotion authority remains false",
+      "promoted object is read-only and offline-complete"
+    ]
+  },
+  "reconstruction": {
+    "destination": "ephemeral per-job venv only",
+    "network": "forbidden",
+    "pip_flags": [
+      "--no-index",
+      "--find-links=<trusted-wheelhouse>",
+      "--require-hashes"
+    ],
+    "package_cache": "ephemeral and destroyed",
+    "verify_before_model_use": [
+      "host Python version/SOABI/machine matches bundle manifest",
+      "vLLM/Torch/TorchVision/TorchCodec versions match certified identity",
+      "Torch CUDA runtime is 12.9",
+      "VLLM_USE_FLASHINFER_SAMPLER=0",
+      "separate gpu-small gate repeats multimodal import and CUDA allocation without model inference"
+    ],
+    "cleanup": "ephemeral venv destroyed with job workspace"
+  },
+  "exclusions": [
+    "do not promote the existing live venv",
+    "do not include Qwen model weights in the runtime object",
+    "do not enable model-eval while building/promoting the bundle",
+    "do not infer or materialize scientific state during bundle acceptance"
+  ]
+}
