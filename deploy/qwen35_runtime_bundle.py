@@ -21,6 +21,7 @@ import subprocess
 import sys
 import sysconfig
 import tempfile
+import urllib.parse
 import zipfile
 from typing import Any
 
@@ -40,9 +41,12 @@ VLLM_WHEEL_URL = (
     "https://github.com/vllm-project/vllm/releases/download/v0.30.0/"
     "vllm-0.30.0%2Bcu129-cp38-abi3-manylinux_2_28_x86_64.whl"
 )
+VLLM_WHEEL_BASENAME = (
+    "vllm-0.30.0+cu129-cp38-abi3-manylinux_2_28_x86_64.whl"
+)
 
 PIN_RE = re.compile(r"^([A-Za-z0-9_.-]+)==([^\s]+)$")
-DIRECT_RE = re.compile(r"^([A-Za-z0-9_.-]+)\s+@\s+(https://\S+)$")
+DIRECT_RE = re.compile(r"^([A-Za-z0-9_.-]+)\s+@\s+(\S+)$")
 
 
 class BundleError(RuntimeError):
@@ -124,27 +128,61 @@ def parse_lock_line(line: str) -> dict[str, str]:
     match = DIRECT_RE.fullmatch(line)
     if match:
         name, url = match.groups()
-        allowed_vllm_urls = {
-            VLLM_WHEEL_URL,
-            f"{VLLM_WHEEL_URL}#sha256={EXPECTED_VLLM_WHEEL_SHA256}",
-        }
-        if canonical_name(name) != "vllm" or url not in allowed_vllm_urls:
+        if canonical_name(name) != "vllm":
             raise BundleError(
                 "unsupported direct requirement; only the exact pinned vLLM "
                 f"release wheel is authorized: {line}"
             )
-        return {
-            "name": name,
-            "canonical_name": canonical_name(name),
-            "kind": "direct_https",
-            "version": EXPECTED_VLLM_DIST,
-            "url": url,
-            "requirement": line,
-            "download_requirement": (
-                f"vllm @ {VLLM_WHEEL_URL}"
-                f"#sha256={EXPECTED_VLLM_WHEEL_SHA256}"
-            ),
+
+        parsed = urllib.parse.urlparse(url)
+        canonical_download = (
+            f"vllm @ {VLLM_WHEEL_URL}"
+            f"#sha256={EXPECTED_VLLM_WHEEL_SHA256}"
+        )
+
+        allowed_https_urls = {
+            VLLM_WHEEL_URL,
+            f"{VLLM_WHEEL_URL}#sha256={EXPECTED_VLLM_WHEEL_SHA256}",
         }
+        if url in allowed_https_urls:
+            return {
+                "name": name,
+                "canonical_name": "vllm",
+                "kind": "direct_https",
+                "version": EXPECTED_VLLM_DIST,
+                "url": url,
+                "requirement": line,
+                "download_requirement": canonical_download,
+            }
+
+        if parsed.scheme == "file":
+            basename = pathlib.PurePosixPath(
+                urllib.parse.unquote(parsed.path)
+            ).name
+            fragment = urllib.parse.parse_qs(parsed.fragment)
+            exact_hash = fragment.get("sha256") == [
+                EXPECTED_VLLM_WHEEL_SHA256
+            ]
+            local_authority_ok = parsed.netloc in {"", "localhost"}
+            if (
+                basename == VLLM_WHEEL_BASENAME
+                and exact_hash
+                and local_authority_ok
+            ):
+                return {
+                    "name": name,
+                    "canonical_name": "vllm",
+                    "kind": "direct_file_certified",
+                    "version": EXPECTED_VLLM_DIST,
+                    "url": url,
+                    "requirement": line,
+                    "download_requirement": canonical_download,
+                }
+
+        raise BundleError(
+            "unsupported direct requirement; only the exact certified vLLM "
+            f"wheel identity is authorized: {line}"
+        )
 
     raise BundleError(f"unsupported/unpinned freeze requirement: {line}")
 
