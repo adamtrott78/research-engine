@@ -24,11 +24,22 @@ def load_module():
     return module
 
 
-def make_wheel(path: Path, *, name: str, version: str):
+def make_wheel(
+    path: Path,
+    *,
+    name: str,
+    version: str,
+    vendored_metadata: bool = False,
+):
     dist = name.replace("-", "_")
     metadata = f"Metadata-Version: 2.1\nName: {name}\nVersion: {version}\n\n"
     with zipfile.ZipFile(path, "w") as archive:
         archive.writestr(f"{dist}-{version}.dist-info/METADATA", metadata)
+        if vendored_metadata:
+            archive.writestr(
+                f"{dist}/_vendor/example-1.0.0.dist-info/METADATA",
+                "Metadata-Version: 2.1\nName: example\nVersion: 1.0.0\n\n",
+            )
 
 
 def test_freeze_parser_accepts_only_exact_pins_and_certified_vllm_url():
@@ -90,6 +101,21 @@ def test_lock_rejects_duplicate_normalized_names():
     bundle = load_module()
     with pytest.raises(bundle.BundleError, match="duplicate"):
         bundle.parse_lock(["foo_bar==1.0", "foo-bar==1.0"])
+
+
+def test_wheel_metadata_ignores_nested_vendored_dist_info(tmp_path: Path):
+    bundle = load_module()
+    wheel = tmp_path / "setuptools-78.1.0-py3-none-any.whl"
+    make_wheel(
+        wheel,
+        name="setuptools",
+        version="78.1.0",
+        vendored_metadata=True,
+    )
+
+    metadata = bundle.wheel_metadata(wheel)
+    assert metadata["name"] == "setuptools"
+    assert metadata["version"] == "78.1.0"
 
 
 def test_wheel_metadata_and_lock_verification_are_exact(tmp_path: Path):

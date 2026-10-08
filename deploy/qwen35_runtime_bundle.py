@@ -254,15 +254,19 @@ print(json.dumps({
 def wheel_metadata(path: pathlib.Path) -> dict[str, Any]:
     try:
         with zipfile.ZipFile(path) as archive:
-            candidates = [
-                name
-                for name in archive.namelist()
-                if name.endswith(".dist-info/METADATA")
-            ]
+            candidates = []
+            for name in archive.namelist():
+                parts = pathlib.PurePosixPath(name).parts
+                if (
+                    len(parts) == 2
+                    and parts[0].endswith(".dist-info")
+                    and parts[1] == "METADATA"
+                ):
+                    candidates.append(name)
             if len(candidates) != 1:
                 raise BundleError(
-                    f"wheel must contain exactly one dist-info METADATA: "
-                    f"{path.name}: {candidates}"
+                    "wheel must contain exactly one root-level "
+                    f"dist-info/METADATA: {path.name}: {candidates}"
                 )
             raw = archive.read(candidates[0])
     except zipfile.BadZipFile as exc:
