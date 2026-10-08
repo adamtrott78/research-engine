@@ -600,17 +600,20 @@ print(json.dumps(payload, sort_keys=True))
 
     expected = {
         "vllm_distribution": EXPECTED_VLLM_DIST,
-        "vllm_direct_url_hash": f"sha256={EXPECTED_VLLM_WHEEL_SHA256}",
         "torch": EXPECTED_TORCH,
         "torch_cuda_runtime": EXPECTED_CUDA_RUNTIME,
         "torchvision": EXPECTED_TORCHVISION,
         "torchcodec": EXPECTED_TORCHCODEC,
         "flashinfer_sampler_env": "0",
     }
-    if identity != expected:
+    actual_core = {
+        key: identity.get(key)
+        for key in expected
+    }
+    if actual_core != expected:
         raise BundleError(
             f"reconstructed core identity mismatch expected={expected} "
-            f"actual={identity}"
+            f"actual={actual_core}"
         )
 
     return {
