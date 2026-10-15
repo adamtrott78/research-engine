@@ -65,7 +65,8 @@ jobs:
         run: |
           set -Eeuo pipefail
 
-          expected_model="/srv/workspace-ci/research-engine/trusted-cache/objects/model/sha256/6e28e2560c07e7dabab92c55dbfb6941d5a7a75c8068bdc7a98115d8dc62072c"
+          expected_model_root="/srv/workspace-ci/research-engine/trusted-cache/objects/model/sha256/6e28e2560c07e7dabab92c55dbfb6941d5a7a75c8068bdc7a98115d8dc62072c"
+          expected_model="$expected_model_root/payload"
           expected_runtime="/srv/workspace-ci/research-engine/expanded-runtimes/qwen35-vllm-cu129-image-native-sampler-v3/f67ff9a26690c55930232c915e59e826e3cca2dd89012de9e35a852032b38f74"
 
           [[ "$(id -un)" == "ci-research-engine" ]]
@@ -73,8 +74,11 @@ jobs:
           [[ "${P5_MODEL_REPOSITORY:-}" == "Qwen/Qwen3.5-4B" ]]
           [[ "${P5_MODEL_REVISION:-}" == "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a" ]]
           [[ "${P5_MODEL_OBJECT_ID:-}" == "6e28e2560c07e7dabab92c55dbfb6941d5a7a75c8068bdc7a98115d8dc62072c" ]]
+          [[ "${P5_MODEL_OBJECT_ROOT:-}" == "$expected_model_root" ]]
           [[ "${P5_MODEL_PATH:-}" == "$expected_model" ]]
+          [[ -d "$P5_MODEL_OBJECT_ROOT" ]]
           [[ -d "$P5_MODEL_PATH" ]]
+          [[ -f "$P5_MODEL_OBJECT_ROOT/receipt.json" ]]
 
           [[ "${P5_EXPANDED_RUNTIME:-}" == "$expected_runtime" ]]
           [[ "${P5_EXPANDED_RUNTIME_PYTHON:-}" == "$expected_runtime/bin/python" ]]
@@ -168,6 +172,7 @@ jobs:
               "model_repository": os.environ["P5_MODEL_REPOSITORY"],
               "model_revision": os.environ["P5_MODEL_REVISION"],
               "model_object_id": os.environ["P5_MODEL_OBJECT_ID"],
+              "model_object_root": os.environ["P5_MODEL_OBJECT_ROOT"],
               "model_path": str(model_path),
               "runtime_id": expected_runtime,
               "runtime_tree_sha256": os.environ[
