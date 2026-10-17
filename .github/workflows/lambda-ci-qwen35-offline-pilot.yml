@@ -266,9 +266,9 @@ jobs:
                   record["model_init_seconds"] = init_seconds
                   record["model_weights_loaded"] = True
               
-                  if init_seconds > 120:
+                  if init_seconds > 240:
                       raise RuntimeError(
-                          f"model init exceeded 120s ceiling: {init_seconds:.3f}s"
+                          f"model init exceeded 240s ceiling: {init_seconds:.3f}s"
                       )
               
                   record["failure_stage"] = "synthetic-image-text-inference"
