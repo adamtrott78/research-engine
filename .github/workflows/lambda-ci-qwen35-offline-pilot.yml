@@ -131,9 +131,10 @@ jobs:
             exit 40
           fi
 
-          "$P5_EXPANDED_RUNTIME_PYTHON" - <<'PY'
+          pilot_script="$RUNNER_TEMP/qwen35_offline_pilot.py"
+          cat > "$pilot_script" <<'PY'
           from __future__ import annotations
-
+          
           import json
           import os
           import pathlib
@@ -142,204 +143,212 @@ jobs:
           import threading
           import time
           import traceback
-
+          
           from PIL import Image
           from vllm import LLM, SamplingParams
           import vllm
-
-          receipt_path = (
-              pathlib.Path(os.environ["RUNNER_TEMP"])
-              / "lambda-ci-qwen35-offline-pilot-receipt.json"
-          )
-
-          model_object_root = pathlib.Path(os.environ["P5_MODEL_OBJECT_ROOT"])
-          model_path = pathlib.Path(os.environ["P5_MODEL_PATH"])
-          expected_model_id = "6e28e2560c07e7dabab92c55dbfb6941d5a7a75c8068bdc7a98115d8dc62072c"
-          expected_revision = "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a"
-          expected_runtime = "qwen35-vllm-cu129-image-native-sampler-v3"
-          expected_gpu = "GPU-a333e68b-d1dc-6d25-1678-97b527bf55ea"
-
-          record = {
-              "schema_version": 1,
-              "phase": "qwen35-offline-pilot",
-              "decision": "FAIL",
-              "failure_stage": "preflight",
-              "candidate_sha": os.environ["EXPECTED_SHA"],
-              "pr_number": int(os.environ["PR_NUMBER"]),
-              "actor": os.environ["ACTOR"],
-              "runner_name": os.environ["RUNNER_NAME_VALUE"],
-              "workload_class": "model-eval-single-gpu",
-              "model_id": os.environ["P5_MODEL_ID"],
-              "model_repository": os.environ["P5_MODEL_REPOSITORY"],
-              "model_revision": os.environ["P5_MODEL_REVISION"],
-              "model_object_id": os.environ["P5_MODEL_OBJECT_ID"],
-              "model_object_root": str(model_object_root),
-              "model_path": str(model_path),
-              "runtime_id": expected_runtime,
-              "runtime_tree_sha256": os.environ[
-                  "P5_EXPANDED_RUNTIME_TREE_SHA256"
-              ],
-              "runtime_manifest_sha256": os.environ[
-                  "P5_EXPANDED_RUNTIME_MANIFEST_SHA256"
-              ],
-              "gpu_uuid": os.environ["P5_GPU_TARGET_UUID"],
-              "cuda_visible_devices": os.environ["CUDA_VISIBLE_DEVICES"],
-              "synthetic_input": True,
-              "scientific_input_used": False,
-              "scientific_state_materialized": False,
-              "production_routing_changed": False,
-              "model_server_persistent_after_job": False,
-              "public_model_acquisition": False,
-              "model_weights_loaded": False,
-              "model_inference_performed": False,
-          }
-
-          def write_receipt() -> None:
-              receipt_path.write_text(
-                  json.dumps(record, indent=2, sort_keys=True) + "\n",
-                  encoding="utf-8",
+          
+          
+          def main() -> None:
+              receipt_path = (
+                  pathlib.Path(os.environ["RUNNER_TEMP"])
+                  / "lambda-ci-qwen35-offline-pilot-receipt.json"
               )
-              print(json.dumps(record, indent=2, sort_keys=True))
-
-          stop_sampler = threading.Event()
-          peak_gpu_mib = 0
-
-          def sample_gpu() -> None:
-              nonlocal_peak = {"value": 0}
-              while not stop_sampler.is_set():
-                  try:
-                      raw = subprocess.check_output(
-                          [
-                              "nvidia-smi",
-                              "--query-gpu=uuid,memory.used",
-                              "--format=csv,noheader,nounits",
-                          ],
-                          text=True,
-                          stderr=subprocess.DEVNULL,
-                          timeout=3,
+              
+              model_object_root = pathlib.Path(os.environ["P5_MODEL_OBJECT_ROOT"])
+              model_path = pathlib.Path(os.environ["P5_MODEL_PATH"])
+              expected_model_id = "6e28e2560c07e7dabab92c55dbfb6941d5a7a75c8068bdc7a98115d8dc62072c"
+              expected_revision = "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a"
+              expected_runtime = "qwen35-vllm-cu129-image-native-sampler-v3"
+              expected_gpu = "GPU-a333e68b-d1dc-6d25-1678-97b527bf55ea"
+              
+              record = {
+                  "schema_version": 1,
+                  "phase": "qwen35-offline-pilot",
+                  "decision": "FAIL",
+                  "failure_stage": "preflight",
+                  "candidate_sha": os.environ["EXPECTED_SHA"],
+                  "pr_number": int(os.environ["PR_NUMBER"]),
+                  "actor": os.environ["ACTOR"],
+                  "runner_name": os.environ["RUNNER_NAME_VALUE"],
+                  "workload_class": "model-eval-single-gpu",
+                  "model_id": os.environ["P5_MODEL_ID"],
+                  "model_repository": os.environ["P5_MODEL_REPOSITORY"],
+                  "model_revision": os.environ["P5_MODEL_REVISION"],
+                  "model_object_id": os.environ["P5_MODEL_OBJECT_ID"],
+                  "model_object_root": str(model_object_root),
+                  "model_path": str(model_path),
+                  "runtime_id": expected_runtime,
+                  "runtime_tree_sha256": os.environ[
+                      "P5_EXPANDED_RUNTIME_TREE_SHA256"
+                  ],
+                  "runtime_manifest_sha256": os.environ[
+                      "P5_EXPANDED_RUNTIME_MANIFEST_SHA256"
+                  ],
+                  "gpu_uuid": os.environ["P5_GPU_TARGET_UUID"],
+                  "cuda_visible_devices": os.environ["CUDA_VISIBLE_DEVICES"],
+                  "synthetic_input": True,
+                  "scientific_input_used": False,
+                  "scientific_state_materialized": False,
+                  "production_routing_changed": False,
+                  "model_server_persistent_after_job": False,
+                  "public_model_acquisition": False,
+                  "model_weights_loaded": False,
+                  "model_inference_performed": False,
+              }
+              
+              def write_receipt() -> None:
+                  receipt_path.write_text(
+                      json.dumps(record, indent=2, sort_keys=True) + "\n",
+                      encoding="utf-8",
+                  )
+                  print(json.dumps(record, indent=2, sort_keys=True))
+              
+              stop_sampler = threading.Event()
+              peak_gpu_mib = 0
+              
+              def sample_gpu() -> None:
+                  nonlocal_peak = {"value": 0}
+                  while not stop_sampler.is_set():
+                      try:
+                          raw = subprocess.check_output(
+                              [
+                                  "nvidia-smi",
+                                  "--query-gpu=uuid,memory.used",
+                                  "--format=csv,noheader,nounits",
+                              ],
+                              text=True,
+                              stderr=subprocess.DEVNULL,
+                              timeout=3,
+                          )
+                          for line in raw.splitlines():
+                              parts = [p.strip() for p in line.split(",")]
+                              if len(parts) == 2 and parts[0] == expected_gpu:
+                                  nonlocal_peak["value"] = max(
+                                      nonlocal_peak["value"],
+                                      int(parts[1]),
+                                  )
+                      except Exception:
+                          pass
+                      stop_sampler.wait(0.25)
+                  record["peak_gpu_memory_mib"] = nonlocal_peak["value"]
+              
+              sampler = threading.Thread(target=sample_gpu, daemon=True)
+              sampler.start()
+              
+              try:
+                  assert model_object_root.is_dir()
+                  assert model_object_root.name == expected_model_id
+                  assert model_path.is_dir()
+                  assert model_path == model_object_root / "payload"
+                  assert os.environ["P5_MODEL_REVISION"] == expected_revision
+                  assert os.environ["P5_GPU_TARGET_UUID"] == expected_gpu
+                  assert os.environ["HF_HUB_OFFLINE"] == "1"
+                  assert os.environ["TRANSFORMERS_OFFLINE"] == "1"
+              
+                  record["failure_stage"] = "model-init"
+                  init_started = time.perf_counter()
+              
+                  llm = LLM(
+                      model=str(model_path),
+                      tensor_parallel_size=1,
+                      dtype="bfloat16",
+                      max_model_len=4096,
+                      max_num_seqs=1,
+                      gpu_memory_utilization=0.65,
+                      limit_mm_per_prompt={"image": 1},
+                      trust_remote_code=False,
+                      disable_log_stats=True,
+                      mm_processor_cache_gb=0.25,
+                  )
+              
+                  init_seconds = time.perf_counter() - init_started
+                  record["model_init_seconds"] = init_seconds
+                  record["model_weights_loaded"] = True
+              
+                  if init_seconds > 120:
+                      raise RuntimeError(
+                          f"model init exceeded 120s ceiling: {init_seconds:.3f}s"
                       )
-                      for line in raw.splitlines():
-                          parts = [p.strip() for p in line.split(",")]
-                          if len(parts) == 2 and parts[0] == expected_gpu:
-                              nonlocal_peak["value"] = max(
-                                  nonlocal_peak["value"],
-                                  int(parts[1]),
-                              )
-                  except Exception:
-                      pass
-                  stop_sampler.wait(0.25)
-              record["peak_gpu_memory_mib"] = nonlocal_peak["value"]
-
-          sampler = threading.Thread(target=sample_gpu, daemon=True)
-          sampler.start()
-
-          try:
-              assert model_object_root.is_dir()
-              assert model_object_root.name == expected_model_id
-              assert model_path.is_dir()
-              assert model_path == model_object_root / "payload"
-              assert os.environ["P5_MODEL_REVISION"] == expected_revision
-              assert os.environ["P5_GPU_TARGET_UUID"] == expected_gpu
-              assert os.environ["HF_HUB_OFFLINE"] == "1"
-              assert os.environ["TRANSFORMERS_OFFLINE"] == "1"
-
-              record["failure_stage"] = "model-init"
-              init_started = time.perf_counter()
-
-              llm = LLM(
-                  model=str(model_path),
-                  tensor_parallel_size=1,
-                  dtype="bfloat16",
-                  max_model_len=4096,
-                  max_num_seqs=1,
-                  gpu_memory_utilization=0.65,
-                  limit_mm_per_prompt={"image": 1},
-                  trust_remote_code=False,
-                  disable_log_stats=True,
-                  mm_processor_cache_gb=0.25,
-              )
-
-              init_seconds = time.perf_counter() - init_started
-              record["model_init_seconds"] = init_seconds
-              record["model_weights_loaded"] = True
-
-              if init_seconds > 120:
-                  raise RuntimeError(
-                      f"model init exceeded 120s ceiling: {init_seconds:.3f}s"
+              
+                  record["failure_stage"] = "synthetic-image-text-inference"
+                  image = Image.new("RGB", (64, 64), (0, 128, 255))
+                  messages = [
+                      {
+                          "role": "user",
+                          "content": [
+                              {
+                                  "type": "image_pil",
+                                  "image_pil": image,
+                              },
+                              {
+                                  "type": "text",
+                                  "text": (
+                                      "This is a deterministic synthetic CI image. "
+                                      "In one short sentence, describe its dominant color."
+                                  ),
+                              },
+                          ],
+                      }
+                  ]
+                  sampling = SamplingParams(
+                      temperature=0.0,
+                      top_p=1.0,
+                      seed=0,
+                      max_tokens=32,
                   )
-
-              record["failure_stage"] = "synthetic-image-text-inference"
-              image = Image.new("RGB", (64, 64), (0, 128, 255))
-              messages = [
-                  {
-                      "role": "user",
-                      "content": [
-                          {
-                              "type": "image_pil",
-                              "image_pil": image,
-                          },
-                          {
-                              "type": "text",
-                              "text": (
-                                  "This is a deterministic synthetic CI image. "
-                                  "In one short sentence, describe its dominant color."
-                              ),
-                          },
-                      ],
-                  }
-              ]
-              sampling = SamplingParams(
-                  temperature=0.0,
-                  top_p=1.0,
-                  seed=0,
-                  max_tokens=32,
-              )
-
-              inference_started = time.perf_counter()
-              outputs = llm.chat(
-                  messages,
-                  sampling_params=sampling,
-                  use_tqdm=False,
-                  chat_template_kwargs={"enable_thinking": False},
-              )
-              inference_seconds = time.perf_counter() - inference_started
-
-              generated = outputs[0].outputs[0]
-              generated_text = generated.text.strip()
-              if not generated_text:
-                  raise RuntimeError("synthetic multimodal inference returned empty text")
-              if inference_seconds > 60:
-                  raise RuntimeError(
-                      "synthetic inference exceeded 60s ceiling: "
-                      f"{inference_seconds:.3f}s"
+              
+                  inference_started = time.perf_counter()
+                  outputs = llm.chat(
+                      messages,
+                      sampling_params=sampling,
+                      use_tqdm=False,
+                      chat_template_kwargs={"enable_thinking": False},
                   )
-
-              record.update(
-                  {
-                      "decision": "PASS",
-                      "failure_stage": None,
-                      "model_inference_performed": True,
-                      "inference_calls": 1,
-                      "input_modalities": ["image", "text"],
-                      "generated_text": generated_text,
-                      "output_tokens": len(generated.token_ids),
-                      "inference_seconds": inference_seconds,
-                      "vllm_version": getattr(vllm, "__version__", "unknown"),
-                      "peak_process_rss_mib": (
-                          resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-                          / 1024.0
-                      ),
-                  }
-              )
-          except BaseException as exc:
-              record["failure_reason"] = f"{type(exc).__name__}: {exc}"
-              record["traceback"] = traceback.format_exc(limit=12)
-              raise
-          finally:
-              stop_sampler.set()
-              sampler.join(timeout=3)
-              write_receipt()
+                  inference_seconds = time.perf_counter() - inference_started
+              
+                  generated = outputs[0].outputs[0]
+                  generated_text = generated.text.strip()
+                  if not generated_text:
+                      raise RuntimeError("synthetic multimodal inference returned empty text")
+                  if inference_seconds > 60:
+                      raise RuntimeError(
+                          "synthetic inference exceeded 60s ceiling: "
+                          f"{inference_seconds:.3f}s"
+                      )
+              
+                  record.update(
+                      {
+                          "decision": "PASS",
+                          "failure_stage": None,
+                          "model_inference_performed": True,
+                          "inference_calls": 1,
+                          "input_modalities": ["image", "text"],
+                          "generated_text": generated_text,
+                          "output_tokens": len(generated.token_ids),
+                          "inference_seconds": inference_seconds,
+                          "vllm_version": getattr(vllm, "__version__", "unknown"),
+                          "peak_process_rss_mib": (
+                              resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+                              / 1024.0
+                          ),
+                      }
+                  )
+              except BaseException as exc:
+                  record["failure_reason"] = f"{type(exc).__name__}: {exc}"
+                  record["traceback"] = traceback.format_exc(limit=12)
+                  raise
+              finally:
+                  stop_sampler.set()
+                  sampler.join(timeout=3)
+                  write_receipt()
+          
+          
+          if __name__ == "__main__":
+              main()
           PY
+          chmod 0400 "$pilot_script"
+          "$P5_EXPANDED_RUNTIME_PYTHON" "$pilot_script"
 
       - name: Upload Qwen3.5 pilot receipt
         if: always()
