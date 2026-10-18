@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "purpose": "workspace-ci-qwen35-dual-offline-pilot-candidate",
+  "scientific_input": false,
+  "scientific_state_effect": false,
+  "production_routing_effect": false,
+  "model_acquisition": false,
+  "model_promotion": false,
+  "expected_execution": "one synthetic image+text inference through the trusted model-eval-dual-gpu workflow with tensor_parallel_size=2 on the exact accepted two-A4500 UUID set"
+}
