@@ -12,6 +12,29 @@ from .semantic_pipeline import ResearchContextHydrator
 
 
 _TOKEN_RE = re.compile(r"[A-Za-z0-9_]+")
+_EVIDENCE_FACETS = (
+    (
+        "method",
+        "method framework approach model architecture training "
+        "algorithm mechanism",
+    ),
+    (
+        "dataset",
+        "dataset testbed receiver transmitter device capture sample "
+        "collection data",
+    ),
+    (
+        "evaluation",
+        "result performance accuracy auroc oscr rejection unknown known "
+        "evaluation metric",
+    ),
+    (
+        "robustness",
+        "limitation future robustness generalization domain shift "
+        "environment channel interference",
+    ),
+)
+
 _STOPWORDS = {
     "a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
     "in", "is", "it", "of", "on", "or", "that", "the", "this", "to",
@@ -157,21 +180,14 @@ def retrieval_query(
     return " ".join(value for value in values if value)
 
 
-def rank_regions(
+def _bm25_rank_regions(
     query: str,
     regions: list[dict[str, Any]],
     *,
-    top_k: int = 32,
-    k1: float = 1.2,
-    b: float = 0.75,
-    section_weight: float = 0.35,
+    k1: float,
+    b: float,
+    section_weight: float,
 ) -> list[dict[str, Any]]:
-    """Rank exact regions with deterministic BM25 plus a bounded section hint."""
-    if top_k <= 0:
-        raise ValueError("top_k must be positive")
-    if not regions:
-        return []
-
     query_tokens = list(dict.fromkeys(_tokens(query)))
     docs = [_tokens(str(region.get("display_text") or "")) for region in regions]
     lengths = [len(doc) for doc in docs]
@@ -202,7 +218,9 @@ def rank_regions(
             score += idf[token] * ((tf * (k1 + 1.0)) / (tf + norm))
 
         section_tokens = set(_tokens(str(region.get("section_hint") or "")))
-        section_score = sum(idf[token] for token in query_tokens if token in section_tokens)
+        section_score = sum(
+            idf[token] for token in query_tokens if token in section_tokens
+        )
         score += section_weight * section_score
 
         row = dict(region)
@@ -217,9 +235,86 @@ def rank_regions(
             str(row["region_id"]),
         )
     )
-    for index, row in enumerate(ranked, start=1):
+    return ranked
+
+
+def rank_regions(
+    query: str,
+    regions: list[dict[str, Any]],
+    *,
+    top_k: int = 32,
+    k1: float = 1.2,
+    b: float = 0.75,
+    section_weight: float = 0.35,
+    evidence_facets: tuple[tuple[str, str], ...] = _EVIDENCE_FACETS,
+) -> list[dict[str, Any]]:
+    """Rank exact regions with deterministic facet-diversified lexical retrieval.
+
+    The first list is the global scientific query. Additional fixed evidence
+    facets broaden recall across method, dataset, evaluation, and robustness
+    evidence without looking at teacher labels or model output. Lists are
+    interleaved by rank depth with exact-region deduplication.
+    """
+    if top_k <= 0:
+        raise ValueError("top_k must be positive")
+    if not regions:
+        return []
+
+    rankings: list[tuple[str, list[dict[str, Any]]]] = [
+        (
+            "global",
+            _bm25_rank_regions(
+                query,
+                regions,
+                k1=k1,
+                b=b,
+                section_weight=section_weight,
+            ),
+        )
+    ]
+    rankings.extend(
+        (
+            f"facet:{name}",
+            _bm25_rank_regions(
+                f"{query} {terms}",
+                regions,
+                k1=k1,
+                b=b,
+                section_weight=section_weight,
+            ),
+        )
+        for name, terms in evidence_facets
+    )
+
+    limit = min(top_k, len(regions))
+    selected: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    depth = 0
+    while len(selected) < limit:
+        added = False
+        for channel, ranking in rankings:
+            if depth >= len(ranking):
+                continue
+            row = ranking[depth]
+            region_id = str(row["region_id"])
+            if region_id in seen:
+                continue
+            result = dict(row)
+            result["retrieval_channel"] = channel
+            selected.append(result)
+            seen.add(region_id)
+            added = True
+            if len(selected) >= limit:
+                break
+        if not added and depth >= max(
+            len(ranking) for _, ranking in rankings
+        ):
+            break
+        depth += 1
+
+    for index, row in enumerate(selected, start=1):
         row["rank"] = index
-    return ranked[: min(top_k, len(ranked))]
+    return selected
 
 
 def evaluate_teacher_retrieval(
@@ -282,6 +377,43 @@ def evaluate_teacher_retrieval(
         "quote_threshold": quote_threshold,
         "teacher_rows": rows,
     }
+
+
+def retrieval_frontier(
+    *,
+    teacher_evidence: list[dict[str, Any]],
+    ranked_regions: list[dict[str, Any]],
+    cutoffs: tuple[int, ...] = (5, 8, 12, 16, 24, 32),
+    quote_threshold: float = 0.8,
+) -> list[dict[str, Any]]:
+    """Measure the recall/source-size frontier for one ranked region list."""
+    rows: list[dict[str, Any]] = []
+    for cutoff in cutoffs:
+        if cutoff <= 0:
+            raise ValueError("retrieval cutoffs must be positive")
+        selected = ranked_regions[:cutoff]
+        metrics = evaluate_teacher_retrieval(
+            teacher_evidence=teacher_evidence,
+            ranked_regions=selected,
+            quote_threshold=quote_threshold,
+        )
+        rows.append(
+            {
+                "cutoff": cutoff,
+                "selected_regions": len(selected),
+                "selected_source_chars": sum(
+                    len(str(region.get("raw_source_form") or ""))
+                    for region in selected
+                ),
+                "candidate_page_recall": metrics[
+                    "candidate_page_recall"
+                ],
+                "teacher_quote_region_recall": metrics[
+                    "teacher_quote_region_recall"
+                ],
+            }
+        )
+    return rows
 
 
 def _historical_evidence(job: Any) -> list[dict[str, Any]]:
@@ -369,6 +501,11 @@ class PreservedExtractRetrievalBenchmark:
                 ranked_regions=ranked,
                 quote_threshold=quote_threshold,
             )
+            frontier = retrieval_frontier(
+                teacher_evidence=teacher,
+                ranked_regions=ranked,
+                quote_threshold=quote_threshold,
+            )
             cases.append(
                 {
                     "job_id": job.id,
@@ -380,6 +517,7 @@ class PreservedExtractRetrievalBenchmark:
                     "candidate_region_count": len(regions),
                     "ranked_region_count": len(ranked),
                     "teacher_metrics": metrics,
+                    "retrieval_frontier": frontier,
                     "top_regions": [
                         {
                             "region_id": row["region_id"],
@@ -423,6 +561,11 @@ class PreservedExtractRetrievalBenchmark:
             "expected_papers": expected_papers,
             "paper_count": len(cases),
             "top_k": top_k,
+            "retrieval_strategy": "FACET_INTERLEAVED_BM25_V1",
+            "evidence_facets": [
+                {"name": name, "query_extension": terms}
+                for name, terms in _EVIDENCE_FACETS
+            ],
             "quote_threshold": quote_threshold,
             "max_region_chars": max_region_chars,
             "teacher_evidence_count": teacher_count,
