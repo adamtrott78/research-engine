@@ -1,0 +1,219 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "local-extract-wave1-rf-nine-paper-v1",
+  "source_run_id": "rf-open-world-corpus-expansion-v1",
+  "topic": "Open-set and open-world RF signal classification and RF fingerprinting under distribution shift: build a source-grounded literature corpus focused on unknown-class rejection, cross-receiver and cross-device generalization, over-the-air channel and environment shift, calibration and uncertainty, post-isolation robustness, multi-emitter interference, and rigorous known-versus-unknown evaluation. Prioritize new primary open-access arXiv papers and challenge broad novelty claims conservatively.",
+  "historical": {
+    "paper_count": 9,
+    "evidence_object_count": 71,
+    "evidence_bearing_page_count": 43,
+    "total_pdf_pages": 65,
+    "extraction_context_chars_total": 322102,
+    "extract_input_tokens": 223262,
+    "extract_cached_input_tokens": 34048,
+    "extract_output_tokens": 7525,
+    "extract_reasoning_output_tokens": 500,
+    "teacher_control_note": "Historical STANDARD Codex EXTRACT output counts/page locations are preserved for all nine papers. Full normalized teacher claim text is preserved in this fixture only for the explicitly listed teacher subset; absence from the subset must not be interpreted as a negative label."
+  },
+  "qwen_config": {
+    "top_k_regions": 12,
+    "max_region_chars": 650,
+    "max_claims_per_paper": 12,
+    "max_claims_per_region": 2,
+    "temperature": 0,
+    "top_p": 1,
+    "seed": 0,
+    "max_output_tokens": 1400,
+    "tensor_parallel_size": 2
+  },
+  "papers": [
+    {
+      "source_job_id": "job:09d281b6ffe4322c2c3b2322",
+      "item_id": "arxiv:2411.03636",
+      "arxiv_id": "2411.03636",
+      "sha256": "46112c40e2c6552cf1def85592d05e2f778a311755d78f6451e342e8b5ec17ed",
+      "historical_evidence_count": 11,
+      "historical_evidence_pages": [
+        1,
+        3,
+        4,
+        6,
+        7,
+        9,
+        11
+      ],
+      "historical_context_chars": 60831,
+      "total_pdf_pages": 12
+    },
+    {
+      "source_job_id": "job:16891dd11475ba0404e59ded",
+      "item_id": "arxiv:2209.03142",
+      "arxiv_id": "2209.03142",
+      "sha256": "78c70255acf4d0f37dcc70464c3ed0340c35e2a8bea37f284b1dabb3feeea774",
+      "historical_evidence_count": 6,
+      "historical_evidence_pages": [
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "historical_context_chars": 31654,
+      "total_pdf_pages": 6
+    },
+    {
+      "source_job_id": "job:2c483d27d3f5c755cfbca692",
+      "item_id": "arxiv:2501.15391",
+      "arxiv_id": "2501.15391",
+      "sha256": "054aaba60e8b6cc4dfc5a35dab9f1adc6584bb9ef6ea68b2b9ced1cb71d52f22",
+      "historical_evidence_count": 7,
+      "historical_evidence_pages": [
+        1,
+        2,
+        4,
+        5,
+        6
+      ],
+      "historical_context_chars": 33251,
+      "total_pdf_pages": 6
+    },
+    {
+      "source_job_id": "job:314b010cf54657c92d287ea3",
+      "item_id": "arxiv:2306.13895",
+      "arxiv_id": "2306.13895",
+      "sha256": "a8ab7700f43e00d574635c677f1388c899b4c4f381afda3419177b68dff3ea10",
+      "historical_evidence_count": 6,
+      "historical_evidence_pages": [
+        2,
+        3,
+        4
+      ],
+      "historical_context_chars": 24145,
+      "total_pdf_pages": 5
+    },
+    {
+      "source_job_id": "job:394f724de0a699f2fb418f7d",
+      "item_id": "arxiv:2403.04036",
+      "arxiv_id": "2403.04036",
+      "sha256": "1097bdfabf6cd1b1e26ff9df58b6bb810e4bf74fbd3890ad20e86316d2ee0c91",
+      "historical_evidence_count": 6,
+      "historical_evidence_pages": [
+        2,
+        4,
+        6
+      ],
+      "historical_context_chars": 32720,
+      "total_pdf_pages": 6,
+      "teacher_claims": [
+        {
+          "id": "e1",
+          "type": "method",
+          "page_number": 2,
+          "normalized_form": "The proposed framework pre-trains on unlabeled source and target data to learn domain-invariant representations, trains a classifier using source-domain device labels, and tests on target-domain data."
+        },
+        {
+          "id": "e2",
+          "type": "method",
+          "page_number": 2,
+          "normalized_form": "Positive pairs are frames from the same transmission, and negative pairs are frames from different transmissions."
+        },
+        {
+          "id": "e3",
+          "type": "dataset",
+          "page_number": 2,
+          "normalized_form": "The wireless testbed used 15+ PyCom/IoT transmitters, with IEEE 802.11b frames sampled by an Ettus USRP B210 at 45 MSps."
+        },
+        {
+          "id": "e4",
+          "type": "result",
+          "page_number": 4,
+          "normalized_form": "Against the CNN baseline, CTL improved accuracy by 10.8–19.9% in wired scenarios and by 13.4–27.8% in wireless scenarios."
+        },
+        {
+          "id": "e5",
+          "type": "result",
+          "page_number": 4,
+          "normalized_form": "Against CNN, CTL improved accuracy by 13.4–27.8% in wireless scenarios."
+        },
+        {
+          "id": "e6",
+          "type": "limitation",
+          "page_number": 6,
+          "normalized_form": "The authors identify wireless-channel impairments, contrastive-learning scalability, and consistently misclassified devices as areas for further research."
+        }
+      ]
+    },
+    {
+      "source_job_id": "job:41c4d0a3d30e56daed7e7533",
+      "item_id": "arxiv:2609.02007",
+      "arxiv_id": "2609.02007",
+      "sha256": "77bb6bf3fdcb15e9bfd42dc1000e5b55f848f8eeff899cff06962f22274f676d",
+      "historical_evidence_count": 6,
+      "historical_evidence_pages": [
+        1,
+        5,
+        6,
+        7
+      ],
+      "historical_context_chars": 35997,
+      "total_pdf_pages": 8
+    },
+    {
+      "source_job_id": "job:45f99d24bf8841a4c53e2908",
+      "item_id": "arxiv:2112.02536",
+      "arxiv_id": "2112.02536",
+      "sha256": "51b5e41562f210b95ae5aaf969416dd2466cfbdf7d7d8e45ab7b2475df79c3d2",
+      "historical_evidence_count": 10,
+      "historical_evidence_pages": [
+        1,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "historical_context_chars": 46558,
+      "total_pdf_pages": 10
+    },
+    {
+      "source_job_id": "job:b8455f7381895d9ffa68e83e",
+      "item_id": "arxiv:2609.20765",
+      "arxiv_id": "2609.20765",
+      "sha256": "49a740badc73931cb45a2f28149fc37a0813ed0271a68fbd76d78c7e14090508",
+      "historical_evidence_count": 8,
+      "historical_evidence_pages": [
+        2,
+        3,
+        4,
+        5
+      ],
+      "historical_context_chars": 28264,
+      "total_pdf_pages": 6
+    },
+    {
+      "source_job_id": "job:e57ebc0cc5f0d16c3c76a551",
+      "item_id": "arxiv:2108.13099",
+      "arxiv_id": "2108.13099",
+      "sha256": "7fcfc9929fd80a94095657ebf644be3301000d0a4342b74de1adc2af529ff7ab",
+      "historical_evidence_count": 11,
+      "historical_evidence_pages": [
+        1,
+        2,
+        3,
+        5,
+        6
+      ],
+      "historical_context_chars": 28682,
+      "total_pdf_pages": 6
+    }
+  ],
+  "source_policy": {
+    "download_origin": "arxiv.org only",
+    "exact_sha256_required": true,
+    "try_versioned_urls": true,
+    "public_acquisition_is_benchmark_ephemeral_only": true,
+    "scientific_state_materialized": false,
+    "production_routing_changed": false
+  }
+}
