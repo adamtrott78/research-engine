@@ -323,7 +323,7 @@ def download_exact_pdf(
 def extract_pdf_pages(path: pathlib.Path) -> tuple[list[dict[str, Any]], str]:
     from pypdf import PdfReader
 
-    reader = PdfReader(str(path), strict=True)
+    reader = PdfReader(str(path))
     title = ""
     try:
         title = str((reader.metadata or {}).title or "")
