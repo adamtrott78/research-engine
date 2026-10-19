@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "purpose": "Bind exactly one zero-materialization Local EXTRACT Wave 1 Lambda benchmark run to an exact PR head.",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "source_run_id": "rf-open-world-corpus-expansion-v1",
+  "workflow": ".github/workflows/lambda-ci-local-extract-wave1.yml",
+  "workflow_blob_sha": "a5be693f750c481db21d86d239a505083aae40aa",
+  "expected_papers": 9,
+  "historical_evidence_objects": 71,
+  "configuration": "fixed Wave 1 configuration from local-extract-wave1-corpus.v1.json",
+  "scientific_state_materialized": false,
+  "production_routing_changed": false,
+  "benchmark_result": null,
+  "note": "This file is an inert candidate marker. The benchmark result is emitted only as a GitHub artifact and is not committed or materialized into scientific state."
+}
