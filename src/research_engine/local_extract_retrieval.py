@@ -12,6 +12,25 @@ from .semantic_pipeline import ResearchContextHydrator
 
 
 _TOKEN_RE = re.compile(r"[A-Za-z0-9_]+")
+_EVIDENCE_FACETS = (
+    (
+        "method framework approach model architecture training "
+        "algorithm mechanism"
+    ),
+    (
+        "dataset testbed receiver transmitter device capture sample "
+        "collection data"
+    ),
+    (
+        "result performance accuracy auroc oscr rejection unknown known "
+        "evaluation metric"
+    ),
+    (
+        "limitation future robustness generalization domain shift "
+        "environment channel interference"
+    ),
+)
+
 _STOPWORDS = {
     "a", "an", "and", "are", "as", "at", "be", "by", "for", "from",
     "in", "is", "it", "of", "on", "or", "that", "the", "this", "to",
@@ -157,21 +176,14 @@ def retrieval_query(
     return " ".join(value for value in values if value)
 
 
-def rank_regions(
+def _bm25_rank_regions(
     query: str,
     regions: list[dict[str, Any]],
     *,
-    top_k: int = 32,
-    k1: float = 1.2,
-    b: float = 0.75,
-    section_weight: float = 0.35,
+    k1: float,
+    b: float,
+    section_weight: float,
 ) -> list[dict[str, Any]]:
-    """Rank exact regions with deterministic BM25 plus a bounded section hint."""
-    if top_k <= 0:
-        raise ValueError("top_k must be positive")
-    if not regions:
-        return []
-
     query_tokens = list(dict.fromkeys(_tokens(query)))
     docs = [_tokens(str(region.get("display_text") or "")) for region in regions]
     lengths = [len(doc) for doc in docs]
@@ -202,7 +214,9 @@ def rank_regions(
             score += idf[token] * ((tf * (k1 + 1.0)) / (tf + norm))
 
         section_tokens = set(_tokens(str(region.get("section_hint") or "")))
-        section_score = sum(idf[token] for token in query_tokens if token in section_tokens)
+        section_score = sum(
+            idf[token] for token in query_tokens if token in section_tokens
+        )
         score += section_weight * section_score
 
         row = dict(region)
@@ -217,9 +231,81 @@ def rank_regions(
             str(row["region_id"]),
         )
     )
-    for index, row in enumerate(ranked, start=1):
+    return ranked
+
+
+def rank_regions(
+    query: str,
+    regions: list[dict[str, Any]],
+    *,
+    top_k: int = 32,
+    k1: float = 1.2,
+    b: float = 0.75,
+    section_weight: float = 0.35,
+    evidence_facets: tuple[str, ...] = _EVIDENCE_FACETS,
+) -> list[dict[str, Any]]:
+    """Rank exact regions with deterministic facet-diversified lexical retrieval.
+
+    The first list is the global scientific query. Additional fixed evidence
+    facets broaden recall across method, dataset, evaluation, and robustness
+    evidence without looking at teacher labels or model output. Lists are
+    interleaved by rank depth with exact-region deduplication.
+    """
+    if top_k <= 0:
+        raise ValueError("top_k must be positive")
+    if not regions:
+        return []
+
+    rankings = [
+        _bm25_rank_regions(
+            query,
+            regions,
+            k1=k1,
+            b=b,
+            section_weight=section_weight,
+        )
+    ]
+    rankings.extend(
+        _bm25_rank_regions(
+            f"{query} {facet}",
+            regions,
+            k1=k1,
+            b=b,
+            section_weight=section_weight,
+        )
+        for facet in evidence_facets
+    )
+
+    limit = min(top_k, len(regions))
+    selected: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    depth = 0
+    while len(selected) < limit:
+        added = False
+        for ranking_index, ranking in enumerate(rankings):
+            if depth >= len(ranking):
+                continue
+            row = ranking[depth]
+            region_id = str(row["region_id"])
+            if region_id in seen:
+                continue
+            result = dict(row)
+            result["retrieval_channel"] = (
+                "global" if ranking_index == 0
+                else f"facet:{ranking_index}"
+            )
+            selected.append(result)
+            seen.add(region_id)
+            added = True
+            if len(selected) >= limit:
+                break
+        if not added and depth >= max(len(ranking) for ranking in rankings):
+            break
+        depth += 1
+
+    for index, row in enumerate(selected, start=1):
         row["rank"] = index
-    return ranked[: min(top_k, len(ranked))]
+    return selected
 
 
 def evaluate_teacher_retrieval(
@@ -423,6 +509,8 @@ class PreservedExtractRetrievalBenchmark:
             "expected_papers": expected_papers,
             "paper_count": len(cases),
             "top_k": top_k,
+            "retrieval_strategy": "FACET_INTERLEAVED_BM25_V1",
+            "evidence_facets": list(_EVIDENCE_FACETS),
             "quote_threshold": quote_threshold,
             "max_region_chars": max_region_chars,
             "teacher_evidence_count": teacher_count,
