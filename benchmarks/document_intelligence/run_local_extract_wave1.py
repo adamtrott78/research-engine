@@ -5,6 +5,7 @@ import argparse
 import json
 import os
 import pathlib
+import traceback
 
 from research_engine.local_extract_wave1 import run_wave1
 
@@ -28,23 +29,49 @@ def main() -> int:
         )
 
     args.workdir.mkdir(parents=True, exist_ok=True)
-    report = run_wave1(
-        fixture=fixture,
-        workdir=args.workdir,
-        model_path=os.environ["P5_MODEL_PATH"],
-        expected_gpu_uuids=expected_uuids,
-    )
-    report["candidate_sha"] = os.environ.get("EXPECTED_SHA")
-    report["model_id"] = os.environ.get("P5_MODEL_ID")
-    report["model_revision"] = os.environ.get("P5_MODEL_REVISION")
-    report["model_object_id"] = os.environ.get("P5_MODEL_OBJECT_ID")
-    report["runtime_tree_sha256"] = os.environ.get(
-        "P5_EXPANDED_RUNTIME_TREE_SHA256"
-    )
-    report["gpu_uuids"] = expected_uuids
-    report["gpu_selected_devices"] = os.environ.get(
-        "P5_GPU_SELECTED_DEVICES", ""
-    ).split(",")
+    try:
+        report = run_wave1(
+            fixture=fixture,
+            workdir=args.workdir,
+            model_path=os.environ["P5_MODEL_PATH"],
+            expected_gpu_uuids=expected_uuids,
+        )
+        report["candidate_sha"] = os.environ.get("EXPECTED_SHA")
+        report["model_id"] = os.environ.get("P5_MODEL_ID")
+        report["model_revision"] = os.environ.get("P5_MODEL_REVISION")
+        report["model_object_id"] = os.environ.get("P5_MODEL_OBJECT_ID")
+        report["runtime_tree_sha256"] = os.environ.get(
+            "P5_EXPANDED_RUNTIME_TREE_SHA256"
+        )
+        report["gpu_uuids"] = expected_uuids
+        report["gpu_selected_devices"] = os.environ.get(
+            "P5_GPU_SELECTED_DEVICES", ""
+        ).split(",")
+    except BaseException as exc:
+        report = {
+            "schema_version": 1,
+            "operation": "LOCAL_EXTRACT_WAVE1_QWEN_NORMALIZATION",
+            "wave1_decision": "REJECT",
+            "failure": f"{type(exc).__name__}: {exc}",
+            "traceback": traceback.format_exc(limit=20),
+            "candidate_sha": os.environ.get("EXPECTED_SHA"),
+            "model_id": os.environ.get("P5_MODEL_ID"),
+            "model_revision": os.environ.get("P5_MODEL_REVISION"),
+            "model_object_id": os.environ.get("P5_MODEL_OBJECT_ID"),
+            "runtime_tree_sha256": os.environ.get(
+                "P5_EXPANDED_RUNTIME_TREE_SHA256"
+            ),
+            "gpu_uuids": expected_uuids,
+            "scientific_state_materialized": False,
+            "production_routing_changed": False,
+        }
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(
+            json.dumps(report, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        print(json.dumps(report, indent=2, sort_keys=True))
+        raise
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
