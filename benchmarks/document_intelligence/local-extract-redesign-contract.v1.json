@@ -1,0 +1,292 @@
+{
+  "schema_version": 1,
+  "task": "research-engine-local-extract-redesign-v1",
+  "stage": "architecture_selection_and_benchmark_contract",
+  "baseline_research_engine_sha": "e5a9b4c361ac790562fac5cf2f35f5a54f2bf58d",
+  "status": "CONTRACT_ONLY_NO_NEW_MODEL_DOWNLOADS",
+  "purpose": "Define a mostly-local, evidence-first EXTRACT architecture and promotion benchmark before any new heavyweight model/runtime download. The objective is to make STANDARD Codex a rare fail-closed fallback while preserving exact authoritative-PDF provenance and the already-accepted VERIFY production route.",
+  "problem_definition": {
+    "current_job": "EXTRACT is an open-ended scientific evidence extraction job over one acquired paper, not a fixed enterprise field schema.",
+    "required_output_fields": [
+      "id",
+      "type",
+      "normalized_form",
+      "raw_source_form",
+      "page_number",
+      "confidence"
+    ],
+    "semantic_requirements": [
+      "raw_source_form must be an exact source-grounded quote that can be deterministically located on the authoritative PDF page",
+      "normalized_form must express an atomic, scientifically useful claim supported by the quote/context",
+      "type must remain semantically compatible with downstream evidence use",
+      "page_number and source provenance must be exact",
+      "the pipeline must seek relevant evidence comprehensively enough that high precision alone cannot hide systematic omissions"
+    ],
+    "prior_failure_boundary": "The prior Qwen3.5-4B grounded-candidate EXTRACT architecture passed provenance guards but failed semantic-equivalence controls decisively. Repeating the same one-shot/bounded-context architecture or cosmetic prompt variants is forbidden."
+  },
+  "inherited_production_assets": [
+    "content-addressed authoritative PDF artifacts",
+    "paper-package/document sidecar with page/block/section provenance",
+    "Docling native lexical/order substrate plus standard_no_ocr structure overlay",
+    "CodeFormulaV2 targeted formula enrichment",
+    "TableFormer FAST -> ACCURATE -> PP-TableMagic targeted table recovery",
+    "shared local inference broker and bounded queue/backpressure semantics",
+    "certified Qwen3.5-4B runtime/model owner",
+    "accepted page-scoped Qwen VERIFY route with whole-job STANDARD Codex fallthrough",
+    "PostgreSQL usage/calibration telemetry"
+  ],
+  "exclusions": [
+    "no rerun of the prior Qwen3.5-4B grounded-candidate EXTRACT architecture as-is",
+    "no broad parser bakeoff",
+    "no global OCR or VLM-on-every-page design",
+    "no PaddleOCR-VL-1.6 general semantic solution absent materially new evidence addressing its prior failures",
+    "no replacement of accepted native/Docling/formula/table components without a new measured residual",
+    "no new heavyweight download before this contract is durable and the first-wave candidate set is explicitly selected"
+  ],
+  "external_design_evidence": [
+    {
+      "source": "ExtractBench 2026 / LlamaExtract Extract v2.5",
+      "implication": "Leading extraction systems use agentic decomposition, structural document representations, cross-page inspection, intermediate representations, source-return tools, grounding/citations and confidence rather than relying only on one-shot generation."
+    },
+    {
+      "source": "Google LangExtract",
+      "implication": "Exact source grounding can be implemented around a model: long text is chunked, extraction is parallel/multipass, and outputs are mapped back to exact source character spans; local model providers are supported."
+    },
+    {
+      "source": "GLiNER2 / GLiNER2.5",
+      "implication": "Compact schema-driven encoders can cheaply propose entities, classifications, records and relations and can serve as candidate-span/type detectors without asking a generative model to rediscover every source span."
+    },
+    {
+      "source": "SciFact / MultiVerS",
+      "implication": "Scientific claim processing can be decomposed into retrieval/rationale selection and claim/evidence verification, with public claim-generation data from citation contexts."
+    },
+    {
+      "source": "LLM-to-small-model information-extraction distillation literature",
+      "implication": "Teacher-generated labels can train substantially cheaper task models; future Codex fallbacks should be captured as supervised local training/evaluation data rather than treated only as recurring remote calls."
+    }
+  ],
+  "architecture": {
+    "id": "LOCAL_EVIDENCE_AGENT_V1",
+    "principle": "Use the cheapest reliable local stage to reduce uncertainty. Preserve exact candidate/source provenance at every transition. Escalate only unresolved units. A stronger model never gets authority to invent an unlocatable source quote.",
+    "stages": [
+      {
+        "tier": 0,
+        "id": "DOCUMENT_SUBSTRATE",
+        "role": "Reuse accepted sidecar/native/structure data to expose page, section, block, sentence, table, formula and figure locators.",
+        "model_requirement": "none beyond already accepted production components",
+        "failure_action": "AUTHORITATIVE_PDF_PATH"
+      },
+      {
+        "tier": 1,
+        "id": "CANDIDATE_RETRIEVAL_AND_RERANK",
+        "role": "Generate multiple evidence-seeking queries from the research topic, retained item rationale/title and document sections; retrieve candidate page/block/sentence regions using deterministic lexical search first and an optional compact local cross-encoder reranker.",
+        "first_wave_candidates": [
+          "existing PostgreSQL/text search and deterministic section heuristics",
+          "BGE-reranker-v2-m3 or equivalent compact cross-encoder only if deterministic retrieval recall is inadequate"
+        ],
+        "output_contract": "ranked source regions with exact page/block/span identity and retrieval/rerank scores",
+        "failure_action": "broaden local retrieval passes before semantic escalation"
+      },
+      {
+        "tier": 2,
+        "id": "SPAN_RECORD_RELATION_PROPOSAL",
+        "role": "Propose exact source spans, candidate evidence classes, records and relations without normalizing them into final scientific claims yet.",
+        "first_wave_candidates": [
+          "deterministic sentence/section/table/formula/figure rules",
+          "GLiNER2.5-base-v1 (194M) or equivalent compact schema-driven encoder"
+        ],
+        "output_contract": "exact candidate spans/records with offsets, page identity, local scores and candidate labels",
+        "failure_action": "retain candidate region for local generative inspection rather than inventing a span"
+      },
+      {
+        "tier": 3,
+        "id": "ATOMIC_CLAIM_NORMALIZATION",
+        "role": "Convert one or a very small set of already-located source spans plus bounded local context into atomic normalized claims and candidate types. This stage does not discover source quotes.",
+        "first_wave_candidates": [
+          "existing certified Qwen3.5-4B runtime in a materially narrower role than the rejected end-to-end EXTRACT architecture"
+        ],
+        "second_wave_candidates": [
+          "NuExtract3 4B as a bounded text/region structured-extraction comparator",
+          "Lift 9B as a bounded document/region structured-extraction comparator after license/runtime review"
+        ],
+        "output_contract": "normalized_form, candidate type, confidence, and references only to supplied exact source spans",
+        "hard_guard": "raw_source_form is copied from the supplied source span by deterministic code, never accepted from free model generation",
+        "failure_action": "LOCAL_HARD_CASE_AGENT_OR_CODEX"
+      },
+      {
+        "tier": 4,
+        "id": "LOCAL_SCIENTIFIC_VERIFICATION",
+        "role": "Test whether each normalized claim is supported by its exact quote plus bounded scientific context; detect contradiction, unsupported abstraction and type mismatch.",
+        "first_wave_candidates": [
+          "MultiVerS/SciFact-style scientific claim verifier or equivalent local NLI/rationale model",
+          "existing bounded Qwen VERIFY capability may be evaluated as an additional independent guard only if its pre-materialization input/output contract is explicit"
+        ],
+        "output_contract": "support/contradict/insufficient decision, confidence and evidence span identity",
+        "failure_action": "reject or escalate; never materialize unsupported claim"
+      },
+      {
+        "tier": 5,
+        "id": "LOCAL_COMPLETENESS_AND_CONSISTENCY_AUDIT",
+        "role": "Evaluate whether the local evidence set appears complete enough for the paper/task: compare independent retrieval/query passes, unresolved high-score regions, duplicate/conflicting claims and section coverage.",
+        "output_contract": "job-local completion decision plus unresolved region/claim list",
+        "failure_action": "LOCAL_HARD_CASE_AGENT_OR_CODEX"
+      },
+      {
+        "tier": 6,
+        "id": "LOCAL_HARD_CASE_AGENT",
+        "role": "Optional stronger local reasoning agent receives only unresolved regions plus sidecar search/read/locate tools. It may request more source regions but cannot bypass exact grounding/verification guards.",
+        "candidate_after_first_wave_failure": "Qwen3.6-35B-A3B or another stronger efficient local model only after quantized dual-A4500 feasibility and license/runtime review",
+        "output_contract": "new grounded candidate claims or explicit abstentions",
+        "failure_action": "STANDARD_CODEX"
+      },
+      {
+        "tier": 7,
+        "id": "STANDARD_CODEX_FALLBACK",
+        "role": "Authoritative-PDF semantic fallback for unresolved job/regions. Results are used both for normal downstream evidence materialization and as teacher/evaluation data for the local pipeline.",
+        "target_frequency": "rare after promotion; measured, never assumed"
+      }
+    ]
+  },
+  "first_wave_candidate_policy": {
+    "purpose": "Test the architecture with the smallest new dependency burden before opening another heavyweight bakeoff.",
+    "reuse_without_download": [
+      "accepted document substrate and sidecar",
+      "existing certified Qwen3.5-4B runtime/model in claim-normalization-only role",
+      "existing deterministic quote/page guards",
+      "existing PostgreSQL and Python text/search infrastructure"
+    ],
+    "small_new_candidates_allowed_after_contract": [
+      "GLiNER2.5-base-v1 or equivalent compact schema IE encoder",
+      "MultiVerS/SciFact-style local scientific verifier",
+      "BGE-reranker-v2-m3 only if retrieval recall measurements justify it"
+    ],
+    "heavyweight_candidates_deferred": [
+      "NuExtract3 4B",
+      "Lift 9B",
+      "Qwen3.6-35B-A3B"
+    ],
+    "rationale": "If decomposition plus lightweight components already turns the existing Qwen runtime into a reliable normalizer/verifier, avoid adding another heavyweight owner. Open specialized/stronger models only against measured residuals."
+  },
+  "benchmark_dataset": {
+    "primary": "preserved historical production-like EXTRACT jobs whose authoritative PDFs and STANDARD Codex results remain available",
+    "teacher_control": "existing/preserved STANDARD Codex EXTRACT outputs are comparison labels, not scientific ground truth when source evidence disagrees",
+    "evaluation_unit": "claim plus exact source quote/page/type; also score whole-job local-completion/fallback decision",
+    "no_scientific_materialization": true,
+    "future_data_loop": "Every production Codex fallback that passes normal verification may be retained in a separate versioned teacher dataset with source artifact identity and extractor version for later local fine-tuning/evaluation."
+  },
+  "metrics": {
+    "retrieval": [
+      "teacher_quote_region_recall",
+      "candidate_page_recall",
+      "candidate_region_count_per_paper",
+      "reranker_recall_at_k"
+    ],
+    "claim_quality": [
+      "normalized_claim_match_f1",
+      "local_pass_precision",
+      "local_pass_recall",
+      "type_agreement",
+      "duplicate_claim_rate",
+      "unsupported_claim_rate"
+    ],
+    "provenance": [
+      "exact_quote_locatability",
+      "page_agreement",
+      "source_span_coverage",
+      "fabricated_or_unlocatable_quote_count"
+    ],
+    "verification": [
+      "verifier_support_precision",
+      "false_accept_rate",
+      "abstention_rate",
+      "conflict_detection_rate"
+    ],
+    "completeness": [
+      "independent_pass_set_stability",
+      "unresolved_high_score_region_rate",
+      "teacher_claim_coverage",
+      "job_local_completion_fraction"
+    ],
+    "economics": [
+      "local_wall_time_ms",
+      "peak_vram_mib_by_owner",
+      "peak_rss_mib_by_owner",
+      "cold_load_ms",
+      "warm_latency_ms",
+      "codex_fallback_jobs",
+      "codex_fallback_units",
+      "projected_remote_input_tokens_avoided",
+      "observed_plan_allowance_change_recorded_separately"
+    ]
+  },
+  "gates": {
+    "hard_safety": [
+      "fabricated_or_unlocatable_quote_count == 0",
+      "exact_quote_locatability == 1.0 for every locally accepted claim",
+      "page provenance coverage == 1.0",
+      "scientific_state_materialized == false during offline benchmark"
+    ],
+    "research_positive": [
+      "local_pass_precision >= 0.95",
+      "page_agreement >= 0.95",
+      "type_agreement >= 0.95",
+      "teacher_claim_coverage >= 0.80",
+      "job_local_completion_fraction >= 0.50"
+    ],
+    "production_promotion": [
+      "all hard safety gates pass",
+      "local_pass_precision >= 0.95",
+      "teacher_claim_coverage >= 0.90",
+      "page_agreement >= 0.95",
+      "type_agreement >= 0.95",
+      "unsupported_claim_rate == 0 on promotion corpus",
+      "job_local_completion_fraction >= 0.80",
+      "projected remote input-token reduction >= 0.50",
+      "no material regression in downstream VERIFY outcome on locally completed jobs"
+    ],
+    "target_after_teacher_adaptation": [
+      "job_local_completion_fraction >= 0.90 while retaining production precision/grounding gates"
+    ],
+    "interpretation": "A candidate may be useful research at lower local-completion rates, but production promotion requires Codex to be the minority path. Quality and provenance are hard gates; savings never compensate for scientific regression."
+  },
+  "teacher_data_policy": {
+    "source": "STANDARD Codex fallback outputs plus authoritative PDF/source locators and subsequent verification outcome",
+    "purpose": "continually improve local retrieval, candidate labeling and normalization on the engine's actual scientific distribution",
+    "exclusions": [
+      "do not train on unverified or source-inconsistent remote outputs as truth",
+      "do not mix teacher labels from changed schemas/prompts without version metadata",
+      "do not silently overwrite benchmark holdout cases"
+    ],
+    "candidate_training_targets": [
+      "retrieval/reranker relevance labels",
+      "span/type labels for compact IE models",
+      "atomic normalized claim generation",
+      "local confidence/calibration model"
+    ],
+    "holdout": "Preserve paper-level holdouts so reduced fallback is not measured on teacher examples seen during adaptation."
+  },
+  "resource_policy": {
+    "existing_global_default": "Respect the production residual-escalation owner limits unless a later evidence-backed resource redesign is explicitly authorized.",
+    "lightweight_components": "Prefer CPU or <=4 GiB VRAM and persistent/shared ownership.",
+    "existing_qwen_owner": "Reuse certified owner/runtime; do not create a duplicate model process.",
+    "new_heavy_owner": "Must pass license/runtime review, bounded cold/warm resource gate and broker integration before production consideration.",
+    "hard_case_agent": "Qwen3.6-35B-A3B is feasibility-only at contract stage because official recipes do not establish RTX A4500 compatibility; no weights download until residual need and quantized deployment plan are explicit."
+  },
+  "decision_values": [
+    "PROCEED_FIRST_WAVE_LIGHTWEIGHT_DECOMPOSED_PROTOTYPE",
+    "OPEN_SPECIALIZED_EXTRACTOR_RESIDUAL_BAKEOFF",
+    "OPEN_STRONG_LOCAL_AGENT_RESIDUAL_BAKEOFF",
+    "FAIL_CLOSED_RETAIN_CODEX_EXTRACT"
+  ],
+  "next_sequence": [
+    "CI-lock this contract without production routing changes.",
+    "Build a zero-materialization offline dataset adapter over preserved EXTRACT jobs and authoritative source regions.",
+    "Measure deterministic retrieval baseline before adding a reranker.",
+    "Prototype exact-span candidate extraction and existing-Qwen claim-normalization-only role.",
+    "Add a local scientific verifier and completeness audit.",
+    "Measure claim quality, provenance and job-local completion/fallback fraction.",
+    "Only if measured residuals justify it, open one specialized extractor or stronger local-agent candidate at a time.",
+    "Capture future Codex fallbacks as versioned teacher data and reassess local completion on untouched holdouts.",
+    "Change production routing only after a separate Lambda integration/acceptance gate."
+  ]
+}
