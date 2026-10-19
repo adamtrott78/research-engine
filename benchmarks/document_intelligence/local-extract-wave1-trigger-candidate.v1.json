@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "purpose": "LOCAL_EXTRACT_WAVE1_TRIGGER_CANDIDATE",
+  "base_research_engine_sha": "366f9585145ab539dc43c3c974dcb8625489a3e3",
+  "workload_class": "model-eval-local-extract-wave1",
+  "workflow_path": ".github/workflows/lambda-ci-local-extract-wave1.yml",
+  "workflow_blob_sha": "a5be693f750c481db21d86d239a505083aae40aa",
+  "scientific_state_materialized": false,
+  "production_routing_changed": false,
+  "note": "Inert marker only. This PR exists solely to provide an exact open PR head for the bounded issue_comment-triggered Wave-1 benchmark after workspace-control admission is installed."
+}
