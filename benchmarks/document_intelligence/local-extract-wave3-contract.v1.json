@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "local-extract-wave3-soft-terminal-regions-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "baseline": {
+    "wave2_workflow_run_id": 39869131630,
+    "wave2_artifact_id": 12464958088,
+    "wave2_artifact_zip_sha256": "9773662cb41eb90408eeac0d0364d72a79c9f9672593c629d758d0b9318b3887",
+    "wave2_report_sha256": "e830160adc794322f30924c89ffc9fc632fc5ccba61f739bb8bcf015e854762f",
+    "wave2_decision": "PARTIAL",
+    "wave2_job_local_completion_fraction": 1,
+    "wave2_accepted_claim_count": 70,
+    "wave2_teacher_claim_coverage_at_f1_0_5": 0,
+    "wave2_projected_remote_input_token_reduction": 0.784898460105168
+  },
+  "hypothesis": "The 650-character region target is currently a hard mid-proposition split whenever an accumulated PDF-text line group crosses the threshold without terminal punctuation. Making 650 a soft target and extending only to the next terminal line, under a strict 1200-character hard ceiling, will improve proposition completeness without changing retrieval ranking semantics or claim/guard behavior.",
+  "experimental_control": {
+    "fixed": [
+      "Qwen/Qwen3.5-4B exact promoted model object",
+      "qwen35-vllm-cu129-image-native-sampler-v3 exact promoted runtime",
+      "tensor_parallel_size=2 on the accepted two RTX A4500 devices",
+      "nine-paper / 71-evidence-object preserved corpus",
+      "exact-SHA ephemeral arXiv PDF acquisition",
+      "production-parity pypdf extraction",
+      "FACET_INTERLEAVED_BM25_V1 ranking algorithm and facet queries",
+      "top_k_regions=12",
+      "Wave-2 one-region-per-model-call execution",
+      "Wave-2 one-claim-or-skip model output contract",
+      "candidate identity bound by deterministic caller state",
+      "Wave-2 unit-level fail-closed guard semantics",
+      "one accepted claim maximum per selected region",
+      "twelve accepted claims maximum per paper",
+      "exact deterministic duplicate removal",
+      "temperature=0, top_p=1, seed=0",
+      "max_output_tokens_per_region_call=320",
+      "preserved six-claim teacher subset",
+      "preserved teacher_agreement lexical scorer and F1>=0.5 pass threshold",
+      "no scientific-state materialization",
+      "no production routing change",
+      "accepted page-scoped Qwen VERIFY unchanged"
+    ],
+    "changed": [
+      "exact source-region overflow behavior only: 650 raw characters becomes a soft target rather than an immediate nonterminal split",
+      "nonterminal regions crossing 650 continue until the existing terminal-line predicate succeeds or a hard 1200-character bound is reached"
+    ],
+    "explicitly_not_changed": [
+      "BM25 scoring",
+      "facet interleaving",
+      "retrieval top-k",
+      "claim proposal count",
+      "claim normalization prompt",
+      "claim guard schema",
+      "teacher scorer",
+      "model/runtime/GPU topology",
+      "production EXTRACT",
+      "Qwen VERIFY",
+      "GitRunner controller/provisioner/runtime/reconciler"
+    ]
+  },
+  "region_construction": {
+    "id": "SOFT650_TERMINAL_OR_HARD1200_V1",
+    "soft_target_raw_chars": 650,
+    "hard_max_raw_chars": 1200,
+    "terminal_predicate": "existing Wave-1 terminal predicate: [.!?] optionally followed by closing quote/paren/bracket at the end of the accumulated raw text",
+    "behavior": [
+      "Preserve the existing early flush when a terminal predicate is reached before 650 characters.",
+      "Before 650 characters and without a terminal, continue accumulating.",
+      "At or above 650 characters without a terminal, continue accumulating instead of flushing.",
+      "Flush at the first terminal predicate after the soft target.",
+      "If no terminal appears by 1200 raw characters, flush at the current line boundary and mark forced_hard_split=true.",
+      "Never rewrite source text. Region IDs, page numbers, and start/end offsets remain exact authoritative-PDF coordinates."
+    ],
+    "safety": [
+      "hard_max_raw_chars is structurally enforced",
+      "raw_source_form remains deterministic exact PDF text",
+      "no model participates in region boundary selection"
+    ]
+  },
+  "benchmark_delta": {
+    "continuity_metrics": [
+      "historical_evidence_page_recall_at_12",
+      "job_local_completion_fraction",
+      "accepted_claim_count",
+      "teacher_subset_precision",
+      "teacher_subset_coverage",
+      "page_agreement_on_passing_matches",
+      "type_agreement_on_passing_matches",
+      "projected_remote_input_token_reduction",
+      "prompt_tokens",
+      "output_tokens",
+      "inference_seconds_total"
+    ],
+    "new_diagnostics": [
+      "candidate_soft_extended_region_count",
+      "candidate_forced_hard_split_count",
+      "selected_soft_extended_region_count",
+      "selected_forced_hard_split_count",
+      "selected_source_chars_total",
+      "teacher_best_source_region_normalized_f1_by_claim",
+      "teacher_best_model_match_f1_by_claim"
+    ],
+    "diagnostic_success_not_promotion_gate": [
+      "paper_wide_collateral_loss_count == 0",
+      "unit_hard_reject_count == 0",
+      "job_local_completion_fraction remains >= 0.50",
+      "at least one teacher best model-match F1 improves relative to Wave 2 or teacher_claim_coverage improves above 0",
+      "projected_remote_input_token_reduction remains >= 0.50"
+    ],
+    "interpretation": "If source-boundary completion improves teacher alignment while safety/completion remain intact, retain it and next isolate multi-proposition span proposal. If it does not, revert this retrieval-substrate delta and move directly to proposal/normalization separation. Do not change the teacher threshold post hoc."
+  },
+  "gates": {
+    "hard_safety_unchanged": [
+      "fabricated/unlocatable quote count = 0",
+      "exact quote locatability = 1.0 for every locally accepted claim",
+      "page provenance coverage = 1.0",
+      "structural claim budgets respected",
+      "scientific_state_materialized = false",
+      "production_routing_changed = false"
+    ],
+    "research_positive_unchanged": [
+      "local pass precision >= 0.95",
+      "page agreement >= 0.95",
+      "type agreement >= 0.95",
+      "teacher claim coverage >= 0.80",
+      "job local completion fraction >= 0.50"
+    ],
+    "production_promotion_unchanged": [
+      "all safety gates pass",
+      "local precision >= 0.95",
+      "teacher claim coverage >= 0.90",
+      "page/type agreement >= 0.95",
+      "unsupported claim rate = 0",
+      "job local completion >= 0.80",
+      "projected remote input-token reduction >= 0.50",
+      "no material downstream VERIFY regression"
+    ]
+  },
+  "execution": {
+    "execution_contract": "model-dual-public-v1",
+    "new_privileged_authority_required": false,
+    "gitrunner_substrate_change_required": false
+  }
+}
