@@ -85,8 +85,8 @@ def exact_source_regions_soft_terminal(
             if not terminal:
                 if len(current) < soft_chars:
                     continue
+                extended_past_soft = True
                 if len(current) < hard_chars:
-                    extended_past_soft = True
                     continue
                 forced_hard_split = True
 
