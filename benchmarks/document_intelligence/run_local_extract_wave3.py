@@ -116,11 +116,11 @@ def main() -> int:
     )
     print(
         "SELECTED_SOFT_EXTENDED_REGION_COUNT="
-        f"{metrics[\'selected_soft_extended_region_count\']}"
+        f"{metrics['selected_soft_extended_region_count']}"
     )
     print(
         "SELECTED_FORCED_HARD_SPLIT_COUNT="
-        f"{metrics[\'selected_forced_hard_split_count\']}"
+        f"{metrics['selected_forced_hard_split_count']}"
     )
     print("SCIENTIFIC_STATE_MATERIALIZED=false")
     print("PRODUCTION_ROUTING_CHANGED=false")
