@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "analysis_id": "local-extract-wave2-decision-v1",
+  "owning_task": "research-engine-local-extract-redesign-v1",
+  "authoritative_execution": {
+    "workflow_run_id": 39869131630,
+    "artifact_id": 12464958088,
+    "artifact_zip_sha256": "9773662cb41eb90408eeac0d0364d72a79c9f9672593c629d758d0b9318b3887",
+    "report_sha256": "e830160adc794322f30924c89ffc9fc632fc5ccba61f739bb8bcf015e854762f",
+    "candidate_sha": "31989cb644d2807048a45b4f00e221a1a74a93fc",
+    "implementation_merge_sha": "d1f240d51dbb348c0525acfc4ca58118a2d0f8e7"
+  },
+  "scientific_decision": "PARTIAL",
+  "wave1_comparison": {
+    "job_local_completion_fraction": {
+      "wave1": 0.3333333333333333,
+      "wave2": 1
+    },
+    "accepted_claim_count": {
+      "wave1": 30,
+      "wave2": 70
+    },
+    "accepted_claims_on_wave1_failed_papers_wave2": 45,
+    "paper_wide_collateral_loss_count_wave2": 0,
+    "hard_rejected_unit_count_wave2": 0,
+    "projected_remote_input_token_reduction": {
+      "wave1": 0.9175094731750141,
+      "wave2": 0.784898460105168
+    },
+    "inference_seconds_total": {
+      "wave1": 78.68,
+      "wave2": 39.70450589223765
+    },
+    "model_init_seconds": {
+      "wave1": 161.7,
+      "wave2": 161.78017267902032
+    }
+  },
+  "hard_safety": {
+    "fabricated_or_unlocatable_quote_count_zero": true,
+    "exact_quote_locatability_one": true,
+    "page_provenance_coverage_one": true,
+    "structural_claim_budget_respected": true,
+    "scientific_state_materialized_false": true,
+    "production_routing_changed_false": true
+  },
+  "teacher_control": {
+    "teacher_claim_count": 6,
+    "qwen_claim_count": 8,
+    "passing_pairs_at_normalized_f1_0_5": 0,
+    "qwen_precision_at_f1_0_5": 0,
+    "teacher_claim_coverage_at_f1_0_5": 0,
+    "best_pair_f1s": [
+      {
+        "teacher_id": "e4",
+        "qwen_index": 6,
+        "f1": 0.4615384615384615,
+        "page_equal": true,
+        "type_equal": true
+      },
+      {
+        "teacher_id": "e1",
+        "qwen_index": 4,
+        "f1": 0.4482758620689655,
+        "page_equal": true,
+        "type_equal": true
+      },
+      {
+        "teacher_id": "e3",
+        "qwen_index": 0,
+        "f1": 0.43636363636363634,
+        "page_equal": true,
+        "type_equal": true
+      },
+      {
+        "teacher_id": "e6",
+        "qwen_index": 2,
+        "f1": 0.4210526315789474,
+        "page_equal": true,
+        "type_equal": true
+      },
+      {
+        "teacher_id": "e5",
+        "qwen_index": 3,
+        "f1": 0.22222222222222224,
+        "page_equal": false,
+        "type_equal": true
+      },
+      {
+        "teacher_id": "e2",
+        "qwen_index": 7,
+        "f1": 0.20512820512820512,
+        "page_equal": false,
+        "type_equal": false
+      }
+    ]
+  },
+  "residual_localization": [
+    {
+      "id": "GUARD_COLLATERAL_SOLVED",
+      "evidence": "All 108 region units terminated as valid CLAIM or SKIP; 9/9 papers PASS_LOCAL; zero hard rejects and zero paper-wide collateral loss.",
+      "conclusion": "Do not reopen paper-level guard semantics as the primary residual."
+    },
+    {
+      "id": "REGION_BOUNDARY_TRUNCATION",
+      "evidence": [
+        "Teacher paper selected region pdf:p2:004670-005356 ends mid-method proposition after 'Finally, we apply the trained base encoder', omitting the rest of the testing-stage sentence.",
+        "Teacher paper selected region pdf:p6:001202-001765 ends after only the first listed future-work area although teacher claim e6 covers multiple listed areas.",
+        "Teacher paper selected page-4 evaluation region contains wired improvement only, while the teacher control also expects the wireless comparison."
+      ],
+      "conclusion": "Page recall@12=1.0 does not imply proposition-complete region retrieval."
+    },
+    {
+      "id": "VALID_NARROW_PARAPHRASES_BELOW_LEXICAL_GATE",
+      "evidence": "Four teacher best matches have correct page and type but normalized token F1 only 0.421-0.462, below the preserved 0.5 pass threshold.",
+      "conclusion": "Teacher lexical zero is not evidence that all eight local claims are semantically unsupported; the next experiment must preserve the existing scorer for continuity while adding source-region completeness diagnostics."
+    },
+    {
+      "id": "ONE_CLAIM_PER_REGION_NOT_YET_ISOLATED",
+      "evidence": "Some selected source regions contain multiple scientifically useful propositions, but Wave 2 structurally emits at most one claim.",
+      "conclusion": "Do not change this yet. First isolate region-boundary completion; only then test span proposal versus normalization if teacher completeness remains low."
+    }
+  ],
+  "next_experiment": "WAVE3_SOFT_TERMINAL_REGION_COMPLETION_V1"
+}
