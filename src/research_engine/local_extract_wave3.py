@@ -35,6 +35,15 @@ SOFT_REGION_CHARS = 650
 HARD_REGION_CHARS = 1200
 
 
+def terminal_at_end(value: str) -> bool:
+    stripped = str(value).rstrip()
+    if not stripped:
+        return False
+    if stripped[-1] in "\\\"')]":
+        return len(stripped) >= 2 and stripped[-2] in ".!?"
+    return stripped[-1] in ".!?"
+
+
 def exact_source_regions_soft_terminal(
     pages: list[dict[str, Any]],
     *,
@@ -70,8 +79,118 @@ def exact_source_regions_soft_terminal(
                 extended_past_soft = False
             end = match.end()
             current = text[start:end]
-            terminal = bool(
-                re.search(r'[.!?][\"\\')\\]]?
+            terminal = terminal_at_end(current)
+
+            forced_hard_split = False
+            if not terminal:
+                if len(current) < soft_chars:
+                    continue
+                if len(current) < hard_chars:
+                    extended_past_soft = True
+                    continue
+                forced_hard_split = True
+
+            raw = text[start:end]
+            rendered = display_text(raw)
+            if len(rendered) >= 12:
+                regions.append(
+                    {
+                        "region_id": (
+                            f"pdf:p{page_number}:"
+                            f"{start:06d}-{end:06d}"
+                        ),
+                        "page_number": page_number,
+                        "start_char": start,
+                        "end_char": end,
+                        "raw_source_form": raw,
+                        "display_text": rendered,
+                        "section_hint": region_section,
+                        "source_layer": "AUTHORITATIVE_PDF_TEXT",
+                        "soft_extended": extended_past_soft,
+                        "forced_hard_split": forced_hard_split,
+                    }
+                )
+            start = None
+            region_section = ""
+            extended_past_soft = False
+
+        if start is not None and end > start:
+            raw = text[start:end]
+            rendered = display_text(raw)
+            if len(rendered) >= 12:
+                regions.append(
+                    {
+                        "region_id": (
+                            f"pdf:p{page_number}:"
+                            f"{start:06d}-{end:06d}"
+                        ),
+                        "page_number": page_number,
+                        "start_char": start,
+                        "end_char": end,
+                        "raw_source_form": raw,
+                        "display_text": rendered,
+                        "section_hint": region_section,
+                        "source_layer": "AUTHORITATIVE_PDF_TEXT",
+                        "soft_extended": extended_past_soft,
+                        "forced_hard_split": False,
+                    }
+                )
+    return regions
+
+
+def teacher_source_region_alignment(
+    teacher: list[dict[str, Any]],
+    regions: list[dict[str, Any]],
+) -> dict[str, Any]:
+    rows: list[dict[str, Any]] = []
+    for teacher_index, expected in enumerate(teacher):
+        scored = [
+            (
+                token_f1(
+                    str(expected["normalized_form"]),
+                    str(region["display_text"]),
+                ),
+                region,
+            )
+            for region in regions
+        ]
+        scored.sort(
+            key=lambda pair: (
+                -pair[0],
+                int(pair[1]["page_number"]),
+                int(pair[1]["start_char"]),
+            )
+        )
+        if scored:
+            score, region = scored[0]
+            rows.append(
+                {
+                    "teacher_index": teacher_index,
+                    "teacher_id": expected.get("id"),
+                    "best_normalized_f1": score,
+                    "page_equal": (
+                        int(expected["page_number"])
+                        == int(region["page_number"])
+                    ),
+                    "region_id": str(region["region_id"]),
+                    "region_rank": int(region["rank"]),
+                    "soft_extended": bool(
+                        region.get("soft_extended", False)
+                    ),
+                    "forced_hard_split": bool(
+                        region.get("forced_hard_split", False)
+                    ),
+                }
+            )
+    return {
+        "teacher_claim_count": len(teacher),
+        "best_region_alignment": rows,
+        "mean_best_normalized_f1": (
+            sum(row["best_normalized_f1"] for row in rows) / len(rows)
+            if rows else 0.0
+        ),
+    }
+
 def build_region_prompt(
     *,
     topic: str,
