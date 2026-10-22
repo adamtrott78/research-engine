@@ -68,7 +68,8 @@
       "claim/unit-level fail-closed guard semantics instead of paper-wide evidence erasure",
       "structural one-claim-per-region and twelve-region-per-paper budgeting",
       "paper completion recorded independently from accepted claim preservation",
-      "unit-level proposal and rejection telemetry preserved in the offline report"
+      "unit-level proposal and rejection telemetry preserved in the offline report",
+      "per-region model max_output_tokens=320 (replacing the paper-level 1400-token ceiling because each call can emit at most one claim)"
     ],
     "explicitly_not_changed": [
       "retrieval query construction",
@@ -105,7 +106,8 @@
       "model_calls_per_paper_max": 12,
       "claims_per_region_max": 1,
       "claims_per_paper_max": 12,
-      "budget_enforcement": "structural, before paper aggregation"
+      "budget_enforcement": "structural, before paper aggregation",
+      "max_output_tokens_per_region_call": 320
     },
     "unit_guard": {
       "unknown_or_extra_fields": "REJECT_UNIT_FAIL_CLOSED",
