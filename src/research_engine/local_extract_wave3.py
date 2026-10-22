@@ -65,7 +65,7 @@ def exact_source_regions_soft_terminal(
         region_section = ""
         extended_past_soft = False
 
-        for match in re.finditer(r".*(?:\\n|$)", text):
+        for match in re.finditer(r".*(?:\n|$)", text):
             raw_line = match.group(0)
             if not raw_line:
                 continue
