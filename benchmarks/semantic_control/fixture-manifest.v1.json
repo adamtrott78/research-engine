@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "manifest_id": "semantic-control-fixture-manifest-v1",
+  "prototype_task_id": "workspace-semantic-control-prototype-v1",
+  "frozen_research_engine_checkpoint": "80da2cae9f8d80a7e7049a9b5339807becc54a98",
+  "frozen_workspace_control_checkpoint": "cc91a3a355a0f206a0c5734bd1d5eaeadc3450d0",
+  "sources": [
+    {
+      "source_id": "re-wave7a3-result",
+      "repository": "adamtrott78/research-engine",
+      "commit_sha": "80da2cae9f8d80a7e7049a9b5339807becc54a98",
+      "path": "benchmarks/document_intelligence/local-extract-wave7a3-author-anchored-result.v1.json",
+      "git_blob_sha": "44ee3f68d5c0c57cf8c124ac5948ddb6acc5abe6",
+      "role": "scientific_result"
+    },
+    {
+      "source_id": "re-domain-model",
+      "repository": "adamtrott78/research-engine",
+      "commit_sha": "80da2cae9f8d80a7e7049a9b5339807becc54a98",
+      "path": "src/research_engine/domain.py",
+      "git_blob_sha": "7f7dd78587cab52b0c3d099dbe07d6e76aed1217",
+      "role": "authoritative_domain_contract"
+    },
+    {
+      "source_id": "re-sql-schema",
+      "repository": "adamtrott78/research-engine",
+      "commit_sha": "80da2cae9f8d80a7e7049a9b5339807becc54a98",
+      "path": "sql/schema.sql",
+      "git_blob_sha": "59d5f9cc4641d1d1bb51e2fca15c34fb3f79001c",
+      "role": "authoritative_persistence_contract"
+    },
+    {
+      "source_id": "wc-extract-task",
+      "repository": "adamtrott78/workspace-control",
+      "commit_sha": "cc91a3a355a0f206a0c5734bd1d5eaeadc3450d0",
+      "path": "tasks/active/research-engine-local-extract-redesign-v1.json",
+      "git_blob_sha": "e2d41feeb9a71b92e9cddf45e4d8a2dfab1604b6",
+      "role": "durable_task_state"
+    },
+    {
+      "source_id": "wc-task-schema",
+      "repository": "adamtrott78/workspace-control",
+      "commit_sha": "cc91a3a355a0f206a0c5734bd1d5eaeadc3450d0",
+      "path": "schemas/task_capsule.v2.schema.json",
+      "git_blob_sha": "3c6c424d2a087857a9d59fec2abb6732afe6d132",
+      "role": "task_state_schema"
+    },
+    {
+      "source_id": "wc-workload-policy",
+      "repository": "adamtrott78/workspace-control",
+      "commit_sha": "cc91a3a355a0f206a0c5734bd1d5eaeadc3450d0",
+      "path": "architecture/lambda-ci-workload-policy.v1.json",
+      "git_blob_sha": "71bd0bb9c63436964462b1f9b889686ac328ee1d",
+      "role": "normative_authority"
+    },
+    {
+      "source_id": "wc-research-engine-project",
+      "repository": "adamtrott78/workspace-control",
+      "commit_sha": "cc91a3a355a0f206a0c5734bd1d5eaeadc3450d0",
+      "path": "architecture/lambda-ci-project-research-engine.v2.json",
+      "git_blob_sha": "3088d8aece6fb261de329cd9081eee2349469efb",
+      "role": "capability_and_route_state"
+    }
+  ],
+  "invariants": [
+    "authoritative source records remain authoritative; fixtures are derived copies",
+    "all copied facts retain exact repository, commit, path, and git blob provenance",
+    "unknown is not false",
+    "contradictions are preserved",
+    "supersession preserves history",
+    "CandidateActionV1 remains UNDECIDED",
+    "EvidenceRequirementV1 remains REQUEST_ONLY",
+    "only DecisionEvaluationV1 with explicit authority context may ALLOW",
+    "identical frozen inputs must yield deterministic or canonically equivalent semantic manifests"
+  ]
+}
