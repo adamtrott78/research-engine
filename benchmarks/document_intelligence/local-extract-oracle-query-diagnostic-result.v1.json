@@ -1,0 +1,206 @@
+{
+  "schema_version": 1,
+  "decision_id": "local-extract-oracle-query-diagnostic-result-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "candidate_sha": "4aafd7e1ca2160c25a931f29bb9bb9a5f15ed25b",
+  "workflow_run_id": 39991479494,
+  "artifact_id": 12518690424,
+  "artifact_zip_sha256": "a55ea171dd4dc77d5d5df3fbe05ad1039b1a7c8f7b0a9aec8d5dd52a97c1ec16",
+  "report_sha256": "4340afe82bd28f0f16b50cb1844f42c8cee386bfe25dfccdd3b876a45e252fe3",
+  "verdict": "QUERY_REPRESENTATION_CONFIRMED",
+  "qualifying_arms": [
+    "BM25_DIRECT",
+    "BGE_M3_DENSE",
+    "BGE_M3_SPARSE",
+    "BGE_M3_COLBERT",
+    "BGE_M3_HYBRID_040_020_040",
+    "QWEN3_RERANKER_0_6B"
+  ],
+  "selected_page_numbers": [
+    1,
+    2,
+    4,
+    6
+  ],
+  "page_pool_proposition_count": 149,
+  "predeclared_gate": {
+    "required_supported_atoms_at_12": 10,
+    "total_atoms": 13,
+    "required_known_misses": [
+      "e2.a",
+      "e2.b",
+      "e4.b"
+    ],
+    "target_text_oracle_verdict_eligible": false
+  },
+  "intent_query_oracle": {
+    "BM25_DIRECT": {
+      "supported_at_1": 6,
+      "supported_at_3": 9,
+      "supported_at_12": 11,
+      "support_recall_at_1": 0.46153846153846156,
+      "support_recall_at_3": 0.6923076923076923,
+      "support_recall_at_12": 0.8461538461538461,
+      "mrr": 0.609493,
+      "known_miss_recovery_count": 3,
+      "known_miss_recovered": [
+        "e2.a",
+        "e2.b",
+        "e4.b"
+      ],
+      "delta_supported_at_12_vs_broad": 9,
+      "mean_best_token_f1_at_12": 0.324312,
+      "ranking_inference_seconds": 0,
+      "peak_gpu_memory_mib": 0
+    },
+    "BGE_M3_DENSE": {
+      "supported_at_1": 6,
+      "supported_at_3": 12,
+      "supported_at_12": 13,
+      "support_recall_at_1": 0.46153846153846156,
+      "support_recall_at_3": 0.9230769230769231,
+      "support_recall_at_12": 1,
+      "mrr": 0.650641,
+      "known_miss_recovery_count": 3,
+      "known_miss_recovered": [
+        "e2.a",
+        "e2.b",
+        "e4.b"
+      ],
+      "delta_supported_at_12_vs_broad": 11,
+      "mean_best_token_f1_at_12": 0.332251,
+      "ranking_inference_seconds": 10.031,
+      "peak_gpu_memory_mib": 2654.2
+    },
+    "BGE_M3_SPARSE": {
+      "supported_at_1": 7,
+      "supported_at_3": 11,
+      "supported_at_12": 12,
+      "support_recall_at_1": 0.5384615384615384,
+      "support_recall_at_3": 0.8461538461538461,
+      "support_recall_at_12": 0.9230769230769231,
+      "mrr": 0.692674,
+      "known_miss_recovery_count": 3,
+      "known_miss_recovered": [
+        "e2.a",
+        "e2.b",
+        "e4.b"
+      ],
+      "delta_supported_at_12_vs_broad": 11,
+      "mean_best_token_f1_at_12": 0.334006,
+      "ranking_inference_seconds": 10.031,
+      "peak_gpu_memory_mib": 2654.2
+    },
+    "BGE_M3_COLBERT": {
+      "supported_at_1": 5,
+      "supported_at_3": 12,
+      "supported_at_12": 13,
+      "support_recall_at_1": 0.38461538461538464,
+      "support_recall_at_3": 0.9230769230769231,
+      "support_recall_at_12": 1,
+      "mrr": 0.637821,
+      "known_miss_recovery_count": 3,
+      "known_miss_recovered": [
+        "e2.a",
+        "e2.b",
+        "e4.b"
+      ],
+      "delta_supported_at_12_vs_broad": 11,
+      "mean_best_token_f1_at_12": 0.329742,
+      "ranking_inference_seconds": 10.031,
+      "peak_gpu_memory_mib": 2654.2
+    },
+    "BGE_M3_HYBRID_040_020_040": {
+      "supported_at_1": 7,
+      "supported_at_3": 12,
+      "supported_at_12": 13,
+      "support_recall_at_1": 0.5384615384615384,
+      "support_recall_at_3": 0.9230769230769231,
+      "support_recall_at_12": 1,
+      "mrr": 0.714744,
+      "known_miss_recovery_count": 3,
+      "known_miss_recovered": [
+        "e2.a",
+        "e2.b",
+        "e4.b"
+      ],
+      "delta_supported_at_12_vs_broad": 11,
+      "mean_best_token_f1_at_12": 0.329742,
+      "ranking_inference_seconds": 10.031,
+      "peak_gpu_memory_mib": 2654.2
+    },
+    "QWEN3_RERANKER_0_6B": {
+      "supported_at_1": 8,
+      "supported_at_3": 11,
+      "supported_at_12": 13,
+      "support_recall_at_1": 0.6153846153846154,
+      "support_recall_at_3": 0.8461538461538461,
+      "support_recall_at_12": 1,
+      "mrr": 0.735348,
+      "known_miss_recovery_count": 3,
+      "known_miss_recovered": [
+        "e2.a",
+        "e2.b",
+        "e4.b"
+      ],
+      "delta_supported_at_12_vs_broad": 12,
+      "mean_best_token_f1_at_12": 0.338377,
+      "ranking_inference_seconds": 35.196,
+      "peak_gpu_memory_mib": 3324.2
+    }
+  },
+  "target_text_oracle_summary": {
+    "BM25_DIRECT": {
+      "supported_at_12": 13,
+      "support_recall_at_12": 1,
+      "known_miss_recovery_count": 3
+    },
+    "BGE_M3_DENSE": {
+      "supported_at_12": 13,
+      "support_recall_at_12": 1,
+      "known_miss_recovery_count": 3
+    },
+    "BGE_M3_SPARSE": {
+      "supported_at_12": 13,
+      "support_recall_at_12": 1,
+      "known_miss_recovery_count": 3
+    },
+    "BGE_M3_COLBERT": {
+      "supported_at_12": 13,
+      "support_recall_at_12": 1,
+      "known_miss_recovery_count": 3
+    },
+    "BGE_M3_HYBRID_040_020_040": {
+      "supported_at_12": 13,
+      "support_recall_at_12": 1,
+      "known_miss_recovery_count": 3
+    },
+    "QWEN3_RERANKER_0_6B": {
+      "supported_at_12": 13,
+      "support_recall_at_12": 1,
+      "known_miss_recovery_count": 3
+    }
+  },
+  "scientific_disposition": {
+    "primary_conclusion": "QUERY_REPRESENTATION_IS_PRIMARY_BOTTLENECK_ON_PRESERVED_TEACHER_CONTROL",
+    "ranker_capacity": "SUFFICIENT_UNDER_PRECISE_INTENT_FOR_THIS_CONTROL",
+    "next_research_target": "LOCAL_EVIDENCE_INTENT_GENERATION_AND_QUERY_DECOMPOSITION",
+    "supervised_domain_adaptation": "DEFER_UNTIL_QUERY_DECOMPOSITION_IS_TESTED",
+    "generation_model_change": "NOT_JUSTIFIED",
+    "wave7_authorized": false,
+    "rationale": [
+      "All six frozen ranking arms meet the predeclared query-representation-confirmed gate under answer-free atom-specific evidence intents.",
+      "BGE-M3 dense, ColBERT, hybrid, and Qwen3-Reranker recover all 13 atoms within top-12; BGE sparse recovers 12/13; direct BM25 recovers 11/13.",
+      "Every arm recovers all three historically known misses e2.a/e2.b/e4.b under the answer-free intent queries.",
+      "The same models performed poorly under broad paper/facet queries, so the dominant changed variable is query/task representation rather than model family.",
+      "The next bounded design should generate specific evidence intents/questions locally before proposition ranking, then measure whether automatically generated intents approach the oracle ceiling without teacher leakage."
+    ]
+  },
+  "boundaries": {
+    "production_extract": "STANDARD_CODEX_UNCHANGED",
+    "qwen_verify": "UNCHANGED",
+    "scientific_state_materialized": false,
+    "generation_model_change": false,
+    "wave7": false
+  }
+}
