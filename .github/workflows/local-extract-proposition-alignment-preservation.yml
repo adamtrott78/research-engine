@@ -1,0 +1,135 @@
+name: Local EXTRACT Proposition Alignment Preservation
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+
+jobs:
+  proposition-alignment-preservation:
+    if: >-
+      github.event.issue.pull_request &&
+      github.actor == 'adamtrott78' &&
+      github.event.comment.author_association == 'OWNER' &&
+      startsWith(github.event.comment.body, '/local-extract-proposition-alignment-preservation ')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Verify exact PR head
+        id: gate
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          expected_sha="$(printf '%s\n' "$COMMENT_BODY" | awk '{print $2}')"
+          [[ "$expected_sha" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "Invalid diagnostic SHA" >&2
+            exit 20
+          }
+          pr_json="$(
+            curl -fsSL               -H "Accept: application/vnd.github+json"               -H "Authorization: Bearer $GH_TOKEN"               -H "X-GitHub-Api-Version: 2022-11-28"               "https://api.github.com/repos/$REPOSITORY/pulls/$PR_NUMBER"
+          )"
+          actual_sha="$(
+            python3 -c 'import json,sys; print(json.load(sys.stdin)["head"]["sha"])'               <<<"$pr_json"
+          )"
+          [[ "$actual_sha" == "$expected_sha" ]]
+          echo "expected_sha=$expected_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout exact candidate SHA
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ steps.gate.outputs.expected_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          clean: true
+
+      - name: Recover exact valid Wave 7A.3 generated intents
+        env:
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          artifact_zip="$RUNNER_TEMP/wave7a3-valid.zip"
+          artifact_dir="$RUNNER_TEMP/wave7a3-valid"
+          curl -fsSL             -H "Accept: application/vnd.github+json"             -H "Authorization: Bearer $GH_TOKEN"             -H "X-GitHub-Api-Version: 2022-11-28"             "https://api.github.com/repos/$REPOSITORY/actions/artifacts/12533721500/zip"             -o "$artifact_zip"
+          [[ "$(sha256sum "$artifact_zip" | awk '{print $1}')" ==             "cd02b842ad44bbadab7aad661ff424cc6108f8047d260df5d0064fba2b4f35fb" ]]
+          mkdir -m 0700 "$artifact_dir"
+          unzip -q "$artifact_zip" -d "$artifact_dir"
+          generated="$artifact_dir/local-extract-wave7a3-generated-intents.json"
+          [[ "$(sha256sum "$generated" | awk '{print $1}')" ==             "a5a970725c1f16a694633416ad9fbd98e58418c267891ac83b7783d8af218ebd" ]]
+          echo "GENERATED_INTENTS=$generated" >> "$GITHUB_ENV"
+
+      - name: Install exact PDF reader ephemerally
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          wheel="$RUNNER_TEMP/pypdf-6.21.1-py3-none-any.whl"
+          pydeps="$RUNNER_TEMP/proposition-alignment-pydeps"
+          url="https://files.pythonhosted.org/packages/85/e6/24c944e473c34e818cf1b98085796fcd780465ecfe17663f2bf8fee1958b/pypdf-6.21.1-py3-none-any.whl"
+          expected="553e2d42f5bb3bb2a785a7d3de8ef90bb7df74b5413eff5a7b4388007ea9254b"
+          curl -fsSL --retry 3 --retry-delay 2 "$url" -o "$wheel"
+          actual="$(sha256sum "$wheel" | awk '{print $1}')"
+          [[ "$actual" == "$expected" ]]
+          mkdir -m 0700 "$pydeps"
+          python3 -m zipfile -e "$wheel" "$pydeps"
+
+      - name: Run frozen proposition-alignment diagnostic
+        env:
+          EXPECTED_SHA: ${{ steps.gate.outputs.expected_sha }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$(git rev-parse HEAD)" == "$EXPECTED_SHA" ]]
+          pydeps="$RUNNER_TEMP/proposition-alignment-pydeps"
+          output="$RUNNER_TEMP/local-extract-proposition-alignment-preservation.json"
+          workdir="$RUNNER_TEMP/local-extract-proposition-alignment-work"
+
+          PYTHONPATH="$PWD/src:$pydeps" python3             benchmarks/document_intelligence/run_local_extract_proposition_alignment_preservation.py             --fixture benchmarks/document_intelligence/local-extract-wave1-corpus.v1.json             --wave7a3-contract benchmarks/document_intelligence/local-extract-wave7a3-author-anchored-obligations.v1.json             --support-fixture benchmarks/document_intelligence/local-extract-teacher-atom-support.v1.json             --design benchmarks/document_intelligence/local-extract-proposition-alignment-preservation-design.v1.json             --wave7a3-result benchmarks/document_intelligence/local-extract-wave7a3-author-anchored-result.v1.json             --generated-intents "$GENERATED_INTENTS"             --output "$output"             --workdir "$workdir"
+
+          python3 - "$output" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          report = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert report["generated_intents_sha256"] == (
+              "a5a970725c1f16a694633416ad9fbd98e58418c267891ac83b7783d8af218ebd"
+          )
+          assert report["qwen_model_calls"] == 0
+          assert report["external_model_downloads"] == 0
+          assert report["scientific_state_materialized"] is False
+          assert report["production_routing_changed"] is False
+          assert report["qwen_verify_changed"] is False
+          assert report["wave7b_started"] is False
+          assert report["ontology_or_semantic_control_in_extract"] is False
+          assert report["fixed_quota_promoted"] is False
+          assert report["hard_safety"]["all_papers_certificate_pass"] is True
+          assert report["hard_safety"]["all_papers_page_preserved"] is True
+          assert report["candidate_selector_id"] == "DYNAMIC_SAME_PAGE_ALIGNMENT_SWAP_V1"
+          assert report["alignment_augment_decision"] in {
+              "ALIGNMENT_AUGMENT_STRONG",
+              "ALIGNMENT_AUGMENT_FEASIBLE",
+              "ALIGNMENT_AUGMENT_NEGATIVE",
+          }
+          print("PROPOSITION_ALIGNMENT_PRESERVATION_RECEIPT=PASS")
+          PY
+
+      - name: Upload proposition-alignment preservation report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: local-extract-proposition-alignment-preservation
+          path: ${{ runner.temp }}/local-extract-proposition-alignment-preservation.json
+          if-no-files-found: error
+          retention-days: 14
