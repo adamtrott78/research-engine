@@ -154,7 +154,7 @@ def test_adapter_source_contains_no_mutating_store_or_external_runtime_paths():
         "from openai",
         "import subprocess",
         "from subprocess",
-        "lambda",
-        "gpu",
+        "boto3",
+        "workspace_ci",
     ]:
         assert token not in lowered
