@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "purpose": "INERT_TRIGGER_ONLY",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "base_implementation_sha": "ec592f877bde55c213dadf3a84aad5dec76197c2",
+  "diagnostic_id": "MULTIVIEW_SUBMODULAR_COVERAGE_DIAGNOSTIC_V1",
+  "scientific_semantics_changed": false,
+  "merge_forbidden": true
+}
