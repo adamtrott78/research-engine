@@ -64,7 +64,7 @@ def test_semantic_support_is_additive_not_metric_replacement() -> None:
     semantic = contract["evaluation"]["semantic_support_track"]
     design = semantic["design"]
     assert any(
-        "Before inspecting neural candidate rankings" in item
+        "frozen before any neural ranking output exists" in item
         for item in design
     )
     assert any("atom-support recall@12" in item for item in design)
