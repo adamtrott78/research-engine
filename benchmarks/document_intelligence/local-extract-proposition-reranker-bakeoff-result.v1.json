@@ -1,0 +1,142 @@
+{
+  "schema_version": 1,
+  "decision_id": "local-extract-proposition-reranker-bakeoff-result-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "candidate_sha": "8329f160a154d86f8178bb094e9b53a8274193b5",
+  "workflow_run_id": 39983057391,
+  "artifact_id": 12514950709,
+  "artifact_zip_sha256": "13a3690a7a2cc313eafcd566548a0bb6b735045ccd6bdf75046e48bc3c603ac4",
+  "report_sha256": "f05a8a12da8946edeaf7470d7c46c9ad61b6f91d640e3ec3da6b1f81d10d2ad9",
+  "decision": "NEGATIVE",
+  "promising_arms": [],
+  "frozen_baselines": {
+    "wave6_grouped_mean_f1": 0.30305743036333815,
+    "wave6_atom_mean_f1": 0.22837751648405338,
+    "selected_page_pool_grouped_ceiling_f1": 0.43276514777044994,
+    "selected_page_pool_atom_ceiling_f1": 0.36343825934770935,
+    "page_conditioned_bm25_grouped_mean_f1": 0.2607226107226107,
+    "page_conditioned_bm25_atom_mean_f1": 0.20472730749170215
+  },
+  "arms": {
+    "PAGE_CONDITIONED_BM25_CONTROL": {
+      "grouped_mean_f1": 0.2607226107226107,
+      "grouped_coverage_at_f1_0_5": 0,
+      "atom_mean_f1": 0.20472730749170215,
+      "atom_coverage_at_f1_0_5": 0,
+      "semantic_support_recall_at_12": 0.15384615384615385,
+      "known_miss_recovery_count": 0,
+      "known_miss_recovered": [],
+      "selected_source_chars": 2742
+    },
+    "BGE_M3_DENSE": {
+      "grouped_mean_f1": 0.23017956609719903,
+      "grouped_coverage_at_f1_0_5": 0.16666666666666666,
+      "atom_mean_f1": 0.17515701853148838,
+      "atom_coverage_at_f1_0_5": 0,
+      "semantic_support_recall_at_12": 0.15384615384615385,
+      "known_miss_recovery_count": 2,
+      "known_miss_recovered": [
+        "e2.a",
+        "e2.b"
+      ],
+      "grouped_gap_closure_fraction": -0.5618622062201465,
+      "atom_gap_closure_fraction": -0.3940486097154906,
+      "selected_source_chars": 2694,
+      "ranking_inference_seconds": 26.669709406036418,
+      "peak_gpu_memory_mib": 2654.2236328125
+    },
+    "BGE_M3_SPARSE": {
+      "grouped_mean_f1": 0.18801912373340945,
+      "grouped_coverage_at_f1_0_5": 0,
+      "atom_mean_f1": 0.18050773647396032,
+      "atom_coverage_at_f1_0_5": 0,
+      "semantic_support_recall_at_12": 0.07692307692307693,
+      "known_miss_recovery_count": 0,
+      "known_miss_recovered": [],
+      "grouped_gap_closure_fraction": -0.8869041020038891,
+      "atom_gap_closure_fraction": -0.3544314876041937,
+      "selected_source_chars": 2833,
+      "ranking_inference_seconds": 26.669709406036418,
+      "peak_gpu_memory_mib": 2654.2236328125
+    },
+    "BGE_M3_COLBERT": {
+      "grouped_mean_f1": 0.22221304420210572,
+      "grouped_coverage_at_f1_0_5": 0.16666666666666666,
+      "atom_mean_f1": 0.16710787712438524,
+      "atom_coverage_at_f1_0_5": 0,
+      "semantic_support_recall_at_12": 0.15384615384615385,
+      "known_miss_recovery_count": 2,
+      "known_miss_recovered": [
+        "e2.a",
+        "e2.b"
+      ],
+      "grouped_gap_closure_fraction": -0.6232812339722801,
+      "atom_gap_closure_fraction": -0.45364506414361977,
+      "selected_source_chars": 3033,
+      "ranking_inference_seconds": 26.669709406036418,
+      "peak_gpu_memory_mib": 2654.2236328125
+    },
+    "BGE_M3_HYBRID_040_020_040": {
+      "grouped_mean_f1": 0.22100217105773504,
+      "grouped_coverage_at_f1_0_5": 0.16666666666666666,
+      "atom_mean_f1": 0.15717266029764643,
+      "atom_coverage_at_f1_0_5": 0,
+      "semantic_support_recall_at_12": 0.15384615384615385,
+      "known_miss_recovery_count": 2,
+      "known_miss_recovered": [
+        "e2.a",
+        "e2.b"
+      ],
+      "grouped_gap_closure_fraction": -0.6326166318080938,
+      "atom_gap_closure_fraction": -0.5272061642537267,
+      "selected_source_chars": 2895,
+      "ranking_inference_seconds": 26.669709406036418,
+      "peak_gpu_memory_mib": 2654.2236328125
+    },
+    "QWEN3_RERANKER_0_6B": {
+      "grouped_mean_f1": 0.19993168910342163,
+      "grouped_coverage_at_f1_0_5": 0,
+      "atom_mean_f1": 0.18559535607373417,
+      "atom_coverage_at_f1_0_5": 0,
+      "semantic_support_recall_at_12": 0.07692307692307693,
+      "known_miss_recovery_count": 0,
+      "known_miss_recovered": [],
+      "grouped_gap_closure_fraction": -0.7950624937469003,
+      "atom_gap_closure_fraction": -0.31676236560839793,
+      "selected_source_chars": 2366,
+      "ranking_inference_seconds": 112.66825233894633,
+      "peak_gpu_memory_mib": 14272.9931640625
+    }
+  },
+  "execution": {
+    "paper_count": 9,
+    "external_model_downloads": 2,
+    "qwen35_extract_model_calls": 0,
+    "scientific_state_materialized": false,
+    "production_routing_changed": false,
+    "qwen_verify_changed": false,
+    "torch": "2.13.0+cu129",
+    "transformers": "5.18.0",
+    "cuda_runtime": "12.9"
+  },
+  "scientific_disposition": {
+    "primary_conclusion": "GENERIC_NEURAL_RERANKING_REJECTED",
+    "primary_residual": "QUERY_TASK_REPRESENTATION_OR_DOMAIN_ADAPTATION",
+    "generation_model_change": "NOT_JUSTIFIED",
+    "wave7_authorized": false,
+    "rationale": [
+      "No neural arm met the predeclared PROMISING rule.",
+      "Every neural arm underperformed the page-conditioned BM25 control on both grouped and atomized mean lexical F1.",
+      "BGE-M3 dense/ColBERT/hybrid recovered e2.a/e2.b semantic anchors but still regressed overall ranking quality and did not recover e4.b.",
+      "Qwen3-Reranker-0.6B regressed both lexical views and semantic support recall relative to the control.",
+      "Therefore generic off-the-shelf semantic ranking is not the missing mechanism under the current query/task representation; the next research question is query/task representation or supervised/domain-adapted proposition ranking, not a generation-model family change."
+    ]
+  },
+  "boundaries": {
+    "production_extract": "STANDARD_CODEX_UNCHANGED",
+    "qwen_verify": "UNCHANGED",
+    "gitrunner_substrate": "UNCHANGED",
+    "generation_model_family_bakeoff": false,
+    "wave7": false
+  }
+}
