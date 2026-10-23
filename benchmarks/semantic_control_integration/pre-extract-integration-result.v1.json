@@ -1,0 +1,117 @@
+{
+  "authority_results": {
+    "fake_epistemic_decision": "ABSTAIN",
+    "gpu_heavy_decision": "DENY",
+    "gpu_heavy_query": {
+      "decision": "DENY",
+      "policy_decision": "DENY",
+      "policy_observation_id": "wc:policy:gpu-heavy",
+      "route_capability_does_not_widen_authority": true,
+      "routes": [
+        "model-eval-local-extract-wave7a3"
+      ],
+      "workload_class": "gpu-heavy"
+    },
+    "gpu_small_decision": "ALLOW",
+    "gpu_small_query": {
+      "decision": "ALLOW",
+      "policy_decision": "EXISTING_P5_CAPABILITY",
+      "policy_observation_id": "wc:policy:gpu-small",
+      "route_capability_does_not_widen_authority": true,
+      "routes": [
+        "gpu-small"
+      ],
+      "workload_class": "gpu-small"
+    },
+    "missing_authority_decision": "ABSTAIN"
+  },
+  "authorization_escape_count": 0,
+  "benchmark_id": "semantic-control-pre-extract-integration-v1",
+  "extract_binding": "BLOCKED_EVIDENCE",
+  "extract_dependency_gate": {
+    "accepted_output_checkpoint_present": false,
+    "gate_id": "accepted-extract-output-v1",
+    "gate_status": "BLOCKED_EVIDENCE",
+    "interpretation": "The feasible proposition-alignment diagnostic is positive scientific evidence, but it is not a durable accepted EXTRACT architecture/output contract. It explicitly opens another design phase and does not authorize semantic-generalization execution or production promotion.",
+    "observed_at_repository_commit": "9566532288bf500db8997b9befcc339788609184",
+    "schema_version": 1,
+    "scientific_result": {
+      "alignment_augment_decision": "ALIGNMENT_AUGMENT_FEASIBLE",
+      "next_architecture_boundary": "OPEN_SEPARATE_SEMANTIC_CERTIFICATE_GENERALIZATION_DESIGN",
+      "primary_disposition": "DIRECT_PROPOSITION_ALIGNMENT_PRESERVATION_FEASIBLE",
+      "production_promotion_authorized": false,
+      "semantic_generalization_design_authorized": true,
+      "semantic_generalization_execution_authorized": false,
+      "wave7b_authorized": false
+    },
+    "source": {
+      "git_blob_sha": "921ec0e061fe59d436c0826ff251b3d4dbb26de3",
+      "path": "benchmarks/document_intelligence/local-extract-proposition-alignment-preservation-result.v1.json"
+    }
+  },
+  "final_production_verdict_issued": false,
+  "gates": {
+    "authorization_escapes_zero": true,
+    "extract_binding_blocked_evidence": true,
+    "fake_epistemic_authority_abstains": true,
+    "generic_gpu_heavy_authority_deny": true,
+    "gpu_small_authority_allow": true,
+    "missing_authority_abstains": true,
+    "pinned_extract_dependency_non_authoritative": true,
+    "relational_semantic_equivalence": true,
+    "research_answer_drift_fails_closed": true,
+    "research_manifest_deterministic": true,
+    "workspace_blob_drift_fails_closed": true,
+    "workspace_manifest_deterministic": true
+  },
+  "latency_comparison": [
+    {
+      "estimated_read_plus_projection_p50_ns": 9962494,
+      "projection_over_relational_percent": 0.8828278033139612,
+      "query_id": "Q1_CLAIM_SUPPORT",
+      "relational_p50_ns": 9875312,
+      "semantic_projection_p50_ns": 87182
+    },
+    {
+      "estimated_read_plus_projection_p50_ns": 9974427,
+      "projection_over_relational_percent": 0.454270740164408,
+      "query_id": "Q2_METHOD_QUALIFIERS",
+      "relational_p50_ns": 9929321,
+      "semantic_projection_p50_ns": 45106
+    },
+    {
+      "estimated_read_plus_projection_p50_ns": 8878045,
+      "projection_over_relational_percent": 0.5278079477937441,
+      "query_id": "Q3_SOURCE_LEVEL_COUNTS",
+      "relational_p50_ns": 8831432,
+      "semantic_projection_p50_ns": 46613
+    },
+    {
+      "estimated_read_plus_projection_p50_ns": 9452573,
+      "projection_over_relational_percent": 0.41549011569708527,
+      "query_id": "Q4_PROVENANCE_PATH",
+      "relational_p50_ns": 9413461,
+      "semantic_projection_p50_ns": 39112
+    }
+  ],
+  "latency_threshold_applied": false,
+  "performance_promotion_claim": false,
+  "production_database_access": false,
+  "production_mutation": false,
+  "production_promotion_authorized": false,
+  "research_semantic_manifest_sha256": "c72157edafe1d2d17b6e95743d5a4328e7eb102a69be0f984628547bf2a73a16",
+  "schema_version": 1,
+  "status": "PRE_EXTRACT_INTEGRATION_PASS",
+  "workspace_projection_overhead": {
+    "latency_ns": {
+      "max": 480856,
+      "mean": 247714,
+      "min": 235108,
+      "p50": 242001,
+      "p95": 267789
+    },
+    "measured_repetitions": 1000,
+    "warmup_repetitions": 20
+  },
+  "workspace_semantic_manifest_sha256": "e666697d29609634fa4b615e3e08ae4de31e5e12c75b926ca21c4669d1ac9193"
+}
