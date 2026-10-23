@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "manifest_id": "semantic-control-workspace-control-snapshot-v1",
+  "repository": "adamtrott78/workspace-control",
+  "task_creation_base_commit": "91459f5f6afa0d71394d63155c2fe8dfdc65a4b7",
+  "integration_task_commit": "f5dd5cb2dea9156b8b2c9bd665513bb7bbc8ea70",
+  "source_blobs_verified_identical_across_commits": true,
+  "sources": [
+    {
+      "source_id": "wc-task-schema",
+      "role": "TASK_STATE_SCHEMA",
+      "path": "schemas/task_capsule.v2.schema.json",
+      "git_blob_sha": "3c6c424d2a087857a9d59fec2abb6732afe6d132"
+    },
+    {
+      "source_id": "wc-workload-policy",
+      "role": "NORMATIVE_AUTHORITY",
+      "path": "architecture/lambda-ci-workload-policy.v1.json",
+      "git_blob_sha": "71bd0bb9c63436964462b1f9b889686ac328ee1d"
+    },
+    {
+      "source_id": "wc-research-engine-project",
+      "role": "CAPABILITY_AND_ROUTE_STATE",
+      "path": "architecture/lambda-ci-project-research-engine.v2.json",
+      "git_blob_sha": "3088d8aece6fb261de329cd9081eee2349469efb"
+    },
+    {
+      "source_id": "wc-execution-contracts",
+      "role": "EXECUTION_CONTRACT",
+      "path": "architecture/lambda-ci-execution-contracts.v1.json",
+      "git_blob_sha": "9eeb0ef9223821f1768350e24891eeb3bc72a940"
+    },
+    {
+      "source_id": "wc-pilot-contract",
+      "role": "RECEIPT_AND_RUNTIME_CONTRACT",
+      "path": "architecture/lambda-self-hosted-execution-pilot-contract.v1.json",
+      "git_blob_sha": "9f0994b48c6190c148341f69bf94184d75f48f79"
+    },
+    {
+      "source_id": "wc-extract-task",
+      "role": "DEPENDENCY_STATE_ONLY",
+      "path": "tasks/active/research-engine-local-extract-redesign-v1.json",
+      "git_blob_sha": "0987bffffead2ed8021fd16e7717a20d9cb8be89",
+      "extract_binding_authority": false
+    }
+  ],
+  "invariants": [
+    "Normative authority comes only from authority-owned policy/contract artifacts, never from inferred semantic edges.",
+    "The Local EXTRACT task is dependency state only until it records an accepted architecture/output checkpoint.",
+    "This snapshot is read-only and cannot update task, policy, project, receipt, runtime, or Heartbeat state.",
+    "Blob identity, not prose similarity, defines the pinned source version."
+  ]
+}

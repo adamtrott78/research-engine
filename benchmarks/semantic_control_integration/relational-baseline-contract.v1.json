@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "baseline_id": "semantic-control-relational-baseline-v1",
+  "purpose": "Measure current authoritative PostgresStore read behavior and latency on a frozen non-production fixture before semantic adapter overhead is assessed.",
+  "repository_checkpoint": "4317830c4f3779cebb8a5cf0d7eeec369b85d5ea",
+  "environment": {
+    "execution": "GitHub Actions CI only",
+    "workflow": {
+      "path": ".github/workflows/ci.yml",
+      "git_blob_sha": "8dd03b91ee52114ec495976c987e138747b51855"
+    },
+    "postgres_image": "pgvector/pgvector:0.8.6-pg18",
+    "database_source": "RESEARCH_ENGINE_DATABASE_URL provided by CI service",
+    "production_database_access": false
+  },
+  "authoritative_sources": {
+    "postgres_store": {
+      "path": "src/research_engine/postgres.py",
+      "git_blob_sha": "dda83be0e41773d7ff45e20fa85a04e76f681008"
+    },
+    "sql_queries": {
+      "path": "src/research_engine/sql_queries.py",
+      "git_blob_sha": "4daf119db5058766dc01a7c649c9fa41c8748cd7"
+    },
+    "corpus_loader": {
+      "path": "src/research_engine/corpus_loader.py",
+      "git_blob_sha": "ba18f972e292cbe87dd14bf10e13fabbb43bf125"
+    },
+    "schema": {
+      "path": "sql/schema.sql",
+      "git_blob_sha": "59d5f9cc4641d1d1bb51e2fca15c34fb3f79001"
+    },
+    "fixture": {
+      "path": "tests/data/rf_osr_five_work.json",
+      "git_blob_sha": "742feb261a72a760c7cb7a472beaca0cb283e4f8"
+    }
+  },
+  "fixture_identity": {
+    "works": 5,
+    "evidence_objects": 21,
+    "evidence_relations": 11,
+    "source_level_counts": {
+      "FULLTEXT_PDF_LAYOUT": 18,
+      "OCR_DERIVED": 3
+    }
+  },
+  "setup": [
+    "Construct PostgresStore from CI RESEARCH_ENGINE_DATABASE_URL.",
+    "Initialize the exact pinned sql/schema.sql in the ephemeral CI database.",
+    "TRUNCATE fixture-owned research tables CASCADE in the ephemeral CI database only.",
+    "Load the exact pinned tests/data/rf_osr_five_work.json via PostgresCorpusLoader.",
+    "Verify fixture cardinalities before timing.",
+    "Do not include schema initialization, TRUNCATE, or fixture loading in measured query latency."
+  ],
+  "timing_methodology": {
+    "clock": "time.perf_counter_ns",
+    "warmup_repetitions_per_query": 5,
+    "measured_repetitions_per_query": 50,
+    "timing_scope": "Whole public PostgresStore method call, including the method's current connection/open-close behavior.",
+    "execution_order": "Run all warmups for one query, then 50 measured calls for that query; repeat in frozen query order.",
+    "correctness_each_repetition": true,
+    "canonical_result_hash_each_repetition": true,
+    "reported_statistics_ns": [
+      "min",
+      "mean",
+      "p50",
+      "p95",
+      "max"
+    ],
+    "percentile_rule": "Nearest-rank on sorted nanosecond samples: rank=ceil(p*N), one-indexed.",
+    "pass_fail_latency_threshold": null,
+    "performance_claim_allowed": false,
+    "rationale": "This stage establishes an empirical baseline; thresholds must not be invented retroactively."
+  },
+  "queries": [
+    {
+      "query_id": "Q1_CLAIM_SUPPORT",
+      "store_method": "claim_support",
+      "arguments": {
+        "claim_id": "ev:2108:claim:conclusion"
+      },
+      "expected": {
+        "row_count": 2,
+        "ordered_result_ids": [
+          "ev:2108:result:ellipsoid",
+          "ev:2108:result:optimization"
+        ],
+        "claim_id": "ev:2108:claim:conclusion",
+        "source_sha256": "7fcfc9929fd80a94095657ebf644be3301000d0a4342b74de1adc2af529ff7ab",
+        "ordered_page_numbers": [
+          5,
+          6
+        ],
+        "verification_state": "MACHINE_CHECKED"
+      }
+    },
+    {
+      "query_id": "Q2_METHOD_QUALIFIERS",
+      "store_method": "qualifiers_for_method",
+      "arguments": {
+        "method_id": "ev:2108:method:ellipsoid"
+      },
+      "expected": {
+        "row_count": 1,
+        "qualifier_id": "ev:2108:limitation:ellipsoid",
+        "evidence_type": "LIMITATION",
+        "page_number": 5,
+        "source_sha256": "7fcfc9929fd80a94095657ebf644be3301000d0a4342b74de1adc2af529ff7ab",
+        "verification_state": "MACHINE_CHECKED"
+      }
+    },
+    {
+      "query_id": "Q3_SOURCE_LEVEL_COUNTS",
+      "store_method": "source_level_counts",
+      "arguments": {},
+      "expected": {
+        "FULLTEXT_PDF_LAYOUT": 18,
+        "OCR_DERIVED": 3
+      }
+    },
+    {
+      "query_id": "Q4_PROVENANCE_PATH",
+      "store_method": "provenance_path",
+      "arguments": {
+        "start_id": "ev:2108:result:ellipsoid",
+        "goal_id": "ev:2108:method:ellipsoid",
+        "max_depth": 8
+      },
+      "expected": {
+        "row_count": 1,
+        "source_id": "ev:2108:experiment:ellipsoid",
+        "target_id": "ev:2108:method:ellipsoid",
+        "relation_type": "USES",
+        "path": [
+          "ev:2108:result:ellipsoid",
+          "ev:2108:experiment:ellipsoid",
+          "ev:2108:method:ellipsoid"
+        ],
+        "depth": 2
+      }
+    }
+  ]
+}
