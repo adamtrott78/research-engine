@@ -1,0 +1,184 @@
+name: Lambda CI Local EXTRACT Wave 7 Intent Generation
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  local-extract-wave7-intents:
+    name: "${{ format('wc-admission-v1|workload=model-eval-local-extract-wave7-intents|pr={0}|request={1}', github.event.issue.number, github.event.comment.body) }}"
+    if: >-
+      github.event.issue.pull_request &&
+      github.actor == 'adamtrott78' &&
+      github.event.comment.author_association == 'OWNER' &&
+      startsWith(github.event.comment.body, '/lambda-ci-local-extract-wave7-intents ')
+    runs-on: lambda-research-engine-gpu
+    timeout-minutes: 45
+
+    steps:
+      - name: Verify exact PR head
+        id: gate
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          expected_sha="$(printf '%s\n' "$COMMENT_BODY" | awk '{print $2}')"
+          [[ "$expected_sha" =~ ^[0-9a-f]{40}$ ]] || exit 20
+          pr_json="$(
+            curl -fsSL \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$REPOSITORY/pulls/$PR_NUMBER"
+          )"
+          actual_sha="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["head"]["sha"])' <<<"$pr_json")"
+          [[ "$actual_sha" == "$expected_sha" ]]
+          echo "expected_sha=$expected_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Prove exact Qwen runtime and two-GPU public binding
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          expected_model_root="/srv/workspace-ci/research-engine/trusted-cache/objects/model/sha256/6e28e2560c07e7dabab92c55dbfb6941d5a7a75c8068bdc7a98115d8dc62072c"
+          expected_model="$expected_model_root/payload"
+          expected_runtime="/srv/workspace-ci/research-engine/expanded-runtimes/qwen35-vllm-cu129-image-native-sampler-v3/f67ff9a26690c55930232c915e59e826e3cca2dd89012de9e35a852032b38f74"
+
+          [[ "$(id -un)" == "ci-research-engine" ]]
+          [[ "${P5_MODEL_ID:-}" == "qwen3.5-4b" ]]
+          [[ "${P5_MODEL_REPOSITORY:-}" == "Qwen/Qwen3.5-4B" ]]
+          [[ "${P5_MODEL_REVISION:-}" == "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a" ]]
+          [[ "${P5_MODEL_OBJECT_ROOT:-}" == "$expected_model_root" ]]
+          [[ "${P5_MODEL_PATH:-}" == "$expected_model" ]]
+          [[ -d "$P5_MODEL_PATH" ]]
+          [[ "${P5_EXPANDED_RUNTIME:-}" == "$expected_runtime" ]]
+          [[ "${P5_EXPANDED_RUNTIME_PYTHON:-}" == "$expected_runtime/bin/python" ]]
+          [[ "${P5_GPU_TARGET_UUIDS:-}" == "GPU-a333e68b-d1dc-6d25-1678-97b527bf55ea,GPU-cfed3394-a935-63aa-9325-c4cae7b568b6" ]]
+          [[ "${CUDA_VISIBLE_DEVICES:-}" == "${P5_GPU_TARGET_UUIDS}" ]]
+          [[ ! -r /var/lib/workspace-ci/controller/github-token ]]
+          [[ ! -r /home/atrott ]]
+
+      - name: Checkout exact candidate SHA
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ steps.gate.outputs.expected_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          clean: true
+
+      - name: Install exact PDF dependency ephemerally
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          pydeps="$RUNNER_TEMP/wave7-pydeps"
+          wheel="$RUNNER_TEMP/pypdf-6.21.1-py3-none-any.whl"
+          mkdir -m 0700 "$pydeps"
+          curl -fsSL --retry 3 --retry-delay 2 \
+            "https://files.pythonhosted.org/packages/85/e6/24c944e473c34e818cf1b98085796fcd780465ecfe17663f2bf8fee1958b/pypdf-6.21.1-py3-none-any.whl" \
+            -o "$wheel"
+          [[ "$(sha256sum "$wheel" | awk '{print $1}')" == "553e2d42f5bb3bb2a785a7d3de8ef90bb7df74b5413eff5a7b4388007ea9254b" ]]
+          "$P5_EXPANDED_RUNTIME_PYTHON" -m zipfile -e "$wheel" "$pydeps"
+          PYTHONPATH="$pydeps" "$P5_EXPANDED_RUNTIME_PYTHON" - <<'PY'
+          import pypdf, torch
+          assert pypdf.__version__ == "6.21.1"
+          assert torch.__version__ == "2.13.0+cu129"
+          assert torch.cuda.is_available()
+          assert torch.cuda.device_count() == 2
+          print("WAVE7_RUNTIME_PREFLIGHT=PASS")
+          PY
+
+      - name: Generate bounded evidence intents with trusted Qwen
+        env:
+          EXPECTED_SHA: ${{ steps.gate.outputs.expected_sha }}
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+          HF_HUB_DISABLE_TELEMETRY: "1"
+          DO_NOT_TRACK: "1"
+          VLLM_NO_USAGE_STATS: "1"
+          VLLM_MEDIA_URL_ALLOW_REDIRECTS: "0"
+          TOKENIZERS_PARALLELISM: "false"
+          VLLM_USE_FLASHINFER_SAMPLER: "0"
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$(git rev-parse HEAD)" == "$EXPECTED_SHA" ]]
+          pydeps="$RUNNER_TEMP/wave7-pydeps"
+          generated="$RUNNER_TEMP/local-extract-wave7-generated-intents.json"
+          workdir="$RUNNER_TEMP/local-extract-wave7-work"
+          PYTHONPATH="$PWD/src:$pydeps" \
+            "$P5_EXPANDED_RUNTIME_PYTHON" \
+            benchmarks/document_intelligence/run_local_extract_wave7_generate.py \
+            --fixture benchmarks/document_intelligence/local-extract-wave1-corpus.v1.json \
+            --contract benchmarks/document_intelligence/local-extract-wave7-intent-generation.v1.json \
+            --output "$generated" \
+            --workdir "$workdir"
+          "$P5_EXPANDED_RUNTIME_PYTHON" - "$generated" <<'PY'
+          import json, pathlib, sys
+          report=json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert report["metrics"]["paper_count"] == 9
+          assert report["metrics"]["model_calls"] <= 18
+          assert report["scientific_state_materialized"] is False
+          assert report["production_routing_changed"] is False
+          assert report["qwen_verify_changed"] is False
+          assert report["wave7b_started"] is False
+          print("WAVE7_INTENT_GENERATION_RECEIPT=PASS")
+          PY
+
+      - name: Evaluate BM25 and BGE retrieval under fused top-24 budget
+        env:
+          EXPECTED_SHA: ${{ steps.gate.outputs.expected_sha }}
+          HF_HUB_DISABLE_TELEMETRY: "1"
+          DO_NOT_TRACK: "1"
+          TOKENIZERS_PARALLELISM: "false"
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$(git rev-parse HEAD)" == "$EXPECTED_SHA" ]]
+          unset HF_HUB_OFFLINE || true
+          unset TRANSFORMERS_OFFLINE || true
+          pydeps="$RUNNER_TEMP/wave7-pydeps"
+          generated="$RUNNER_TEMP/local-extract-wave7-generated-intents.json"
+          output="$RUNNER_TEMP/local-extract-wave7-intent-generation-report.json"
+          workdir="$RUNNER_TEMP/local-extract-wave7-work"
+          PYTHONPATH="$PWD/src:$pydeps" \
+            "$P5_EXPANDED_RUNTIME_PYTHON" \
+            benchmarks/document_intelligence/run_local_extract_wave7_evaluate.py \
+            --fixture benchmarks/document_intelligence/local-extract-wave1-corpus.v1.json \
+            --contract benchmarks/document_intelligence/local-extract-wave7-intent-generation.v1.json \
+            --support-fixture benchmarks/document_intelligence/local-extract-teacher-atom-support.v1.json \
+            --generated "$generated" \
+            --output "$output" \
+            --workdir "$workdir"
+          "$P5_EXPANDED_RUNTIME_PYTHON" - "$output" <<'PY'
+          import json, pathlib, sys
+          report=json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert report["wave7a_decision"] in {
+              "WAVE7A_PROMISING","WAVE7A_PARTIAL","WAVE7A_REJECT"
+          }
+          assert len(report["pairs"]) == 6
+          assert report["scientific_state_materialized"] is False
+          assert report["production_routing_changed"] is False
+          assert report["qwen_verify_changed"] is False
+          assert report["wave7b_started"] is False
+          assert all(report["hard_safety"].values())
+          print("WAVE7_INTENT_EVAL_RECEIPT=PASS")
+          PY
+
+      - name: Upload Wave 7 intent-generation evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: local-extract-wave7-intent-generation
+          path: |
+            ${{ runner.temp }}/local-extract-wave7-generated-intents.json
+            ${{ runner.temp }}/local-extract-wave7-intent-generation-report.json
+          if-no-files-found: error
+          retention-days: 14
