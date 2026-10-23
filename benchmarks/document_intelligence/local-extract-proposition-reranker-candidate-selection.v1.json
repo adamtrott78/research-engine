@@ -1,0 +1,164 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "local-extract-proposition-reranker-candidate-selection-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "baseline_sha": "250d149d88989933ee73514e4483a93dc6a33ef3",
+  "motivating_result": {
+    "workflow_run_id": 39896430384,
+    "page_conditioned_bm25_grouped_mean_f1": 0.2607226107226107,
+    "wave6_grouped_mean_f1": 0.30305743036333815,
+    "selected_page_pool_grouped_ceiling_f1": 0.43276514777044994,
+    "page_conditioned_bm25_atom_mean_f1": 0.20472730749170215,
+    "wave6_atom_mean_f1": 0.22837751648405338,
+    "selected_page_pool_atom_ceiling_f1": 0.36343825934770935,
+    "disposition": "RETRIEVAL_RANKING_SEMANTICS"
+  },
+  "research_evidence": [
+    {
+      "candidate": "BAAI/bge-m3",
+      "role": "multi-function proposition scorer",
+      "evidence": [
+        "The official BGE-M3 model card supports dense, learned sparse, and multi-vector/ColBERT scoring from one model.",
+        "The official pair-scoring example exposes dense, sparse, ColBERT, sparse+dense, and colbert+sparse+dense scores and publishes fixed hybrid weights [0.4, 0.2, 0.4].",
+        "The model card recommends hybrid retrieval followed by reranking and supports inputs up to 8192 tokens."
+      ],
+      "license": "MIT",
+      "source": "https://huggingface.co/BAAI/bge-m3"
+    },
+    {
+      "candidate": "Qwen/Qwen3-Reranker-0.6B",
+      "role": "semantic proposition reranker",
+      "evidence": [
+        "The official model card identifies a 0.6B instruction-aware text reranker with 32K context and Apache-2.0 licensing.",
+        "The official card reports MTEB-R 65.80 for the 0.6B reranker versus 57.03 for BGE-reranker-v2-m3 in its published reranking table.",
+        "The model is directly usable as a Sentence Transformers CrossEncoder and exposes a fixed yes/no relevance score."
+      ],
+      "license": "Apache-2.0",
+      "source": "https://huggingface.co/Qwen/Qwen3-Reranker-0.6B"
+    },
+    {
+      "candidate": "ColBERTv2",
+      "role": "literature control only; no separate download in first bakeoff",
+      "evidence": [
+        "ColBERTv2 establishes token-level late interaction / MaxSim as an effective fine-grained passage-ranking architecture.",
+        "BGE-M3 already exposes a ColBERT-style multi-vector scoring mode, so a separate ColBERTv2 download would duplicate the first question rather than add an independent capability."
+      ],
+      "source": "https://github.com/stanford-futuredata/ColBERT"
+    }
+  ],
+  "fixed_controls": [
+    "preserved exact-SHA nine-paper / 71-evidence-object corpus",
+    "current FACET_INTERLEAVED_BM25_V1 top-12 region retrieval used only for coarse selected-page routing",
+    "all exact complete propositions enumerated from the authoritative PDF text on those selected pages",
+    "same five retrieval channels: global plus method, dataset, evaluation, robustness facets",
+    "same maximum 12 selected propositions per paper",
+    "same preserved six grouped Codex teacher claims and 13 unique atomized teacher rows",
+    "legacy token_f1 and F1>=0.5 measurements retained unchanged",
+    "no Qwen3.5 EXTRACT normalization calls during ranking bakeoff",
+    "no scientific-state materialization",
+    "no production EXTRACT or VERIFY routing change",
+    "no GitRunner/controller/provisioner/runtime redesign"
+  ],
+  "candidate_models": [
+    {
+      "id": "BGE_M3",
+      "model_id": "BAAI/bge-m3",
+      "immutable_revision_required_before_download": true,
+      "one_model_load_produces_arms": [
+        {
+          "id": "BGE_M3_DENSE",
+          "score": "dense"
+        },
+        {
+          "id": "BGE_M3_SPARSE",
+          "score": "learned_sparse"
+        },
+        {
+          "id": "BGE_M3_COLBERT",
+          "score": "multi_vector_colbert"
+        },
+        {
+          "id": "BGE_M3_HYBRID_040_020_040",
+          "score": "0.4*dense + 0.2*sparse + 0.4*colbert",
+          "weights_frozen_from_official_example": [
+            0.4,
+            0.2,
+            0.4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "QWEN3_RERANKER_0_6B",
+      "model_id": "Qwen/Qwen3-Reranker-0.6B",
+      "immutable_revision_required_before_download": true,
+      "one_model_load_produces_arms": [
+        {
+          "id": "QWEN3_RERANKER_0_6B",
+          "score": "yes/no relevance logit",
+          "instruction": "Judge whether the scientific proposition contains direct evidence relevant to the research query and requested evidence facet. Prefer propositions that directly state the method, dataset, quantitative result, limitation, robustness condition, or evaluation fact rather than merely sharing topic words."
+        }
+      ]
+    }
+  ],
+  "scoring_protocol": {
+    "candidate_pool": "all exact propositions on pages reached by current top-12 coarse regions",
+    "channels": [
+      "global",
+      "facet:method",
+      "facet:dataset",
+      "facet:evaluation",
+      "facet:robustness"
+    ],
+    "channel_query_text": "reuse the exact current query and facet extensions; no candidate-specific query rewriting",
+    "selection": "rank propositions independently per channel with the arm score, then reuse the current deterministic facet-interleaving/deduplication rule until top_k=12",
+    "no_tuning_after_results": [
+      "no changing BGE-M3 hybrid weights",
+      "no changing the Qwen3 reranker instruction",
+      "no changing top_k",
+      "no changing the selected-page pool",
+      "no per-teacher-case query engineering"
+    ]
+  },
+  "evaluation": {
+    "frozen_legacy_metrics": [
+      "six-grouped-claim selected proposition mean token_f1",
+      "13-unique-atom selected proposition mean token_f1",
+      "teacher coverage at token_f1>=0.5",
+      "case recovery for e2 contrastive pairs and e4/e5 wireless-result evidence",
+      "selected proposition source-character budget"
+    ],
+    "semantic_support_track": {
+      "purpose": "Prevent the multi-fact Codex teacher / atomic local representation mismatch from being mistaken for ranking failure.",
+      "design": [
+        "Before inspecting neural candidate rankings, freeze authoritative-PDF support labels for the 13 unique teacher atoms against exact propositions on the expected teacher pages.",
+        "Report atom-support recall@12 and unsupported-selection count alongside legacy token_f1.",
+        "Use SciFact-style claim/evidence support semantics: support requires direct evidence, not topical relatedness.",
+        "Do not replace or retune the legacy lexical metric; semantic support is an additional diagnostic track.",
+        "AlignScore/FActScore-style automated scoring may be evaluated later against the frozen support labels, but no third model download is part of the initial ranking bakeoff."
+      ],
+      "literature": [
+        "SciFact: scientific claim verification explicitly pairs claims with supporting/refuting evidence and rationales.",
+        "FActScore: decomposes generated content into atomic facts and measures source support.",
+        "AlignScore: evaluates factual consistency through general text alignment."
+      ]
+    }
+  },
+  "predeclared_interpretation": {
+    "material_gain": "An arm is materially better than Wave 6 only if it improves both grouped and atomized mean token_f1 and closes at least 25% of the Wave6-to-selected-page-pool ceiling gap on both views, without reducing semantic atom-support recall.",
+    "case_recovery": "A promising arm must recover direct target evidence for at least two of the three unique known retrieval misses represented by e2, e4/e5, while staying within top_k=12.",
+    "promising": "Material gain + case recovery + no semantic-support regression. This authorizes design of one bounded retrieval-focused Wave 7 candidate, not production promotion.",
+    "negative": "If neither model family meets material gain, do not change the generation model; revisit query/task representation or supervised/domain adaptation for proposition ranking.",
+    "model_normalization": "A generation-model change remains unjustified unless a ranking arm first demonstrates that the correct bounded evidence reliably reaches the downstream normalizer."
+  },
+  "execution_boundaries": {
+    "model_downloads_authorized_by_this_contract": false,
+    "maximum_candidate_model_families_after_durable_approval": 2,
+    "load_models_sequentially": true,
+    "production_extract_change_authorized": false,
+    "qwen_verify_change_authorized": false,
+    "wave7_authorized": false,
+    "generation_model_family_bakeoff_authorized": false,
+    "gitrunner_substrate_change_authorized": false
+  }
+}
