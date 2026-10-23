@@ -320,13 +320,21 @@ def _tree_identity(path: pathlib.Path) -> dict[str, Any]:
         if row.is_file() and ".cache" not in row.parts
     ):
         relative = file_path.relative_to(path).as_posix()
-        payload = file_path.read_bytes()
-        file_digest = hashlib.sha256(payload).hexdigest()
+        file_hasher = hashlib.sha256()
+        file_size = 0
+        with file_path.open("rb") as handle:
+            while True:
+                chunk = handle.read(8 * 1024 * 1024)
+                if not chunk:
+                    break
+                file_hasher.update(chunk)
+                file_size += len(chunk)
+        file_digest = file_hasher.hexdigest()
         digest.update(relative.encode("utf-8"))
         digest.update(b"\0")
         digest.update(file_digest.encode("ascii"))
         digest.update(b"\n")
-        total += len(payload)
+        total += file_size
         files += 1
     return {
         "file_count": files,
