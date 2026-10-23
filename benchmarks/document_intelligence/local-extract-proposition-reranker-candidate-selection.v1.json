@@ -63,7 +63,7 @@
     {
       "id": "BGE_M3",
       "model_id": "BAAI/bge-m3",
-      "immutable_revision_required_before_download": true,
+      "immutable_revision_required_before_download": false,
       "one_model_load_produces_arms": [
         {
           "id": "BGE_M3_DENSE",
@@ -86,19 +86,23 @@
             0.4
           ]
         }
-      ]
+      ],
+      "immutable_revision": "5617a9f61b028005a4858fdac845db406aefb181",
+      "immutable_revision_source": "https://huggingface.co/api/models/BAAI/bge-m3"
     },
     {
       "id": "QWEN3_RERANKER_0_6B",
       "model_id": "Qwen/Qwen3-Reranker-0.6B",
-      "immutable_revision_required_before_download": true,
+      "immutable_revision_required_before_download": false,
       "one_model_load_produces_arms": [
         {
           "id": "QWEN3_RERANKER_0_6B",
           "score": "yes/no relevance logit",
           "instruction": "Judge whether the scientific proposition contains direct evidence relevant to the research query and requested evidence facet. Prefer propositions that directly state the method, dataset, quantitative result, limitation, robustness condition, or evaluation fact rather than merely sharing topic words."
         }
-      ]
+      ],
+      "immutable_revision": "e61197ed45024b0ed8a2d74b80b4d909f1255473",
+      "immutable_revision_source": "https://huggingface.co/api/models/Qwen/Qwen3-Reranker-0.6B"
     }
   ],
   "scoring_protocol": {
@@ -131,17 +135,20 @@
     "semantic_support_track": {
       "purpose": "Prevent the multi-fact Codex teacher / atomic local representation mismatch from being mistaken for ranking failure.",
       "design": [
-        "Before inspecting neural candidate rankings, freeze authoritative-PDF support labels for the 13 unique teacher atoms against exact propositions on the expected teacher pages.",
-        "Report atom-support recall@12 and unsupported-selection count alongside legacy token_f1.",
-        "Use SciFact-style claim/evidence support semantics: support requires direct evidence, not topical relatedness.",
+        "Use benchmarks/document_intelligence/local-extract-teacher-atom-support.v1.json, frozen before any neural ranking output exists.",
+        "Report deterministic atom-support recall@12 over the 13 unique teacher atoms using authoritative-PDF page + normalized source-anchor rules.",
+        "Different required anchors for one atom may be satisfied by different selected propositions, so the metric recognizes bounded evidence composition.",
+        "Do not label unrelated selected propositions as unsupported because the preserved teacher corpus is incomplete.",
         "Do not replace or retune the legacy lexical metric; semantic support is an additional diagnostic track.",
-        "AlignScore/FActScore-style automated scoring may be evaluated later against the frozen support labels, but no third model download is part of the initial ranking bakeoff."
+        "No learned semantic evaluator is part of the initial ranking bakeoff; AlignScore/FActScore-style scoring remains later calibration research only."
       ],
       "literature": [
         "SciFact: scientific claim verification explicitly pairs claims with supporting/refuting evidence and rationales.",
         "FActScore: decomposes generated content into atomic facts and measures source support.",
         "AlignScore: evaluates factual consistency through general text alignment."
-      ]
+      ],
+      "fixture": "benchmarks/document_intelligence/local-extract-teacher-atom-support.v1.json",
+      "unique_atom_count": 13
     }
   },
   "predeclared_interpretation": {
@@ -159,6 +166,7 @@
     "qwen_verify_change_authorized": false,
     "wave7_authorized": false,
     "generation_model_family_bakeoff_authorized": false,
-    "gitrunner_substrate_change_authorized": false
+    "gitrunner_substrate_change_authorized": false,
+    "revision_and_semantic_fixture_frozen": true
   }
 }
