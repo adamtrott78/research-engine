@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "decision_id": "local-extract-proposition-alignment-preservation-result-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "design_merge_sha": "ed666137ecf5c42950fb5eee2cd5ecc0d69f7c13",
+  "isolated_design_head_sha": "ca6ada76b1850a164ab964a9673a120a10d2f15e",
+  "durable_implementation_merge_sha": "f3d5dc4f8cc5007d3159b232ae00317620a59de6",
+  "isolated_implementation_head_sha": "0abf32f0fa106c2b22a6f080341b0dadc4794f96",
+  "trigger_pr": 201,
+  "trigger_head_sha": "627ac55631de84f4f17a2586c64f607408c2f0f8",
+  "trigger_comment_id": 6376616084,
+  "workflow_run_id": 40038661074,
+  "artifact_id": 12537639453,
+  "artifact_zip_sha256": "2ddf8377a40c4fda86331a2fa464ad7ba71eea0456680518e668b61cfa4a3fce",
+  "report_sha256": "f676a5d36c030984f3839ed4ee0e7f07408996ffc81910597b0b1b417fdc8c8f",
+  "generated_intents_sha256": "a5a970725c1f16a694633416ad9fbd98e58418c267891ac83b7783d8af218ebd",
+  "alignment_augment_decision": "ALIGNMENT_AUGMENT_FEASIBLE",
+  "scientific_gate_consumed": true,
+  "candidate_selector": {
+    "id": "DYNAMIC_SAME_PAGE_ALIGNMENT_SWAP_V1",
+    "alignment_threshold": 0.4,
+    "supported_atoms_at_24": 8,
+    "supported_atoms": [
+      "e2.a",
+      "e2.b",
+      "e3.a",
+      "e3.b",
+      "e4.a",
+      "e4.b",
+      "e6.a",
+      "e6.b"
+    ],
+    "observed_residual_atoms_recovered": [
+      "e6.a"
+    ],
+    "observed_residual_recovery_count": 1,
+    "frozen_control_atoms_retained": [
+      "e2.a",
+      "e2.b",
+      "e3.a",
+      "e3.b",
+      "e4.a",
+      "e4.b",
+      "e6.b"
+    ],
+    "frozen_control_retention_count": 7,
+    "historical_evidence_bearing_page_count": 43,
+    "coarse_selected_page_hits": 32,
+    "coarse_selected_page_recall_ceiling": 0.7441860465116279,
+    "merged24_page_hits": 32,
+    "historical_evidence_bearing_page_recall_in_merged24": 0.7441860465116279,
+    "merged24_page_recall_fraction_of_ceiling": 1,
+    "teacher_paper_swap_count": 1,
+    "all_papers_total_swap_count": 11,
+    "all_papers_certificate_pass": true,
+    "all_papers_page_preserved": true,
+    "teacher_paper_swap": {
+      "removed_proposition_id": "page:p4:s33",
+      "removed_frozen_fusion_rank": 22,
+      "certifier_proposition_id": "page:p4:s28",
+      "certificate_page_number": 4,
+      "alignment_score": 0.4444444444444444,
+      "threshold": 0.4,
+      "added_proposition_id": "page:p6:s13",
+      "added_residual_fusion_rank": 4
+    }
+  },
+  "controls": {
+    "FROZEN_SOURCE_AWARE_BM25_RRF_V1": {
+      "supported_atoms_at_24": 7,
+      "supported_atoms": [
+        "e2.a",
+        "e2.b",
+        "e3.a",
+        "e3.b",
+        "e4.a",
+        "e4.b",
+        "e6.b"
+      ],
+      "observed_residual_recovery_count": 0,
+      "frozen_control_retention_count": 7,
+      "merged24_page_recall_fraction_of_ceiling": 1
+    },
+    "FROZEN_AUTHOR_ANCHORED_BM25_RRF_V1": {
+      "supported_atoms_at_24": 5,
+      "supported_atoms": [
+        "e1.a",
+        "e3.a",
+        "e4.a",
+        "e4.b",
+        "e6.a"
+      ],
+      "observed_residual_atoms_recovered": [
+        "e1.a",
+        "e6.a"
+      ],
+      "observed_residual_recovery_count": 2,
+      "frozen_control_retention_count": 3,
+      "merged24_page_recall_fraction_of_ceiling": 1
+    },
+    "CONTROL20_RESIDUAL4_QUOTA_V1": {
+      "supported_atoms_at_24": 8,
+      "supported_atoms": [
+        "e2.a",
+        "e2.b",
+        "e3.a",
+        "e3.b",
+        "e4.a",
+        "e4.b",
+        "e6.a",
+        "e6.b"
+      ],
+      "observed_residual_atoms_recovered": [
+        "e6.a"
+      ],
+      "observed_residual_recovery_count": 1,
+      "frozen_control_retention_count": 7,
+      "merged24_page_recall_fraction_of_ceiling": 1,
+      "verdict_eligible": false,
+      "interpretation": "Predeclared diagnostic-only reference. It remains non-promotable and was not used to choose the dynamic alignment result."
+    }
+  },
+  "hard_safety": {
+    "teacher_blind_selector": true,
+    "all_papers_certificate_pass": true,
+    "all_papers_page_preserved": true,
+    "qwen_model_calls": 0,
+    "external_model_downloads": 0,
+    "scientific_state_materialized_false": true,
+    "production_routing_changed_false": true,
+    "qwen_verify_changed_false": true,
+    "wave7b_started_false": true,
+    "ontology_or_semantic_control_in_extract_false": true,
+    "fixed_quota_promoted_false": true
+  },
+  "scientific_disposition": {
+    "primary": "DIRECT_PROPOSITION_ALIGNMENT_PRESERVATION_FEASIBLE",
+    "findings": [
+      "Direct teacher-blind proposition-to-proposition redundancy certification succeeds where source-aware intent-utility preservation failed: the candidate preserves all seven frozen source-aware teacher atoms and adds residual atom e6.a for 8/13 total support.",
+      "The teacher-paper result requires only one dynamically certified replacement: page:p4:s33 is removable because retained baseline proposition page:p4:s28 overlaps at token-F1 0.4444 on the same authoritative PDF page; the freed slot admits residual page:p6:s13.",
+      "Baseline page coverage is unchanged and all nine papers satisfy certificate and page-preservation safety checks.",
+      "This is a FEASIBLE rather than STRONG result because e1.a is still absent and total support is 8/13, not 9/13.",
+      "The result validates sparse direct redundancy certification as a useful preservation principle, but it does not authorize production routing changes.",
+      "Per the frozen decision boundary, the next scientific phase may design a second-stage semantic generalization of the certificate (for example semantic tuples or a separately validated learned paraphrase/entailment certificate) under a new evidence-first contract."
+    ],
+    "next_architecture_boundary": "OPEN_SEPARATE_SEMANTIC_CERTIFICATE_GENERALIZATION_DESIGN",
+    "semantic_generalization_design_authorized": true,
+    "semantic_generalization_execution_authorized": false,
+    "production_promotion_authorized": false,
+    "classifier_training_authorized": false,
+    "wave7b_authorized": false,
+    "rerun_authorized": false
+  },
+  "coordination_boundary": {
+    "experiment_execution_base": "0abf32f0fa106c2b22a6f080341b0dadc4794f96",
+    "trigger_head": "627ac55631de84f4f17a2586c64f607408c2f0f8",
+    "result_checkpoint_base_main_sha": "8bf738f2c6722cda60f98190b58892e8e7979918",
+    "current_main_parallel_change": "research-engine main later included semantic-control PR #200; those changes were not part of the scientific execution.",
+    "semantic_control_parallel_task": "downstream_only"
+  },
+  "boundaries": {
+    "production_standard_codex_extract_changed": false,
+    "accepted_qwen_verify_changed": false,
+    "ontology_or_semantic_control_in_extract": false,
+    "gitrunner_controller_provisioner_changed": false,
+    "fixed_quota_promoted": false,
+    "wave7b_started": false
+  }
+}
