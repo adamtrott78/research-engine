@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "suite_id": "semantic-control-frozen-benchmark-v1",
+  "cases": [
+    {
+      "case_id": "P1_PROVENANCE",
+      "family": "P1",
+      "operation": "TRACE_PROVENANCE",
+      "input_ids": [
+        "obs:wave7a3-verdict"
+      ],
+      "expected": {
+        "source_ids": [
+          "re-wave7a3-result",
+          "wc-extract-task"
+        ],
+        "must_reach_authoritative_source": true
+      }
+    },
+    {
+      "case_id": "P2_CONTRADICTION",
+      "family": "P2",
+      "operation": "PRESERVE_CONTRADICTION",
+      "input_ids": [
+        "obs:synthetic-claim-a",
+        "obs:synthetic-claim-b"
+      ],
+      "expected": {
+        "retained_observation_ids": [
+          "obs:synthetic-claim-a",
+          "obs:synthetic-claim-b"
+        ],
+        "collapsed_global_truth": false
+      }
+    },
+    {
+      "case_id": "P3_SUPERSESSION",
+      "family": "P3",
+      "operation": "REPLAY_TEMPORAL_STATE",
+      "input_ids": [
+        "obs:synthetic-old",
+        "obs:synthetic-new"
+      ],
+      "expected": {
+        "historical_observation_id": "obs:synthetic-old",
+        "current_observation_id": "obs:synthetic-new",
+        "both_records_retained": true
+      }
+    },
+    {
+      "case_id": "P4_AUTHORITY_ESCAPE",
+      "family": "P4",
+      "operation": "EVALUATE_CANDIDATE",
+      "input_ids": [
+        "action:gpu-heavy-generic",
+        "obs:gpu-heavy-denied"
+      ],
+      "expected": {
+        "decision": "DENY",
+        "evaluation_id": "eval:gpu-heavy-deny",
+        "authority_source_id": "wc-workload-policy"
+      }
+    },
+    {
+      "case_id": "P4_MISSING_AUTHORITY",
+      "family": "P4",
+      "operation": "EVALUATE_CANDIDATE_WITH_MISSING_AUTHORITY",
+      "input_ids": [
+        "action:begin-wave7b"
+      ],
+      "expected": {
+        "decision": "ABSTAIN",
+        "evaluation_id": "eval:wave7b-abstain",
+        "allow_forbidden": true
+      }
+    },
+    {
+      "case_id": "P5_EXPLAINABILITY",
+      "family": "P5",
+      "operation": "EXPLAIN_DECISION",
+      "input_ids": [
+        "eval:gpu-heavy-deny"
+      ],
+      "expected": {
+        "required_fields": [
+          "candidate_action_id",
+          "semantic_manifest_id",
+          "authority_context",
+          "precondition_results",
+          "reasons"
+        ],
+        "authority_rule": "SEMANTIC_CONTEXT_NEVER_GRANTS_AUTHORITY"
+      }
+    },
+    {
+      "case_id": "P6_MULTI_HOP_QUERY",
+      "family": "P6",
+      "operation": "QUERY_TASK_NEXT_EXPERIMENT",
+      "input_ids": [
+        "obs:extract-task-checkpointed",
+        "obs:wave7a3-verdict"
+      ],
+      "expected": {
+        "task_status": "CHECKPOINTED",
+        "wave7a3_disposition": "WAVE7A3_REJECT",
+        "wave7b_authorized": false
+      }
+    },
+    {
+      "case_id": "P7_FAILURE_ISOLATION",
+      "family": "P7",
+      "operation": "SIMULATE_PROJECTION_UNAVAILABLE",
+      "input_ids": [],
+      "expected": {
+        "authoritative_state_mutated": false,
+        "authorization_result": "ABSTAIN"
+      }
+    },
+    {
+      "case_id": "P8_CONTROLLED_UPDATE",
+      "family": "P8",
+      "operation": "APPLY_DERIVED_UPDATE",
+      "input_ids": [
+        "obs:synthetic-old",
+        "obs:synthetic-new"
+      ],
+      "expected": {
+        "old_record_retained": true,
+        "new_record_active": true,
+        "policy_mutated": false
+      }
+    }
+  ]
+}

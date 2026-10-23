@@ -1,0 +1,479 @@
+{
+  "schema_version": 1,
+  "snapshot_id": "semantic-control-authoritative-snapshot-v1",
+  "observations": [
+    {
+      "schema_version": 1,
+      "observation_id": "obs:wave7a3-verdict",
+      "layer": "EPISTEMIC",
+      "subject": {
+        "entity_type": "ScientificExperiment",
+        "entity_id": "wave7a3-author-anchored"
+      },
+      "predicate": "hasScientificDisposition",
+      "object": {
+        "kind": "LITERAL",
+        "value": "WAVE7A3_REJECT"
+      },
+      "assertion_state": "ACTIVE",
+      "provenance": [
+        "re-wave7a3-result",
+        "wc-extract-task"
+      ],
+      "verification": {
+        "state": "AUTHORITATIVE_RECORD",
+        "basis": [
+          "implementation_validity=PASS",
+          "scientific_gate_consumed=true"
+        ]
+      },
+      "temporal": {
+        "observed_at": null,
+        "valid_from": null,
+        "valid_to": null
+      },
+      "supersedes": [],
+      "contradicts": [],
+      "attributes": {
+        "author_salience_hypothesis": "REJECTED_AS_IMPLEMENTED",
+        "wave7b_authorized": false,
+        "production_extract_changed": false,
+        "qwen_verify_changed": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "observation_id": "obs:extract-task-checkpointed",
+      "layer": "EXECUTION",
+      "subject": {
+        "entity_type": "Task",
+        "entity_id": "research-engine-local-extract-redesign-v1"
+      },
+      "predicate": "hasStatus",
+      "object": {
+        "kind": "LITERAL",
+        "value": "CHECKPOINTED"
+      },
+      "assertion_state": "ACTIVE",
+      "provenance": [
+        "wc-extract-task"
+      ],
+      "verification": {
+        "state": "AUTHORITATIVE_RECORD",
+        "basis": [
+          "durable task capsule"
+        ]
+      },
+      "temporal": {
+        "observed_at": null,
+        "valid_from": null,
+        "valid_to": null
+      },
+      "supersedes": [],
+      "contradicts": [],
+      "attributes": {
+        "next_action_class": "STOP_AND_REDESIGN"
+      }
+    },
+    {
+      "schema_version": 1,
+      "observation_id": "obs:gpu-heavy-denied",
+      "layer": "NORMATIVE",
+      "subject": {
+        "entity_type": "WorkloadClass",
+        "entity_id": "gpu-heavy"
+      },
+      "predicate": "policyDecision",
+      "object": {
+        "kind": "LITERAL",
+        "value": "DENY"
+      },
+      "assertion_state": "ACTIVE",
+      "provenance": [
+        "wc-workload-policy"
+      ],
+      "verification": {
+        "state": "AUTHORITATIVE_RECORD",
+        "basis": [
+          "root-owned policy epoch 3"
+        ]
+      },
+      "temporal": {
+        "observed_at": null,
+        "valid_from": null,
+        "valid_to": null
+      },
+      "supersedes": [],
+      "contradicts": [],
+      "attributes": {
+        "policy_id": "lambda-ci-workload-policy-v1",
+        "policy_epoch": 3,
+        "denial_reason": "dual-GPU authority requires a separate post-pilot acceptance gate"
+      }
+    },
+    {
+      "schema_version": 1,
+      "observation_id": "obs:wave7a3-route",
+      "layer": "EXECUTION",
+      "subject": {
+        "entity_type": "ProjectRoute",
+        "entity_id": "research-engine:model-eval-local-extract-wave7a3"
+      },
+      "predicate": "bindsExecutionContract",
+      "object": {
+        "kind": "LITERAL",
+        "value": "model-dual-public-v1"
+      },
+      "assertion_state": "ACTIVE",
+      "provenance": [
+        "wc-research-engine-project"
+      ],
+      "verification": {
+        "state": "AUTHORITATIVE_RECORD",
+        "basis": [
+          "workspace-control project profile"
+        ]
+      },
+      "temporal": {
+        "observed_at": null,
+        "valid_from": null,
+        "valid_to": null
+      },
+      "supersedes": [],
+      "contradicts": [],
+      "attributes": {
+        "lane": "gpu",
+        "activation_state": "MIGRATION_LIVE_EQUIVALENT",
+        "workflow_path": ".github/workflows/lambda-ci-local-extract-wave7a3.yml"
+      }
+    },
+    {
+      "schema_version": 1,
+      "observation_id": "obs:synthetic-claim-a",
+      "layer": "EPISTEMIC",
+      "subject": {
+        "entity_type": "Method",
+        "entity_id": "Method-X"
+      },
+      "predicate": "improvesHardwareShiftRobustness",
+      "object": {
+        "kind": "LITERAL",
+        "value": true
+      },
+      "assertion_state": "ACTIVE",
+      "provenance": [
+        "re-sql-schema"
+      ],
+      "verification": {
+        "state": "MACHINE_CHECKED",
+        "basis": [
+          "synthetic benchmark case"
+        ]
+      },
+      "temporal": {
+        "observed_at": "2026-01-01T00:00:00Z",
+        "valid_from": null,
+        "valid_to": null
+      },
+      "supersedes": [],
+      "contradicts": [
+        "obs:synthetic-claim-b"
+      ],
+      "attributes": {
+        "fixture_kind": "SYNTHETIC_ADVERSARIAL"
+      }
+    },
+    {
+      "schema_version": 1,
+      "observation_id": "obs:synthetic-claim-b",
+      "layer": "EPISTEMIC",
+      "subject": {
+        "entity_type": "Method",
+        "entity_id": "Method-X"
+      },
+      "predicate": "improvesHardwareShiftRobustness",
+      "object": {
+        "kind": "LITERAL",
+        "value": false
+      },
+      "assertion_state": "ACTIVE",
+      "provenance": [
+        "re-sql-schema"
+      ],
+      "verification": {
+        "state": "MACHINE_CHECKED",
+        "basis": [
+          "synthetic benchmark case"
+        ]
+      },
+      "temporal": {
+        "observed_at": "2026-02-01T00:00:00Z",
+        "valid_from": null,
+        "valid_to": null
+      },
+      "supersedes": [],
+      "contradicts": [
+        "obs:synthetic-claim-a"
+      ],
+      "attributes": {
+        "fixture_kind": "SYNTHETIC_ADVERSARIAL"
+      }
+    },
+    {
+      "schema_version": 1,
+      "observation_id": "obs:synthetic-old",
+      "layer": "EPISTEMIC",
+      "subject": {
+        "entity_type": "Claim",
+        "entity_id": "claim-versioned"
+      },
+      "predicate": "hasValue",
+      "object": {
+        "kind": "LITERAL",
+        "value": "old"
+      },
+      "assertion_state": "SUPERSEDED",
+      "provenance": [
+        "re-sql-schema"
+      ],
+      "verification": {
+        "state": "SUPERSEDED",
+        "basis": [
+          "synthetic temporal benchmark"
+        ]
+      },
+      "temporal": {
+        "observed_at": "2026-01-01T00:00:00Z",
+        "valid_from": "2026-01-01T00:00:00Z",
+        "valid_to": "2026-02-01T00:00:00Z"
+      },
+      "supersedes": [],
+      "contradicts": [],
+      "attributes": {
+        "fixture_kind": "SYNTHETIC_ADVERSARIAL"
+      }
+    },
+    {
+      "schema_version": 1,
+      "observation_id": "obs:synthetic-new",
+      "layer": "EPISTEMIC",
+      "subject": {
+        "entity_type": "Claim",
+        "entity_id": "claim-versioned"
+      },
+      "predicate": "hasValue",
+      "object": {
+        "kind": "LITERAL",
+        "value": "new"
+      },
+      "assertion_state": "ACTIVE",
+      "provenance": [
+        "re-sql-schema"
+      ],
+      "verification": {
+        "state": "MACHINE_CHECKED",
+        "basis": [
+          "synthetic temporal benchmark"
+        ]
+      },
+      "temporal": {
+        "observed_at": "2026-02-01T00:00:00Z",
+        "valid_from": "2026-02-01T00:00:00Z",
+        "valid_to": null
+      },
+      "supersedes": [
+        "obs:synthetic-old"
+      ],
+      "contradicts": [],
+      "attributes": {
+        "fixture_kind": "SYNTHETIC_ADVERSARIAL"
+      }
+    }
+  ],
+  "evidence_requirements": [
+    {
+      "schema_version": 1,
+      "requirement_id": "req:resolve-method-x-contradiction",
+      "target_ids": [
+        "obs:synthetic-claim-a",
+        "obs:synthetic-claim-b"
+      ],
+      "reason_types": [
+        "CONTRADICTION"
+      ],
+      "requested_evidence_kinds": [
+        "INDEPENDENT_EVALUATION"
+      ],
+      "evidence_basis": [
+        "obs:synthetic-claim-a",
+        "obs:synthetic-claim-b"
+      ],
+      "priority": "HIGH",
+      "status": "OPEN",
+      "execution_effect": "REQUEST_ONLY",
+      "provenance": [
+        "re-sql-schema"
+      ]
+    }
+  ],
+  "ontology_slices": [
+    {
+      "schema_version": 1,
+      "slice_id": "slice:scientific-gap-v1",
+      "semantic_manifest_id": "manifest:FROZEN_FIXTURE",
+      "context": {
+        "purpose": "evidence-gap derivation"
+      },
+      "included_entity_types": [
+        "Claim",
+        "EvidenceRequirement",
+        "Method"
+      ],
+      "included_predicates": [
+        "contradicts",
+        "improvesHardwareShiftRobustness",
+        "requiresEvidence"
+      ],
+      "constraints": [
+        "preserve provenance",
+        "unknown is not false",
+        "do not collapse contradictions"
+      ],
+      "source_schema_refs": [
+        "re-domain-model",
+        "re-sql-schema"
+      ],
+      "deterministic_key": "scientific-gap|Claim,EvidenceRequirement,Method|contradicts,improvesHardwareShiftRobustness,requiresEvidence"
+    }
+  ],
+  "candidate_actions": [
+    {
+      "schema_version": 1,
+      "candidate_action_id": "action:begin-wave7b",
+      "action_type": "BEGIN_EXPERIMENT",
+      "target": {
+        "task_id": "research-engine-local-extract-redesign-v1",
+        "experiment": "Wave7B"
+      },
+      "rationale_observation_ids": [
+        "obs:wave7a3-verdict",
+        "obs:extract-task-checkpointed"
+      ],
+      "preconditions": [
+        {
+          "precondition_id": "p:wave7b-authorized",
+          "description": "Owning scientific task explicitly authorizes Wave 7B."
+        }
+      ],
+      "required_capabilities": [
+        "research-engine-experiment-route"
+      ],
+      "requested_effects": [
+        "SCIENTIFIC_EXPERIMENT"
+      ],
+      "required_authority_context": [
+        "workspace-control task capsule",
+        "root-owned workload policy"
+      ],
+      "authorization_state": "UNDECIDED",
+      "provenance": [
+        "wc-extract-task",
+        "wc-workload-policy"
+      ]
+    },
+    {
+      "schema_version": 1,
+      "candidate_action_id": "action:gpu-heavy-generic",
+      "action_type": "RUN_WORKLOAD",
+      "target": {
+        "project_id": "research-engine",
+        "workload_class": "gpu-heavy"
+      },
+      "rationale_observation_ids": [
+        "obs:wave7a3-route"
+      ],
+      "preconditions": [
+        {
+          "precondition_id": "p:gpu-heavy-policy",
+          "description": "Root-owned policy must admit generic gpu-heavy."
+        }
+      ],
+      "required_capabilities": [
+        "gpu-heavy"
+      ],
+      "requested_effects": [
+        "CI_VALIDATION_ONLY"
+      ],
+      "required_authority_context": [
+        "lambda-ci-workload-policy-v1"
+      ],
+      "authorization_state": "UNDECIDED",
+      "provenance": [
+        "wc-workload-policy"
+      ]
+    }
+  ],
+  "decision_evaluations": [
+    {
+      "schema_version": 1,
+      "evaluation_id": "eval:gpu-heavy-deny",
+      "candidate_action_id": "action:gpu-heavy-generic",
+      "semantic_manifest_id": "manifest:FROZEN_FIXTURE",
+      "knowledge_checkpoint_ids": [
+        "research-engine@80da2cae9f8d80a7e7049a9b5339807becc54a98"
+      ],
+      "authority_context": [
+        {
+          "authority_kind": "POLICY_ARTIFACT",
+          "source_id": "wc-workload-policy",
+          "authority_id": "lambda-ci-workload-policy-v1",
+          "authority_version": "epoch:3"
+        }
+      ],
+      "precondition_results": [
+        {
+          "precondition_id": "p:gpu-heavy-policy",
+          "result": "FAIL",
+          "evidence_ids": [
+            "obs:gpu-heavy-denied"
+          ]
+        }
+      ],
+      "decision": "DENY",
+      "reasons": [
+        "root-owned workload policy explicitly denies generic gpu-heavy"
+      ],
+      "authority_rule": "SEMANTIC_CONTEXT_NEVER_GRANTS_AUTHORITY",
+      "selected_executor": null,
+      "execution_receipt_id": null
+    },
+    {
+      "schema_version": 1,
+      "evaluation_id": "eval:wave7b-abstain",
+      "candidate_action_id": "action:begin-wave7b",
+      "semantic_manifest_id": "manifest:FROZEN_FIXTURE",
+      "knowledge_checkpoint_ids": [
+        "research-engine@80da2cae9f8d80a7e7049a9b5339807becc54a98"
+      ],
+      "authority_context": [],
+      "precondition_results": [
+        {
+          "precondition_id": "p:wave7b-authorized",
+          "result": "FAIL",
+          "evidence_ids": [
+            "obs:wave7a3-verdict",
+            "obs:extract-task-checkpointed"
+          ]
+        }
+      ],
+      "decision": "ABSTAIN",
+      "reasons": [
+        "owning task explicitly records wave7b_authorized=false",
+        "no authority permits Wave 7B"
+      ],
+      "authority_rule": "SEMANTIC_CONTEXT_NEVER_GRANTS_AUTHORITY",
+      "selected_executor": null,
+      "execution_receipt_id": null
+    }
+  ]
+}

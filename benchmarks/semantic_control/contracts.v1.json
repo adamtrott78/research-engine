@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "contract_set_id": "semantic-control-contracts-v1",
+  "status": "FROZEN_BEFORE_IMPLEMENTATION",
+  "authority_rule": "SEMANTIC_CONTEXT_NEVER_GRANTS_AUTHORITY",
+  "contracts": {
+    "SemanticObservationV1": {
+      "purpose": "Provenance-bearing typed semantic assertion derived from an authoritative source record.",
+      "required_fields": [
+        "schema_version",
+        "observation_id",
+        "layer",
+        "subject",
+        "predicate",
+        "object",
+        "assertion_state",
+        "provenance",
+        "verification",
+        "temporal",
+        "supersedes",
+        "contradicts",
+        "attributes"
+      ],
+      "layer_values": [
+        "EPISTEMIC",
+        "NORMATIVE",
+        "EXECUTION"
+      ],
+      "assertion_state_values": [
+        "ACTIVE",
+        "SUPERSEDED",
+        "REJECTED",
+        "UNKNOWN"
+      ],
+      "invariants": [
+        "provenance must contain at least one exact source reference",
+        "contradictions are represented explicitly and never silently collapsed",
+        "supersession preserves prior records",
+        "semantic observations are derived projections and never become source authority"
+      ]
+    },
+    "EvidenceRequirementV1": {
+      "purpose": "Machine-readable request for additional evidence without execution authority.",
+      "required_fields": [
+        "schema_version",
+        "requirement_id",
+        "target_ids",
+        "reason_types",
+        "requested_evidence_kinds",
+        "evidence_basis",
+        "priority",
+        "status",
+        "execution_effect",
+        "provenance"
+      ],
+      "reason_type_values": [
+        "MISSING_FACET",
+        "CONTRADICTION",
+        "SOURCE_LEVEL_INSUFFICIENT",
+        "VERIFICATION_INSUFFICIENT",
+        "STALE",
+        "BENCHMARK_CALIBRATED_INSUFFICIENCY"
+      ],
+      "execution_effect_value": "REQUEST_ONLY",
+      "invariants": [
+        "must not invoke acquisition, inference, Lambda, experiments, or materialization",
+        "raw model self-confidence alone is insufficient evidence for escalation"
+      ]
+    },
+    "OntologySliceV1": {
+      "purpose": "Deterministic bounded schema/context slice for one task or query.",
+      "required_fields": [
+        "schema_version",
+        "slice_id",
+        "semantic_manifest_id",
+        "context",
+        "included_entity_types",
+        "included_predicates",
+        "constraints",
+        "source_schema_refs",
+        "deterministic_key"
+      ],
+      "invariants": [
+        "same semantic manifest and same context produce the same canonical slice",
+        "slice contains only relevant entity types/predicates and does not widen authority"
+      ]
+    },
+    "CandidateActionV1": {
+      "purpose": "Proposed next action derived from semantic state; never an authorization.",
+      "required_fields": [
+        "schema_version",
+        "candidate_action_id",
+        "action_type",
+        "target",
+        "rationale_observation_ids",
+        "preconditions",
+        "required_capabilities",
+        "requested_effects",
+        "required_authority_context",
+        "authorization_state",
+        "provenance"
+      ],
+      "authorization_state_value": "UNDECIDED",
+      "invariants": [
+        "candidate action cannot serialize ALLOW, AUTHORIZED, or equivalent",
+        "candidate action may suggest an action but cannot grant permission"
+      ]
+    },
+    "DecisionEvaluationV1": {
+      "purpose": "Auditable policy-bound evaluation of a CandidateActionV1.",
+      "required_fields": [
+        "schema_version",
+        "evaluation_id",
+        "candidate_action_id",
+        "semantic_manifest_id",
+        "knowledge_checkpoint_ids",
+        "authority_context",
+        "precondition_results",
+        "decision",
+        "reasons",
+        "authority_rule",
+        "selected_executor",
+        "execution_receipt_id"
+      ],
+      "decision_values": [
+        "ALLOW",
+        "DENY",
+        "ABSTAIN"
+      ],
+      "authority_rule_value": "SEMANTIC_CONTEXT_NEVER_GRANTS_AUTHORITY",
+      "invariants": [
+        "ALLOW requires explicit authority-owned POLICY_ARTIFACT context",
+        "missing or stale required authority context yields DENY or ABSTAIN",
+        "inferred/model-derived facts cannot create permission or obligation",
+        "execution receipt is null until execution actually occurs"
+      ]
+    }
+  }
+}
