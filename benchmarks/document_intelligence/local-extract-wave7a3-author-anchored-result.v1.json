@@ -1,0 +1,190 @@
+{
+  "schema_version": 1,
+  "decision_id": "local-extract-wave7a3-author-anchored-result-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "candidate_sha": "dcdcfc8c85ddda2bfbf8fe439c79a8e0784ee276",
+  "workflow_run_id": 40027366528,
+  "trigger_pr": 178,
+  "trigger_comment_id": 6375134209,
+  "artifact_id": 12533721500,
+  "artifact_zip_sha256": "cd02b842ad44bbadab7aad661ff424cc6108f8047d260df5d0064fba2b4f35fb",
+  "generated_intents_sha256": "a5a970725c1f16a694633416ad9fbd98e58418c267891ac83b7783d8af218ebd",
+  "report_sha256": "a87c643b28b25f6581f0bf4dd356646e0bccd168a67ecbfaf58b662b4e0f8e35",
+  "wave7a3_decision": "WAVE7A3_REJECT",
+  "scientific_gate_consumed": true,
+  "qualifying_pairs": [],
+  "invalid_predecessor_run": {
+    "run_id": 40021544696,
+    "disposition": "INVALID_IMPLEMENTATION",
+    "scientific_gate_consumed": false,
+    "reason": "Verdict-eligible author-anchor generation failed closed on all 9 papers through unconstrained structured-output handling; 5 JSONDecodeError Extra data and 4 INVALID_TOP_LEVEL_SCHEMA failures produced zero accepted anchors/intents."
+  },
+  "implementation_validity": {
+    "status": "PASS",
+    "paper_count": 9,
+    "usable_candidate_papers": 9,
+    "completely_fail_closed_candidate": false,
+    "failures": [],
+    "candidate_status_pass_papers": 9,
+    "anchor_interface_pass_papers": 9,
+    "obligation_interface_pass_papers": 9,
+    "accepted_anchor_count_total": 35,
+    "accepted_candidate_intent_count_total": 93,
+    "source_aware_control_intent_count_total": 100
+  },
+  "valid_run_controls": {
+    "exact_sha_admission": true,
+    "trusted_qwen_dual_gpu_binding": true,
+    "structured_output_repair_exercised": true,
+    "generation_phase_pass": true,
+    "frozen_bm25_bge_evaluation_pass": true,
+    "artifact_upload_pass": true,
+    "hard_safety_pass": true,
+    "scientific_state_materialized": false,
+    "production_extract_changed": false,
+    "qwen_verify_changed": false,
+    "wave7b_started": false
+  },
+  "generation_metrics": {
+    "paper_count": 9,
+    "model_calls": 27,
+    "model_init_seconds": 161.83713427901966,
+    "inference_seconds": 108.74603381095221,
+    "prompt_tokens": 58686,
+    "output_tokens": 11217,
+    "peak_gpu_memory_mib_by_uuid": {
+      "GPU-a333e68b-d1dc-6d25-1678-97b527bf55ea": 12459,
+      "GPU-cfed3394-a935-63aa-9325-c4cae7b568b6": 12926
+    }
+  },
+  "bge_metrics": {
+    "model_download_bytes": 2295419274,
+    "model_download_seconds": 16.871566172980238,
+    "model_load_seconds": 2.4412136409955565,
+    "ranking_inference_seconds": 128.10047561395913,
+    "peak_gpu_memory_mib": 2654.2236328125,
+    "model_snapshot_tree_sha256": "0bd07dd957f4b437fc39654f6a4e559b3b6adef6a84cefcdff3fe37b75835921"
+  },
+  "pairs": {
+    "QWEN35_AUTHOR_ANCHORED_OBLIGATIONS_V1__BM25_DIRECT": {
+      "teacher_supported_atoms_at_24": 5,
+      "teacher_support_recall_at_24": 0.38461538461538464,
+      "supported_atoms": [
+        "e1.a",
+        "e3.a",
+        "e4.a",
+        "e4.b",
+        "e6.a"
+      ],
+      "residual_atoms_recovered_at_24": 2,
+      "residual_atoms_recovered": [
+        "e1.a",
+        "e6.a"
+      ],
+      "control_supported_atoms_retained_at_24": 3,
+      "control_supported_atoms_retained": [
+        "e3.a",
+        "e4.a",
+        "e4.b"
+      ],
+      "delta_supported_atoms_vs_matching_control": -2,
+      "teacher_mean_best_token_f1_at_24": 0.27011411798318324,
+      "teacher_leak_reject_fraction": 0,
+      "nine_paper_page_recall": 0.7441860465116279,
+      "fraction_of_coarse_page_ceiling": 1
+    },
+    "QWEN35_SOURCE_AWARE_INTENTS_V1__BM25_DIRECT": {
+      "teacher_supported_atoms_at_24": 7,
+      "teacher_support_recall_at_24": 0.5384615384615384,
+      "supported_atoms": [
+        "e2.a",
+        "e2.b",
+        "e3.a",
+        "e3.b",
+        "e4.a",
+        "e4.b",
+        "e6.b"
+      ],
+      "residual_atoms_recovered_at_24": 0,
+      "control_supported_atoms_retained_at_24": 7,
+      "delta_supported_atoms_vs_matching_control": 0,
+      "teacher_mean_best_token_f1_at_24": 0.28671762802925754,
+      "teacher_leak_reject_fraction": 0.1,
+      "nine_paper_page_recall": 0.7441860465116279,
+      "fraction_of_coarse_page_ceiling": 1,
+      "exact_wave7a2_control_support_reproduced": true
+    },
+    "QWEN35_AUTHOR_ANCHORED_OBLIGATIONS_V1__BGE_M3_HYBRID_040_020_040": {
+      "teacher_supported_atoms_at_24": 4,
+      "teacher_support_recall_at_24": 0.3076923076923077,
+      "supported_atoms": [
+        "e4.a",
+        "e4.b",
+        "e6.a",
+        "e6.b"
+      ],
+      "residual_atoms_recovered_at_24": 1,
+      "residual_atoms_recovered": [
+        "e6.a"
+      ],
+      "control_supported_atoms_retained_at_24": 3,
+      "control_supported_atoms_retained": [
+        "e4.a",
+        "e4.b",
+        "e6.b"
+      ],
+      "delta_supported_atoms_vs_matching_control": 0,
+      "teacher_mean_best_token_f1_at_24": 0.2528194385703517,
+      "teacher_leak_reject_fraction": 0,
+      "nine_paper_page_recall": 0.7209302325581395,
+      "fraction_of_coarse_page_ceiling": 0.96875
+    },
+    "QWEN35_SOURCE_AWARE_INTENTS_V1__BGE_M3_HYBRID_040_020_040": {
+      "teacher_supported_atoms_at_24": 4,
+      "teacher_support_recall_at_24": 0.3076923076923077,
+      "supported_atoms": [
+        "e3.a",
+        "e3.c",
+        "e4.a",
+        "e4.b"
+      ],
+      "residual_atoms_recovered_at_24": 1,
+      "residual_atoms_recovered": [
+        "e3.c"
+      ],
+      "control_supported_atoms_retained_at_24": 3,
+      "teacher_mean_best_token_f1_at_24": 0.2522704639693876,
+      "teacher_leak_reject_fraction": 0.1,
+      "nine_paper_page_recall": 0.7441860465116279,
+      "fraction_of_coarse_page_ceiling": 1,
+      "exact_wave7a2_control_support_reproduced": true
+    }
+  },
+  "scientific_disposition": {
+    "primary_conclusion": "AUTHOR_ANCHORED_OBLIGATIONS_REJECTED_UNDER_FROZEN_WAVE7A3_GATES",
+    "author_salience_hypothesis": "REJECTED_AS_IMPLEMENTED",
+    "control_parity": "REPRODUCED_VALID_WAVE7A2_CONTROL",
+    "diagnosis": [
+      "The repaired interface is valid: every paper produced schema-conformant anchors and obligations and all nine candidate arms passed semantic guards.",
+      "Author anchoring does recover previously missed high-salience residual atoms: BM25 recovers e1.a and e6.a; BGE recovers e6.a.",
+      "Those gains are not additive to the strong source-aware control. BM25 loses four frozen control-supported atoms and falls from 7/13 to 5/13 total support; BGE swaps support and only ties the control at 4/13.",
+      "BM25 preserves the full coarse page-recall ceiling, so the rejection is not explained by page routing. BGE candidate page recall is slightly lower at 0.96875 of the coarse ceiling.",
+      "Candidate teacher-leak reject fraction is 0.0 in both retriever arms, so the rejection is not caused by anti-leak filtering.",
+      "The valid run reproduces the frozen Wave 7A.2 source-aware controls exactly at 7/13 BM25 and 4/13 BGE, resolving the invalid predecessor run's 5/13 BM25 control drift as local generation nondeterminism rather than representation drift."
+    ],
+    "residual_after_wave7a3": "SALIENCE_ANCHORS_RECOVER_SOME_RESIDUALS_BUT_DO_NOT_PRESERVE_OR_EXTEND_CONTROL_COVERAGE",
+    "retriever_capacity": "NOT_REOPENED",
+    "generation_model_change": "NOT_JUSTIFIED_BY_THIS_RESULT",
+    "reranker_training": "NOT_JUSTIFIED_BY_THIS_RESULT",
+    "wave7b_authorized": false,
+    "next_action": "CHECKPOINT_AND_STOP; any subsequent experiment requires a new evidence-first design phase for a materially different intent-generation architecture rather than Wave 7B continuation."
+  },
+  "boundaries": {
+    "production_extract": "STANDARD_CODEX_UNCHANGED",
+    "qwen_verify": "UNCHANGED",
+    "scientific_state_materialized": false,
+    "retrieval_budget_changed": false,
+    "frozen_thresholds_changed": false,
+    "wave7b": false
+  }
+}
