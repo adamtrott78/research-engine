@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "decision_id": "local-extract-wave7a3-invalid-interface-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "candidate_sha": "8e3481c4ad00ffe26cd175d0e6c6275081d70ab0",
+  "workflow_run_id": 40021544696,
+  "artifact_id": 12530229453,
+  "artifact_zip_sha256": "555750cf5ec2a5b4b5fcd4086a34ca9e27de0667d5f3e4433efcceab676e41be",
+  "generated_intents_sha256": "e8b40d800daf70f0c14ec3b2875080fb9bccf098e10dff1942dfd3013b057862",
+  "report_sha256": "8d4e112e39a3f6058d4fb8136f7d885f8adf54eba41fc282b9912e74b7bdcefe",
+  "raw_report_decision": "WAVE7A3_REJECT",
+  "scientific_disposition": "INVALID_IMPLEMENTATION",
+  "scientific_gate_consumed": false,
+  "reason": [
+    "The verdict-eligible QWEN35_AUTHOR_ANCHORED_OBLIGATIONS_V1 arm failed closed on all 9 papers before producing any accepted author anchors or retrieval intents.",
+    "Five papers failed anchor generation with JSONDecodeError: Extra data; four papers failed the anchor guard with INVALID_TOP_LEVEL_SCHEMA.",
+    "Because the candidate arm produced zero accepted anchors/intents on every paper, its 0/13 teacher support and zero page recall are interface-failure artifacts rather than evidence about the frozen author-salience hypothesis.",
+    "The supposedly frozen source-aware BM25 control reproduced 5/13 teacher atoms rather than the frozen Wave 7A.2 value 7/13; BGE reproduced 4/13. Control parity must be audited before a valid scientific rerun.",
+    "The evaluator did not independently invalidate the run when the verdict-eligible generator failed closed, so the raw WAVE7A3_REJECT must not be promoted as scientific truth."
+  ],
+  "observed_candidate_generation": {
+    "paper_count": 9,
+    "accepted_anchor_count_total": 0,
+    "accepted_intent_count_total": 0,
+    "fail_closed_papers": 9,
+    "json_decode_extra_data_papers": 5,
+    "invalid_top_level_schema_papers": 4
+  },
+  "observed_controls": {
+    "source_aware_bm25_supported_atoms_at_24": 5,
+    "source_aware_bge_supported_atoms_at_24": 4,
+    "frozen_wave7a2_bm25_supported_atoms_at_24": 7,
+    "frozen_wave7a2_bge_supported_atoms_at_24": 4,
+    "source_aware_teacher_leak_reject_fraction": 0.2222222222222222
+  },
+  "valid_execution_boundaries": {
+    "exact_sha_admission": true,
+    "trusted_qwen_runtime_binding": true,
+    "dependency_preflight": true,
+    "workflow_completed_success": true,
+    "artifact_uploaded": true,
+    "scientific_state_materialized": false,
+    "production_extract_changed": false,
+    "qwen_verify_changed": false,
+    "wave7b_started": false
+  },
+  "frozen_wave7a3_state": {
+    "scientific_question": "Can author-salient contribution anchors from the paper's own front matter and conclusion/future-work context guide Qwen to generate answer-free atomic evidence obligations that recover the high-value teacher atoms missed by one-shot source-aware intent generation?",
+    "contract_path": "benchmarks/document_intelligence/local-extract-wave7a3-author-anchored-obligations.v1.json",
+    "contract_sha": "8e3481c4ad00ffe26cd175d0e6c6275081d70ab0",
+    "residual_atoms": [
+      "e1.a",
+      "e1.b",
+      "e1.c",
+      "e3.c",
+      "e6.a",
+      "e6.c"
+    ],
+    "control_supported_atoms": [
+      "e2.a",
+      "e2.b",
+      "e3.a",
+      "e3.b",
+      "e4.a",
+      "e4.b",
+      "e6.b"
+    ],
+    "production_promotion_authorized": false,
+    "wave7b_authorized": false
+  },
+  "next_safe_action": "Do not redesign salience and do not accept the raw WAVE7A3_REJECT. Repair only the Wave 7A.3 execution interface: make verdict-eligible anchor structured output reliably schema-conformant/fail explicitly before evaluation, add a pre-scientific generator-success validity gate, audit exact source-aware control parity against the frozen Wave 7A.2 control representation, then validate/merge the bounded fix. Only after those implementation-validity checks pass may one fresh inert trigger issue one valid Wave 7A.3 scientific run under the unchanged scientific hypothesis and promotion thresholds."
+}
