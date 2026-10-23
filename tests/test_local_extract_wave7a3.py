@@ -3,15 +3,24 @@ from __future__ import annotations
 import json
 import pathlib
 
-from research_engine.local_extract_wave7a3_evaluate import _verdict
+import pytest
+
+from research_engine.local_extract_wave7a3_evaluate import (
+    _implementation_validity,
+    _verdict,
+)
 from research_engine.local_extract_wave7a3_intents import (
+    _anchor_json_schema,
     _guard_anchors,
     _guard_obligations,
+    _obligation_json_schema,
+    _parse_structured_json,
 )
 
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 CONTRACT=ROOT/"benchmarks"/"document_intelligence"/"local-extract-wave7a3-author-anchored-obligations.v1.json"
+WAVE7A2_CONTRACT=ROOT/"benchmarks"/"document_intelligence"/"local-extract-wave7a2-evidence-conditioned.v2.json"
 
 
 def test_wave7a3_contract_freezes_salience_before_questions() -> None:
@@ -155,3 +164,122 @@ def test_wave7a3_partial_requires_actual_improvement() -> None:
             "QWEN35_AUTHOR_ANCHORED_OBLIGATIONS_V1",retr,candidate
         )
     assert _verdict(pairs)["wave7a3_decision"]=="WAVE7A3_REJECT"
+
+
+
+def test_wave7a3_structured_parser_rejects_multiple_objects() -> None:
+    with pytest.raises(json.JSONDecodeError):
+        _parse_structured_json(
+            '{"anchors":[]}\n{"anchors":[]}'
+        )
+
+
+def test_wave7a3_structured_schemas_freeze_only_interface_shape() -> None:
+    anchors=_anchor_json_schema(min_anchors=3,max_anchors=7)
+    assert anchors["additionalProperties"] is False
+    assert anchors["properties"]["anchors"]["minItems"]==3
+    assert anchors["properties"]["anchors"]["maxItems"]==7
+    item=anchors["properties"]["anchors"]["items"]
+    assert item["additionalProperties"] is False
+    assert set(item["required"])=={"anchor_id","role","descriptor"}
+    assert item["properties"]["role"]["enum"]==[
+        "problem","contribution","result","limitation_or_future_work"
+    ]
+
+    obligations=_obligation_json_schema(
+        anchors=[{"anchor_id":"A01"},{"anchor_id":"A02"}],
+        min_intents=8,
+        max_intents=18,
+    )
+    assert obligations["additionalProperties"] is False
+    assert obligations["properties"]["intents"]["minItems"]==8
+    assert obligations["properties"]["intents"]["maxItems"]==18
+    oitem=obligations["properties"]["intents"]["items"]
+    assert set(oitem["required"])=={"anchor_id","question"}
+    assert oitem["properties"]["anchor_id"]["enum"]==["A01","A02"]
+
+
+def test_wave7a3_control_operational_contract_matches_valid_wave7a2() -> None:
+    wave7a2=json.loads(WAVE7A2_CONTRACT.read_text())
+    wave7a3=json.loads(CONTRACT.read_text())
+    a72=next(
+        row for row in wave7a2["generator_arms"]
+        if row["id"]=="QWEN35_SOURCE_AWARE_INTENTS_V1"
+    )
+    a73=next(
+        row for row in wave7a3["generator_arms"]
+        if row["id"]=="QWEN35_SOURCE_AWARE_INTENTS_V1"
+    )
+    operational_keys={
+        "id","model_id","model_revision","input_scope","max_input_chars",
+        "min_intents","max_intents","max_output_tokens","temperature",
+        "top_p","seed",
+    }
+    assert {k:a73[k] for k in operational_keys}=={
+        k:a72[k] for k in operational_keys
+    }
+
+
+def test_wave7a3_implementation_validity_blocks_complete_fail_close() -> None:
+    generated={"papers":[
+        {
+            "item_id":"paper-1",
+            "generator_arms":{
+                "QWEN35_AUTHOR_ANCHORED_OBLIGATIONS_V1":{
+                    "status":"FAIL_CLOSED",
+                    "anchor_interface_status":"PASS",
+                    "obligation_interface_status":"PASS",
+                }
+            },
+        },
+        {
+            "item_id":"paper-2",
+            "generator_arms":{
+                "QWEN35_AUTHOR_ANCHORED_OBLIGATIONS_V1":{
+                    "status":"FAIL_CLOSED",
+                    "anchor_interface_status":"PASS",
+                    "obligation_interface_status":"PASS",
+                }
+            },
+        },
+    ]}
+    result=_implementation_validity(generated)
+    assert result["status"]=="FAIL_CLOSED"
+    assert result["completely_fail_closed_candidate"] is True
+    assert any(
+        row["reason"]=="COMPLETELY_FAIL_CLOSED_CANDIDATE"
+        for row in result["failures"]
+    )
+
+
+def test_wave7a3_implementation_validity_blocks_interface_failure() -> None:
+    generated={"papers":[
+        {
+            "item_id":"paper-1",
+            "generator_arms":{
+                "QWEN35_AUTHOR_ANCHORED_OBLIGATIONS_V1":{
+                    "status":"PASS",
+                    "anchor_interface_status":"PASS",
+                    "obligation_interface_status":"PASS",
+                }
+            },
+        },
+        {
+            "item_id":"paper-2",
+            "generator_arms":{
+                "QWEN35_AUTHOR_ANCHORED_OBLIGATIONS_V1":{
+                    "status":"FAIL_CLOSED",
+                    "anchor_interface_status":"FAIL_CLOSED",
+                    "anchor_interface_error":"JSONDecodeError:Extra data",
+                    "obligation_interface_status":"PASS",
+                }
+            },
+        },
+    ]}
+    result=_implementation_validity(generated)
+    assert result["status"]=="FAIL_CLOSED"
+    assert result["usable_candidate_papers"]==1
+    assert any(
+        row["stage"]=="anchor" and row["item_id"]=="paper-2"
+        for row in result["failures"]
+    )

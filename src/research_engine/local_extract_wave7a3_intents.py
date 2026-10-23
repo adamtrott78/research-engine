@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import pathlib
 import re
 import time
@@ -24,6 +25,133 @@ from research_engine.local_extract_wave7_intents import (
 
 
 ANCHOR_ROLES={"problem","contribution","result","limitation_or_future_work"}
+
+
+def _parse_structured_json(text: str) -> dict[str,Any]:
+    parsed=json.loads(str(text).strip())
+    if not isinstance(parsed,dict):
+        raise RuntimeError("structured model output root must be an object")
+    return parsed
+
+
+def _anchor_json_schema(
+    *,
+    min_anchors: int,
+    max_anchors: int,
+) -> dict[str,Any]:
+    return {
+        "type":"object",
+        "additionalProperties":False,
+        "required":["anchors"],
+        "properties":{
+            "anchors":{
+                "type":"array",
+                "minItems":min_anchors,
+                "maxItems":max_anchors,
+                "items":{
+                    "type":"object",
+                    "additionalProperties":False,
+                    "required":["anchor_id","role","descriptor"],
+                    "properties":{
+                        "anchor_id":{"type":"string","pattern":r"^A[0-9]{2}$"},
+                        "role":{
+                            "type":"string",
+                            "enum":[
+                                "problem",
+                                "contribution",
+                                "result",
+                                "limitation_or_future_work",
+                            ],
+                        },
+                        "descriptor":{"type":"string"},
+                    },
+                },
+            }
+        },
+    }
+
+
+def _obligation_json_schema(
+    *,
+    anchors: list[dict[str,Any]],
+    min_intents: int,
+    max_intents: int,
+) -> dict[str,Any]:
+    anchor_ids=[
+        str(row["anchor_id"])
+        for row in anchors
+        if str(row.get("anchor_id") or "")
+    ]
+    anchor_id_schema: dict[str,Any]={"type":"string"}
+    if anchor_ids:
+        anchor_id_schema["enum"]=anchor_ids
+    else:
+        anchor_id_schema["pattern"]=r"^A[0-9]{2}$"
+    return {
+        "type":"object",
+        "additionalProperties":False,
+        "required":["intents"],
+        "properties":{
+            "intents":{
+                "type":"array",
+                "minItems":min_intents,
+                "maxItems":max_intents,
+                "items":{
+                    "type":"object",
+                    "additionalProperties":False,
+                    "required":["anchor_id","question"],
+                    "properties":{
+                        "anchor_id":anchor_id_schema,
+                        "question":{"type":"string"},
+                    },
+                },
+            }
+        },
+    }
+
+
+def _model_json_schema(
+    llm: Any,
+    prompt: str,
+    *,
+    json_schema: dict[str,Any],
+    temperature: float,
+    top_p: float,
+    seed: int,
+    max_tokens: int,
+) -> tuple[dict[str,Any],dict[str,Any]]:
+    from vllm import SamplingParams
+    from vllm.sampling_params import StructuredOutputsParams
+
+    params=SamplingParams(
+        temperature=temperature,
+        top_p=top_p,
+        seed=seed,
+        max_tokens=max_tokens,
+        structured_outputs=StructuredOutputsParams(
+            json=json_schema,
+            disable_additional_properties=True,
+        ),
+    )
+    started=time.perf_counter()
+    outputs=llm.chat(
+        [{"role":"user","content":prompt}],
+        sampling_params=params,
+        use_tqdm=False,
+        chat_template_kwargs={"enable_thinking":False},
+    )
+    seconds=time.perf_counter()-started
+    output=outputs[0]
+    generated=output.outputs[0]
+    parsed=_parse_structured_json(generated.text)
+    return parsed,{
+        "wall_time_seconds":seconds,
+        "prompt_tokens":len(getattr(output,"prompt_token_ids",[]) or []),
+        "output_tokens":len(generated.token_ids),
+        "generated_text_sha256":hashlib.sha256(
+            generated.text.encode("utf-8")
+        ).hexdigest(),
+    }
 
 
 def _author_salience_context(
@@ -383,8 +511,12 @@ def generate_wave7a3_intents(
             anchor_cfg=candidate["salience_context"]
             anchor_usage={"prompt_tokens":0,"output_tokens":0,"wall_time_seconds":0.0}
             obligation_usage=dict(anchor_usage)
+            anchor_interface_status="NOT_ATTEMPTED"
+            anchor_interface_error=None
+            obligation_interface_status="NOT_ATTEMPTED"
+            obligation_interface_error=None
             try:
-                anchor_payload,anchor_usage=model_claims(
+                anchor_payload,anchor_usage=_model_json_schema(
                     llm,
                     _anchor_prompt(
                         topic=str(fixture["topic"]),
@@ -393,11 +525,16 @@ def generate_wave7a3_intents(
                         min_anchors=int(anchor_cfg["anchor_min"]),
                         max_anchors=int(anchor_cfg["anchor_max"]),
                     ),
+                    json_schema=_anchor_json_schema(
+                        min_anchors=int(anchor_cfg["anchor_min"]),
+                        max_anchors=int(anchor_cfg["anchor_max"]),
+                    ),
                     temperature=float(candidate["temperature"]),
                     top_p=float(candidate["top_p"]),
                     seed=int(candidate["seed"]),
                     max_tokens=int(anchor_cfg["max_output_tokens"]),
                 )
+                anchor_interface_status="PASS"
                 model_calls+=1
                 prompt_tokens+=int(anchor_usage["prompt_tokens"])
                 output_tokens+=int(anchor_usage["output_tokens"])
@@ -412,6 +549,8 @@ def generate_wave7a3_intents(
                     max_copy_tokens=int(anchor_schema["no_verbatim_source_quote_longer_than_tokens"]),
                 )
             except Exception as exc:
+                anchor_interface_status="FAIL_CLOSED"
+                anchor_interface_error=f"{type(exc).__name__}:{exc}"
                 anchor_guard={
                     "status":"FAIL_CLOSED","accepted":[],
                     "rejected":[{"reason":f"{type(exc).__name__}:{exc}"}],
@@ -421,7 +560,7 @@ def generate_wave7a3_intents(
             obligation_cfg=candidate["obligation_context"]
             try:
                 anchors=list(anchor_guard.get("accepted") or [])
-                obligation_payload,obligation_usage=model_claims(
+                obligation_payload,obligation_usage=_model_json_schema(
                     llm,
                     _obligation_prompt(
                         topic=str(fixture["topic"]),
@@ -432,11 +571,17 @@ def generate_wave7a3_intents(
                         max_intents=int(obligation_cfg["max_intents"]),
                         max_per_anchor=int(obligation_cfg["max_intents_per_anchor"]),
                     ),
+                    json_schema=_obligation_json_schema(
+                        anchors=anchors,
+                        min_intents=int(obligation_cfg["min_intents"]),
+                        max_intents=int(obligation_cfg["max_intents"]),
+                    ),
                     temperature=float(candidate["temperature"]),
                     top_p=float(candidate["top_p"]),
                     seed=int(candidate["seed"]),
                     max_tokens=int(obligation_cfg["max_output_tokens"]),
                 )
+                obligation_interface_status="PASS"
                 model_calls+=1
                 prompt_tokens+=int(obligation_usage["prompt_tokens"])
                 output_tokens+=int(obligation_usage["output_tokens"])
@@ -454,6 +599,8 @@ def generate_wave7a3_intents(
                     max_copy_tokens=int(obligation_schema["no_verbatim_source_quote_longer_than_tokens"]),
                 )
             except Exception as exc:
+                obligation_interface_status="FAIL_CLOSED"
+                obligation_interface_error=f"{type(exc).__name__}:{exc}"
                 obligation_guard={
                     "status":"FAIL_CLOSED","accepted":[],
                     "rejected":[{"reason":f"{type(exc).__name__}:{exc}"}],
@@ -471,7 +618,11 @@ def generate_wave7a3_intents(
                 "anchor_count":int(anchor_guard.get("accepted_count") or 0),
                 "anchor_rejected":list(anchor_guard.get("rejected") or []),
                 "anchor_guard_status":anchor_guard["status"],
+                "anchor_interface_status":anchor_interface_status,
+                "anchor_interface_error":anchor_interface_error,
                 "obligation_guard_status":obligation_guard["status"],
+                "obligation_interface_status":obligation_interface_status,
+                "obligation_interface_error":obligation_interface_error,
                 "accepted_per_anchor":dict(obligation_guard.get("accepted_per_anchor") or {}),
                 "usage":{
                     "prompt_tokens":int(anchor_usage["prompt_tokens"])+int(obligation_usage["prompt_tokens"]),

@@ -18,6 +18,54 @@ CANDIDATE_ID="QWEN35_AUTHOR_ANCHORED_OBLIGATIONS_V1"
 CONTROL_ID="QWEN35_SOURCE_AWARE_INTENTS_V1"
 
 
+def _implementation_validity(
+    generated: dict[str,Any],
+) -> dict[str,Any]:
+    failures=[]
+    usable_candidate_papers=0
+    paper_count=0
+    for paper in generated.get("papers") or []:
+        paper_count+=1
+        item_id=str(paper.get("item_id") or "")
+        candidate=dict(
+            (paper.get("generator_arms") or {}).get(CANDIDATE_ID) or {}
+        )
+        if candidate.get("status")=="PASS":
+            usable_candidate_papers+=1
+        anchor_status=str(candidate.get("anchor_interface_status") or "MISSING")
+        obligation_status=str(
+            candidate.get("obligation_interface_status") or "MISSING"
+        )
+        if anchor_status!="PASS":
+            failures.append({
+                "item_id":item_id,
+                "stage":"anchor",
+                "reason":f"INTERFACE_{anchor_status}",
+                "error":candidate.get("anchor_interface_error"),
+            })
+        if obligation_status!="PASS":
+            failures.append({
+                "item_id":item_id,
+                "stage":"obligation",
+                "reason":f"INTERFACE_{obligation_status}",
+                "error":candidate.get("obligation_interface_error"),
+            })
+    completely_fail_closed=paper_count>0 and usable_candidate_papers==0
+    if completely_fail_closed:
+        failures.append({
+            "stage":"candidate",
+            "reason":"COMPLETELY_FAIL_CLOSED_CANDIDATE",
+            "paper_count":paper_count,
+        })
+    return {
+        "status":"PASS" if not failures else "FAIL_CLOSED",
+        "paper_count":paper_count,
+        "usable_candidate_papers":usable_candidate_papers,
+        "completely_fail_closed_candidate":completely_fail_closed,
+        "failures":failures,
+    }
+
+
 def _augment_pair(
     row: dict[str,Any],
     *,
@@ -141,6 +189,35 @@ def evaluate_wave7a3(
 ) -> dict[str,Any]:
     if generated["scientific_state_materialized"] or generated["production_routing_changed"]:
         raise RuntimeError("generation report violated scientific boundary")
+    implementation_validity=_implementation_validity(generated)
+    if implementation_validity["status"]!="PASS":
+        return {
+            "schema_version":1,
+            "operation":"LOCAL_EXTRACT_WAVE7A3_AUTHOR_ANCHORED_EVAL",
+            "benchmark_id":contract["benchmark_id"],
+            "baseline_sha":contract["baseline_sha"],
+            "wave7a3_decision":"INVALID_IMPLEMENTATION",
+            "qualifying_pairs":[],
+            "candidate_vs_control":[],
+            "implementation_validity":implementation_validity,
+            "pairs":{},
+            "teacher_generation_diagnostic":_teacher_generation_diagnostic(
+                generated,
+                teacher_item_id=str(support_fixture["source_item_id"]),
+            ),
+            "generation_metrics":generated["metrics"],
+            "bge_resource_metrics":None,
+            "hard_safety":{
+                "scientific_state_materialized_false":True,
+                "production_routing_changed_false":True,
+                "qwen_verify_changed_false":True,
+                "wave7b_started_false":True,
+            },
+            "scientific_state_materialized":False,
+            "production_routing_changed":False,
+            "qwen_verify_changed":False,
+            "wave7b_started":False,
+        }
     papers=_prepare_papers(
         fixture=fixture,
         generated=generated,
@@ -217,6 +294,7 @@ def evaluate_wave7a3(
         "benchmark_id":contract["benchmark_id"],
         "baseline_sha":contract["baseline_sha"],
         **decision,
+        "implementation_validity":implementation_validity,
         "pairs":pairs,
         "teacher_generation_diagnostic":_teacher_generation_diagnostic(
             generated,
