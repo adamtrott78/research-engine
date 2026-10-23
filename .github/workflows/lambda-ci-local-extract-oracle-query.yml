@@ -1,0 +1,171 @@
+name: Lambda CI Local EXTRACT Oracle Query Diagnostic
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  oracle-query-diagnostic:
+    name: "${{ format('wc-admission-v1|workload=model-eval-local-extract-oracle-query-v1|pr={0}|request={1}', github.event.issue.number, github.event.comment.body) }}"
+    if: >-
+      github.event.issue.pull_request &&
+      github.actor == 'adamtrott78' &&
+      github.event.comment.author_association == 'OWNER' &&
+      startsWith(github.event.comment.body, '/lambda-ci-local-extract-oracle-query ')
+    runs-on: lambda-research-engine-gpu
+    timeout-minutes: 45
+
+    steps:
+      - name: Verify exact PR head
+        id: gate
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          expected_sha="$(printf '%s\n' "$COMMENT_BODY" | awk '{print $2}')"
+          [[ "$expected_sha" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "Invalid oracle-query SHA" >&2
+            exit 20
+          }
+          pr_json="$(
+            curl -fsSL \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$REPOSITORY/pulls/$PR_NUMBER"
+          )"
+          actual_sha="$(
+            python3 -c 'import json,sys; print(json.load(sys.stdin)["head"]["sha"])' <<<"$pr_json"
+          )"
+          [[ "$actual_sha" == "$expected_sha" ]]
+          echo "expected_sha=$expected_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Prove single-GPU public-payload execution boundary
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          expected_runtime="/srv/workspace-ci/research-engine/expanded-runtimes/qwen35-vllm-cu129-image-native-sampler-v3/f67ff9a26690c55930232c915e59e826e3cca2dd89012de9e35a852032b38f74"
+          [[ "$(id -un)" == "ci-research-engine" ]]
+          [[ "${P5_EXPANDED_RUNTIME:-}" == "$expected_runtime" ]]
+          [[ "${P5_EXPANDED_RUNTIME_PYTHON:-}" == "$expected_runtime/bin/python" ]]
+          [[ "${P5_EXPANDED_RUNTIME_TREE_SHA256:-}" == "b0cbb4efbe8673bdb421bad8036d29864bffe0687a9a654bbd95f54544659e63" ]]
+          [[ "${P5_EXPANDED_RUNTIME_MANIFEST_SHA256:-}" == "f67ff9a26690c55930232c915e59e826e3cca2dd89012de9e35a852032b38f74" ]]
+          [[ -z "${P5_MODEL_ID:-}" ]]
+          [[ -z "${P5_MODEL_PATH:-}" ]]
+          [[ -n "${P5_GPU_TARGET_UUID:-}" ]]
+          [[ -n "${P5_GPU_SELECTED_DEVICE:-}" ]]
+          [[ "${CUDA_VISIBLE_DEVICES:-}" == "$P5_GPU_TARGET_UUID" ]]
+          [[ "$P5_GPU_TARGET_UUID" == "GPU-a333e68b-d1dc-6d25-1678-97b527bf55ea" ]]
+          [[ ! -r /var/lib/workspace-ci/controller/github-token ]]
+          [[ ! -r /home/atrott ]]
+          if [[ -e /var/run/docker.sock ]]; then
+            [[ ! -r /var/run/docker.sock ]]
+            [[ ! -w /var/run/docker.sock ]]
+          fi
+
+      - name: Checkout exact candidate SHA
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ steps.gate.outputs.expected_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          clean: true
+
+      - name: Install exact benchmark dependency ephemerally
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          pydeps="$RUNNER_TEMP/oracle-query-pydeps"
+          mkdir -m 0700 "$pydeps"
+          pypdf_wheel="$RUNNER_TEMP/pypdf-6.21.1-py3-none-any.whl"
+          curl -fsSL --retry 3 --retry-delay 2 \
+            "https://files.pythonhosted.org/packages/85/e6/24c944e473c34e818cf1b98085796fcd780465ecfe17663f2bf8fee1958b/pypdf-6.21.1-py3-none-any.whl" \
+            -o "$pypdf_wheel"
+          [[ "$(sha256sum "$pypdf_wheel" | awk '{print $1}')" == "553e2d42f5bb3bb2a785a7d3de8ef90bb7df74b5413eff5a7b4388007ea9254b" ]]
+          "$P5_EXPANDED_RUNTIME_PYTHON" -m zipfile -e "$pypdf_wheel" "$pydeps"
+          PYTHONPATH="$pydeps" "$P5_EXPANDED_RUNTIME_PYTHON" - <<'PY'
+          import torch, transformers, huggingface_hub, pypdf
+          assert pypdf.__version__ == "6.21.1"
+          assert torch.__version__ == "2.13.0+cu129"
+          assert torch.version.cuda == "12.9"
+          assert torch.cuda.is_available()
+          assert torch.cuda.device_count() == 1
+          print(
+              "ORACLE_QUERY_RUNTIME_PREFLIGHT=PASS "
+              f"torch={torch.__version__} "
+              f"transformers={transformers.__version__} "
+              f"huggingface_hub={huggingface_hub.__version__}"
+          )
+          PY
+
+      - name: Run bounded oracle query diagnostic
+        env:
+          EXPECTED_SHA: ${{ steps.gate.outputs.expected_sha }}
+          HF_HUB_DISABLE_TELEMETRY: "1"
+          DO_NOT_TRACK: "1"
+          TOKENIZERS_PARALLELISM: "false"
+          VLLM_NO_USAGE_STATS: "1"
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$(git rev-parse HEAD)" == "$EXPECTED_SHA" ]]
+          if git config --local --get-regexp '^http\..*\.extraheader$' >/dev/null 2>&1; then
+            echo "Checkout credentials remained in candidate git config" >&2
+            exit 40
+          fi
+          unset HF_HUB_OFFLINE || true
+          unset TRANSFORMERS_OFFLINE || true
+
+          pydeps="$RUNNER_TEMP/oracle-query-pydeps"
+          output="$RUNNER_TEMP/local-extract-oracle-query-diagnostic.json"
+          workdir="$RUNNER_TEMP/local-extract-oracle-query-work"
+
+          PYTHONPATH="$PWD/src:$pydeps" \
+            "$P5_EXPANDED_RUNTIME_PYTHON" \
+            benchmarks/document_intelligence/run_local_extract_oracle_query.py \
+            --fixture benchmarks/document_intelligence/local-extract-wave1-corpus.v1.json \
+            --contract benchmarks/document_intelligence/local-extract-oracle-query-diagnostic.v1.json \
+            --support-fixture benchmarks/document_intelligence/local-extract-teacher-atom-support.v1.json \
+            --output "$output" \
+            --workdir "$workdir"
+
+          "$P5_EXPANDED_RUNTIME_PYTHON" - "$output" <<'PY'
+          import json, pathlib, sys
+          report=json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert report["teacher_item_id"] == "arxiv:2403.04036"
+          assert report["external_model_downloads"] == 2
+          assert report["qwen35_extract_model_calls"] == 0
+          assert report["scientific_state_materialized"] is False
+          assert report["production_routing_changed"] is False
+          assert report["qwen_verify_changed"] is False
+          assert report["wave7_started"] is False
+          assert report["verdict"] in {
+              "QUERY_REPRESENTATION_CONFIRMED",
+              "QUERY_REPRESENTATION_PARTIAL",
+              "RANKER_LIMIT_SUPPORTED",
+          }
+          assert {2,4,6}.issubset(set(report["selected_page_numbers"]))
+          assert set(report["query_modes"]) == {
+              "TARGET_TEXT_ORACLE",
+              "INTENT_QUERY_ORACLE",
+          }
+          print("ORACLE_QUERY_DIAGNOSTIC_RECEIPT=PASS")
+          PY
+
+      - name: Upload oracle query report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: local-extract-oracle-query-diagnostic
+          path: ${{ runner.temp }}/local-extract-oracle-query-diagnostic.json
+          if-no-files-found: error
+          retention-days: 14
