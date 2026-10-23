@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "design_id": "local-extract-proposition-alignment-preservation-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "baseline_result_sha": "fda45f3024cebfb2d760952b2eb93dfa07247b97",
+  "status": "DESIGN_ONLY_NO_EXECUTION_AUTHORIZED",
+  "purpose": "Replace failed intent-utility preservation with direct teacher-blind proposition-to-proposition redundancy certification. Residual evidence may displace a baseline proposition only when the removed baseline proposition is independently aligned to another retained baseline proposition on the same source page.",
+  "exclusion_evidence": [
+    {
+      "result": "WAVE7A3_REJECT",
+      "implication": "Author-framed salience can discover complementary residual evidence but standalone replacement displaces established source-aware coverage."
+    },
+    {
+      "result": "COMPOSITION_NEGATIVE",
+      "implication": "One-shot balanced set coverage does not preserve the strong source-aware control."
+    },
+    {
+      "result": "PROTECTED_AUGMENT_NEGATIVE",
+      "implication": "Preserving source-aware intent utility is not a sufficient proxy for preserving semantic evidence: the zero-loss selector fell from 7/13 control support to 6/13 while its intent-utility constraint passed on all papers."
+    }
+  ],
+  "research_evidence": [
+    {
+      "source": "Ernst et al., The Power of Summary-Source Alignments, Findings ACL 2024",
+      "url": "https://aclanthology.org/2024.findings-acl.389/",
+      "evidence": "Summary-source alignment is more precise at proposition-span granularity than sentence-level heuristics and can support salience/redundancy tasks.",
+      "implication": "Preservation should operate on the exact proposition units already used by EXTRACT rather than on aggregate query utility."
+    },
+    {
+      "source": "Ernst et al., Proposition-Level Clustering for Multi-Document Summarization, NAACL 2022",
+      "url": "https://aclanthology.org/2022.naacl-main.128/",
+      "evidence": "Paraphrastic proposition clustering is used to identify repeated information and reduce redundancy more cleanly than sentence-level clustering.",
+      "implication": "A baseline proposition may be removable only when another proposition independently carries substantially overlapping information."
+    },
+    {
+      "source": "Suhara and Alikaniotis, Source Identification in Abstractive Summarization, EACL 2024",
+      "url": "https://aclanthology.org/2024.eacl-short.20/",
+      "evidence": "Similarity-based source-identification methods are reported as robust in relatively extractive settings.",
+      "implication": "A similarity-based preservation certificate is reasonable for exact extracted propositions before introducing a learned semantic judge."
+    },
+    {
+      "source": "Ge et al., Extractive Summarization via Fine-grained Semantic Tuple Extraction, INLG 2024",
+      "url": "https://aclanthology.org/2024.inlg-main.10/",
+      "evidence": "Fine-grained semantic units can be used as coverage targets rather than relying on fixed sentence counts.",
+      "implication": "Semantic-tuple preservation is a credible later family, but it adds an IE/model dependency and is deferred until a zero-model proposition-alignment premise is tested."
+    }
+  ],
+  "source_only_calibration": {
+    "source_run_id": 40035904753,
+    "source_artifact_id": 12536818273,
+    "source_report_sha256": "5a27ac5cb7def8649b3bce0122a17079a4d5adb514fadb41cb1edc1fe001e55d",
+    "input_arm": "FROZEN_SOURCE_AWARE_BM25_RRF_V1",
+    "proposition_count": 216,
+    "metric": "For each baseline proposition, maximum research_engine.local_extract_wave1.token_f1 against any other baseline proposition on the same source page.",
+    "threshold": 0.4,
+    "certified_count": 20,
+    "certified_fraction": 0.09259259259259259,
+    "per_paper_certified_counts": {
+      "arxiv:2411.03636": 0,
+      "arxiv:2209.03142": 3,
+      "arxiv:2501.15391": 4,
+      "arxiv:2306.13895": 4,
+      "arxiv:2403.04036": 2,
+      "arxiv:2609.02007": 0,
+      "arxiv:2112.02536": 5,
+      "arxiv:2609.20765": 2,
+      "arxiv:2108.13099": 0
+    },
+    "interpretation": "The 0.40 certificate is deliberately sparse and source-only. It identifies a high-overlap redundancy tail without imposing a fixed number of residual slots. Runtime selection never reads teacher atoms or teacher support."
+  },
+  "architecture_families": [
+    {
+      "id": "SAME_PAGE_PROPOSITION_ALIGNMENT_CERTIFICATE",
+      "role": "selected_first",
+      "mechanism": "Dynamic proposition-to-proposition token-F1 redundancy certification on the same authoritative PDF page; residual swaps may consume only independently certified redundant baseline slots."
+    },
+    {
+      "id": "SEMANTIC_TUPLE_COVERAGE",
+      "role": "deferred",
+      "mechanism": "Extract predicate-argument semantic tuples and preserve tuple coverage before residual augmentation.",
+      "reason": "Scientifically attractive but adds an information-extraction dependency before the simpler proposition-alignment premise is tested."
+    },
+    {
+      "id": "LEARNED_PARAPHRASE_OR_NLI_CERTIFICATE",
+      "role": "deferred",
+      "mechanism": "Use a learned proposition paraphrase/entailment model to certify redundancy.",
+      "reason": "Would require a new model/download and transfer validation; not justified before a zero-model alignment diagnostic."
+    },
+    {
+      "id": "FIXED_TAIL_OR_QUOTA_REPLACEMENT",
+      "role": "ineligible",
+      "mechanism": "Reserve a fixed number of low-ranked source-aware slots for residual evidence.",
+      "reason": "The 20/4 arm is prior non-verdict evidence and may not be promoted or tuned post hoc."
+    }
+  ],
+  "selected_first_diagnostic": {
+    "id": "PROPOSITION_ALIGNMENT_CERTIFIED_AUGMENTATION_DIAGNOSTIC_V1",
+    "purpose": "Test whether direct same-page proposition redundancy certificates can expose residual capacity while retaining all frozen source-aware teacher support.",
+    "new_model_calls": 0,
+    "new_model_downloads": 0,
+    "scientific_state_materialized": false,
+    "inputs": [
+      "exact valid Wave 7A.3 generated-intents artifact SHA256 a5a970725c1f16a694633416ad9fbd98e58418c267891ac83b7783d8af218ebd",
+      "frozen source-aware BM25 RRF top-24 as baseline",
+      "frozen author-anchored BM25 residual RRF only as a fixed residual candidate ordering",
+      "same nine-paper authoritative PDFs, selected-page proposition pool, BM25 per-intent depth 12, RRF k=60, and final budget 24"
+    ],
+    "algorithm": {
+      "id": "DYNAMIC_SAME_PAGE_ALIGNMENT_SWAP_V1",
+      "baseline_set": "source-aware BM25 RRF top-24",
+      "residual_order": "author-anchored BM25 RRF order; baseline propositions are skipped",
+      "alignment_metric": "research_engine.local_extract_wave1.token_f1 over raw_source_form",
+      "alignment_threshold": 0.4,
+      "certificate_scope": "same source page only",
+      "certificate_source": "another proposition from the original frozen baseline set that is still retained",
+      "page_preservation": "the set of source pages present in the frozen baseline top-24 may not shrink",
+      "removal_order": "among currently certified removable baseline propositions, remove the one with worst frozen source-aware fusion rank; tie-break proposition_id",
+      "addition_order": "take the highest-ranked residual RRF proposition not already selected",
+      "dynamic_recompute": true,
+      "stop_rule": "stop when no certified removable baseline proposition remains or no residual candidate remains",
+      "final_budget": 24,
+      "teacher_blind": true,
+      "no_post_result_tuning": true
+    },
+    "controls": [
+      "frozen source-aware BM25 RRF top-24",
+      "frozen author-anchored BM25 RRF top-24",
+      "rejected LEXICOGRAPHIC_ZERO_LOSS_SWAP_V1 result",
+      "predeclared fixed 20-control/4-residual quota as non-verdict reference only"
+    ],
+    "predeclared_interpretation": {
+      "ALIGNMENT_AUGMENT_STRONG": [
+        "supports at least 9/13 teacher atoms",
+        "recovers both observed residual atoms e1.a and e6.a",
+        "retains all 7/7 frozen source-aware control-supported atoms",
+        "merged-page recall is at least 90% of the frozen coarse selected-page ceiling",
+        "every removal has a live same-page baseline alignment certificate >=0.40 and page preservation passes"
+      ],
+      "ALIGNMENT_AUGMENT_FEASIBLE": [
+        "no STRONG result",
+        "supports at least 8/13 teacher atoms",
+        "recovers at least 1 of e1.a/e6.a",
+        "retains all 7/7 frozen source-aware control-supported atoms",
+        "merged-page recall is at least 90% of the frozen coarse selected-page ceiling",
+        "all alignment certificates/page-preservation checks pass"
+      ],
+      "ALIGNMENT_AUGMENT_NEGATIVE": [
+        "neither STRONG nor FEASIBLE is met"
+      ]
+    },
+    "decision_boundary": {
+      "if_strong_or_feasible": "Only then design a second-stage semantic generalization of the certificate (semantic tuples or learned paraphrase/NLI) as a separate evidence-first contract; do not change production routing yet.",
+      "if_negative": "Reject sparse lexical proposition alignment as an adequate semantic-preservation certificate and return to a materially different evidence-unit representation.",
+      "never": "Do not promote/tune the fixed 20/4 quota, change the 0.40 threshold after teacher results, execute the rejected Qwen gap judge, train/download a classifier, start Wave 7B, alter production EXTRACT/VERIFY, or introduce ontology/semantic-control mechanisms."
+    }
+  },
+  "boundaries": {
+    "wave7b": false,
+    "production_standard_codex_extract_changed": false,
+    "accepted_qwen_verify_changed": false,
+    "qwen_generation_changed": false,
+    "new_model_training_authorized": false,
+    "new_model_download_authorized": false,
+    "ontology_or_semantic_control_in_extract": false,
+    "fixed_quota_promotion": false,
+    "rejected_zero_loss_selector_rerun": false
+  },
+  "next_safe_action": "CI-lock this design checkpoint. Then implement DYNAMIC_SAME_PAGE_ALIGNMENT_SWAP_V1 exactly as frozen, add deterministic unit tests for certificate scope/dynamic recomputation/page preservation/verdict gates, run normal CI, durable-checkpoint the implementation, and issue exactly one zero-generation diagnostic."
+}
