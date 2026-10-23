@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "analysis_id": "local-extract-wave4-decision-v1",
+  "owning_task": "research-engine-local-extract-redesign-v1",
+  "authoritative_execution": {
+    "workflow_run_id": 39877621286,
+    "artifact_id": 12469556387,
+    "artifact_zip_sha256": "718fd2f6477077f3a193a9660e97fe8849815f66dfd192436c7514f57eddc97e",
+    "report_sha256": "f65f3cb55ded5a221d5691b14d9a804efa67192fb9c22dd2647d6a7486bc1e7d",
+    "candidate_sha": "908e710c4aa68775bb727100865cb65fe90f02e3",
+    "implementation_merge_sha": "7d2b7b9b131881de9b2d0c31640110fd7b0df348"
+  },
+  "workflow_disposition": {
+    "github_conclusion": "failure",
+    "scientific_report_complete": true,
+    "rerun_required": false,
+    "failure_stage": "post-benchmark receipt assertion",
+    "failure": "KeyError: paper_wide_collateral_loss_count",
+    "interpretation": "The benchmark completed, emitted WAVE4_DECISION=PARTIAL, wrote a full report, and uploaded the artifact. A copied launcher receipt assertion referenced a metric not emitted by Wave 4. No second scientific run is authorized or needed."
+  },
+  "scientific_decision": "PARTIAL",
+  "hard_safety": {
+    "fabricated_or_unlocatable_quote_count_zero": true,
+    "exact_quote_locatability_one": true,
+    "page_provenance_coverage_one": true,
+    "structural_claim_budget_respected": true,
+    "scientific_state_materialized_false": true,
+    "production_routing_changed_false": true
+  },
+  "metrics": {
+    "job_local_completion_fraction": 0.7777777777777778,
+    "locally_completed_jobs": 7,
+    "accepted_claim_count": 50,
+    "accepted_claims_on_wave1_failed_papers": 27,
+    "proposal_model_calls": 106,
+    "normalization_model_calls": 54,
+    "model_calls": 160,
+    "proposal_select_count": 54,
+    "proposal_skip_count": 52,
+    "proposal_hard_reject_count": 0,
+    "normalization_skip_count": 1,
+    "normalization_hard_reject_count": 3,
+    "unit_hard_reject_count": 3,
+    "projected_remote_input_token_reduction": 0.6980722200822352,
+    "qwen_prompt_tokens": 67409,
+    "qwen_output_tokens": 4311,
+    "inference_seconds_total": 46.17955426994013,
+    "historical_evidence_page_recall_at_12": 0.7441860465116279
+  },
+  "teacher_control": {
+    "teacher_claim_count": 6,
+    "qwen_claim_count": 4,
+    "passing_pairs_at_normalized_f1_0_5": 0,
+    "qwen_precision_at_f1_0_5": 0,
+    "teacher_claim_coverage_at_f1_0_5": 0,
+    "matched_normalized_f1": 0.17839877907935986,
+    "available_exact_proposition_mean_f1": 0.31908516604168774,
+    "qwen_selected_proposition_mean_f1": 0.21498668482680108,
+    "wave2_region_mean_f1_recomputed": 0.27380476969124573
+  },
+  "hard_reject_diagnostic": {
+    "count": 3,
+    "reason": "CLAIM_SCHEMA",
+    "observed_pattern": "All three rejected normalization payloads were otherwise grounded CLAIM objects that omitted the requested confidence field.",
+    "conclusion": "Do not change the normalization schema in the next wave because that would confound proposal-selection isolation; retain and measure the same strict guard."
+  },
+  "residual_localization": [
+    {
+      "id": "PROPOSITION_ENUMERATION_HELPFUL",
+      "evidence": "All available exact propositions improve teacher-source mean F1 from the Wave-2 region control 0.274 to 0.319.",
+      "conclusion": "Retain exact proposition enumeration."
+    },
+    {
+      "id": "QWEN_PROPOSAL_SELECTOR_PRIMARY_FAILURE",
+      "evidence": "Qwen-selected propositions fall to mean teacher-source F1 0.215, below both the Wave-2 region control and the 0.319 available-proposition ceiling.",
+      "conclusion": "Replace Qwen proposal selection before changing normalization."
+    },
+    {
+      "id": "DETERMINISTIC_SELECTOR_OFFLINE_DIAGNOSTIC",
+      "evidence": "Using the unchanged research query and existing BM25 scoring, choosing the highest-scoring complete proposition per selected region yields teacher-source mean F1 0.303 and page-equal best matches for all six preserved teacher claims.",
+      "conclusion": "Use deterministic BM25 proposition selection as the next bounded experiment."
+    },
+    {
+      "id": "NORMALIZATION_NOT_YET_ISOLATED_CLEANLY",
+      "evidence": "Final normalized teacher agreement fell to 0.178 because the proposal selector supplied weak propositions; normalization cannot be adjudicated independently from this Wave-4 result.",
+      "conclusion": "Wave 5 should improve only proposal selection while keeping normalization fixed."
+    }
+  ],
+  "next_experiment": "WAVE5_DETERMINISTIC_PROPOSITION_RANKING_THEN_NORMALIZATION_V1"
+}

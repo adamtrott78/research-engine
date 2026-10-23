@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "local-extract-wave5-deterministic-proposition-ranking-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "baseline": {
+    "wave4_workflow_run_id": 39877621286,
+    "wave4_artifact_id": 12469556387,
+    "wave4_artifact_zip_sha256": "718fd2f6477077f3a193a9660e97fe8849815f66dfd192436c7514f57eddc97e",
+    "wave4_report_sha256": "f65f3cb55ded5a221d5691b14d9a804efa67192fb9c22dd2647d6a7486bc1e7d",
+    "wave4_decision": "PARTIAL",
+    "wave4_job_local_completion_fraction": 0.7777777777777778,
+    "wave4_accepted_claim_count": 50,
+    "wave4_teacher_claim_coverage_at_f1_0_5": 0,
+    "wave4_available_exact_proposition_mean_f1": 0.31908516604168774,
+    "wave4_qwen_selected_proposition_mean_f1": 0.21498668482680108,
+    "wave4_final_normalized_mean_f1": 0.17839877907935986,
+    "wave4_projected_remote_input_token_reduction": 0.6980722200822352,
+    "offline_deterministic_selector_mean_f1": 0.303
+  },
+  "hypothesis": "Wave 4 showed that exact proposition candidates contain substantially better teacher-aligned evidence than Qwen selects. Replacing only the Qwen proposition-selection call with deterministic BM25 scoring over the exact propositions in each retrieved region should recover most of the available proposition ceiling while reducing model calls, allowing the unchanged Qwen normalizer to be evaluated on better inputs.",
+  "experimental_control": {
+    "fixed": [
+      "Qwen/Qwen3.5-4B exact promoted model object",
+      "qwen35-vllm-cu129-image-native-sampler-v3 exact promoted runtime",
+      "tensor_parallel_size=2 on the accepted two RTX A4500 devices",
+      "nine-paper / 71-evidence-object preserved corpus",
+      "exact-SHA ephemeral arXiv PDF acquisition",
+      "production-parity pypdf extraction",
+      "Wave-2 exact_source_regions(max_chars=650) region construction",
+      "FACET_INTERLEAVED_BM25_V1 region ranking algorithm and facet queries",
+      "top_k_regions=12",
+      "Wave-4 deterministic exact proposition enumeration",
+      "one selected proposition maximum per retrieved region",
+      "Wave-4 Qwen normalization prompt",
+      "Wave-4 normalization JSON schema and strict guard",
+      "one accepted claim maximum per selected region",
+      "twelve accepted claims maximum per paper",
+      "exact deterministic duplicate removal",
+      "temperature=0, top_p=1, seed=0",
+      "max_output_tokens_per_normalization_call=320",
+      "preserved six-claim teacher subset",
+      "preserved teacher_agreement lexical scorer and F1>=0.5 pass threshold",
+      "no scientific-state materialization",
+      "no production routing change",
+      "accepted page-scoped Qwen VERIFY unchanged"
+    ],
+    "changed": [
+      "remove the Wave-4 Qwen proposition-selection model call",
+      "for each retrieved region with at least one complete exact proposition, score those propositions deterministically using the existing BM25 scoring formula against the unchanged paper research query and choose the highest-scoring proposition with deterministic source-order tie breaks",
+      "regions with no complete proposition remain deterministic skips"
+    ],
+    "explicitly_not_changed": [
+      "region construction",
+      "region retrieval ranking",
+      "retrieval top-k",
+      "proposition segmentation",
+      "normalization prompt",
+      "normalization guard schema",
+      "teacher scorer or threshold",
+      "model/runtime/GPU topology",
+      "production EXTRACT",
+      "Qwen VERIFY",
+      "GitRunner controller/provisioner/runtime/reconciler"
+    ]
+  },
+  "deterministic_selector": {
+    "id": "PER_REGION_GLOBAL_BM25_PROPOSITION_V1",
+    "query": "unchanged Wave-2/Wave-4 per-paper research query: fixture topic + PDF title + paper item_id",
+    "candidates": "complete exact propositions enumerated inside one selected region only",
+    "scoring": "existing local_extract_wave1._bm25 formula with the proposition display_text and inherited section_hint",
+    "selection": "highest score; ties break by page_number, start_char, proposition_id",
+    "model_calls": 0,
+    "skip_rule": "SKIP only when a region contains no complete exact proposition"
+  },
+  "diagnostics": {
+    "continuity_metrics": [
+      "historical_evidence_page_recall_at_12",
+      "job_local_completion_fraction",
+      "accepted_claim_count",
+      "teacher_subset_precision",
+      "teacher_subset_coverage",
+      "page_agreement_on_passing_matches",
+      "type_agreement_on_passing_matches",
+      "projected_remote_input_token_reduction",
+      "qwen_prompt_tokens",
+      "qwen_output_tokens",
+      "inference_seconds_total"
+    ],
+    "selector_metrics": [
+      "available_exact_proposition_count",
+      "deterministic_selected_proposition_count",
+      "teacher_available_proposition_mean_f1",
+      "teacher_deterministic_selected_proposition_mean_f1",
+      "normalization_model_calls",
+      "normalization_skip_count",
+      "normalization_hard_reject_count"
+    ]
+  },
+  "predeclared_interpretation": [
+    "If deterministic selected-proposition teacher alignment materially recovers toward the available-proposition ceiling and final normalized agreement also improves, retain deterministic selection and next isolate normalization quality only if the preserved teacher gate still fails.",
+    "If deterministic selected-proposition alignment improves but final normalized agreement does not, proposal selection is solved sufficiently for this benchmark and normalization semantics / teacher-granularity mismatch becomes the primary residual.",
+    "If deterministic selected-proposition alignment fails to improve over Wave 4 Qwen selection, reject this selector and revisit candidate ranking or a specialized IE component.",
+    "Do not change the preserved teacher F1 threshold after seeing the result."
+  ],
+  "gates": {
+    "hard_safety_unchanged": [
+      "fabricated/unlocatable quote count = 0",
+      "exact quote locatability = 1.0",
+      "page provenance coverage = 1.0",
+      "structural claim budgets respected",
+      "scientific_state_materialized = false",
+      "production_routing_changed = false"
+    ],
+    "research_positive_unchanged": [
+      "local pass precision >= 0.95",
+      "page agreement >= 0.95",
+      "type agreement >= 0.95",
+      "teacher claim coverage >= 0.80",
+      "job local completion fraction >= 0.50"
+    ],
+    "production_promotion_unchanged": [
+      "all safety gates pass",
+      "local precision >= 0.95",
+      "teacher claim coverage >= 0.90",
+      "page/type agreement >= 0.95",
+      "unsupported claim rate = 0",
+      "job local completion >= 0.80",
+      "projected remote input-token reduction >= 0.50",
+      "no material downstream VERIFY regression"
+    ]
+  },
+  "teacher_control_limitation": "The legacy normalized teacher subset contains six claims from one paper, and several historical teacher claims combine multiple facts while the local architecture intentionally emits atomic claims. The scorer and threshold remain unchanged for continuity; proposal-stage source alignment remains an explicit diagnostic.",
+  "execution": {
+    "execution_contract": "model-dual-public-v1",
+    "new_privileged_authority_required": false,
+    "gitrunner_substrate_change_required": false
+  }
+}
