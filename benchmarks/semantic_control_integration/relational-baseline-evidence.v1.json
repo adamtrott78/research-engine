@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "evidence_id": "semantic-control-relational-baseline-run-40036307847",
+  "pr_number": 195,
+  "pr_head_sha": "460c76075a51ea0c98f406a6d455e853beb8bed9",
+  "ci_run_id": 40036307847,
+  "ci_job_id": 120696530150,
+  "result_marker": "SEMANTIC_CONTROL_RELATIONAL_BASELINE_V1",
+  "result_sha256": "09a2b695580a2262629bca33dc568fe450edea726d92d70c1b9f24d5c0d5fcca",
+  "source": "GitHub Actions job log warning emitted by test_measure_frozen_relational_baseline_and_emit_machine_readable_result",
+  "production_database_access": false,
+  "production_mutation": false
+}
