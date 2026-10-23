@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "decision_id": "local-extract-family-c-zero-loss-result-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "implementation_sha": "134936c8d884ee743faa82e18a886d9caebf62db",
+  "trigger_pr": 193,
+  "trigger_head_sha": "875c56d52e7d26493ab82e49a176410ffce39fb3",
+  "trigger_comment_id": 6376264502,
+  "workflow_run_id": 40035904753,
+  "artifact_id": 12536818273,
+  "artifact_zip_sha256": "21ff9a05013c3b63a43b3ae880adbee5a607ca88c047d01189f7f9599a133e4f",
+  "report_sha256": "5a27ac5cb7def8649b3bce0122a17079a4d5adb514fadb41cb1edc1fe001e55d",
+  "generated_intents_sha256": "a5a970725c1f16a694633416ad9fbd98e58418c267891ac83b7783d8af218ebd",
+  "protected_augment_decision": "PROTECTED_AUGMENT_NEGATIVE",
+  "scientific_gate_consumed": true,
+  "candidate_selector": {
+    "id": "LEXICOGRAPHIC_ZERO_LOSS_SWAP_V1",
+    "supported_atoms_at_24": 6,
+    "supported_atoms": [
+      "e3.a",
+      "e3.b",
+      "e4.a",
+      "e4.b",
+      "e6.a",
+      "e6.b"
+    ],
+    "observed_residual_atoms_recovered": [
+      "e6.a"
+    ],
+    "observed_residual_recovery_count": 1,
+    "frozen_control_atoms_retained": [
+      "e3.a",
+      "e3.b",
+      "e4.a",
+      "e4.b",
+      "e6.b"
+    ],
+    "frozen_control_retention_count": 5,
+    "historical_evidence_bearing_page_count": 43,
+    "coarse_selected_page_hits": 32,
+    "coarse_selected_page_recall_ceiling": 0.7441860465116279,
+    "merged24_page_hits": 32,
+    "historical_evidence_bearing_page_recall_in_merged24": 0.7441860465116279,
+    "merged24_page_recall_fraction_of_ceiling": 1,
+    "swap_count": 7,
+    "baseline_control_utility": 0.016219034375212764,
+    "final_control_utility": 0.01627685956964998,
+    "baseline_residual_utility": 0.016034332903714185,
+    "final_residual_utility": 0.016393442622950817,
+    "all_papers_zero_loss": true
+  },
+  "controls": {
+    "FROZEN_SOURCE_AWARE_BM25_RRF_V1": {
+      "supported_atoms_at_24": 7,
+      "supported_atoms": [
+        "e2.a",
+        "e2.b",
+        "e3.a",
+        "e3.b",
+        "e4.a",
+        "e4.b",
+        "e6.b"
+      ],
+      "observed_residual_recovery_count": 0,
+      "frozen_control_retention_count": 7,
+      "merged24_page_recall_fraction_of_ceiling": 1
+    },
+    "FROZEN_AUTHOR_ANCHORED_BM25_RRF_V1": {
+      "supported_atoms_at_24": 5,
+      "supported_atoms": [
+        "e1.a",
+        "e3.a",
+        "e4.a",
+        "e4.b",
+        "e6.a"
+      ],
+      "observed_residual_atoms_recovered": [
+        "e1.a",
+        "e6.a"
+      ],
+      "observed_residual_recovery_count": 2,
+      "frozen_control_retention_count": 3,
+      "merged24_page_recall_fraction_of_ceiling": 1
+    },
+    "CONTROL20_RESIDUAL4_QUOTA_V1": {
+      "supported_atoms_at_24": 8,
+      "supported_atoms": [
+        "e2.a",
+        "e2.b",
+        "e3.a",
+        "e3.b",
+        "e4.a",
+        "e4.b",
+        "e6.a",
+        "e6.b"
+      ],
+      "observed_residual_atoms_recovered": [
+        "e6.a"
+      ],
+      "observed_residual_recovery_count": 1,
+      "frozen_control_retention_count": 7,
+      "merged24_page_recall_fraction_of_ceiling": 1,
+      "verdict_eligible": false,
+      "interpretation": "Predeclared diagnostic-only reference. It demonstrates that a fixed residual allocation can reach 8/13 while preserving all seven frozen control atoms, but it may not be promoted or tuned post hoc."
+    }
+  },
+  "hard_safety": {
+    "all_papers_zero_loss": true,
+    "teacher_blind_selector": true,
+    "qwen_model_calls": 0,
+    "external_model_downloads": 0,
+    "structured_gap_judge_executed": false,
+    "scientific_state_materialized_false": true,
+    "production_routing_changed_false": true,
+    "qwen_verify_changed_false": true,
+    "wave7b_started_false": true,
+    "ontology_or_semantic_control_in_extract_false": true
+  },
+  "scientific_disposition": {
+    "primary": "LEXICOGRAPHIC_ZERO_LOSS_RESIDUAL_AUGMENTATION_REJECTED",
+    "findings": [
+      "The teacher-blind zero-loss constraint is operationally valid: source-aware intent utility never fell below each paper's frozen first-pass baseline and merged-page recall remained at the full coarse selected-page ceiling.",
+      "Despite that operational preservation, the candidate lost semantic teacher coverage relative to the frozen 7/13 source-aware control, ending at 6/13 and retaining only 5/7 frozen control-supported atoms while recovering only e6.a.",
+      "Therefore source-aware intent-utility preservation is not a sufficient proxy for preserving semantic control evidence under proposition swaps.",
+      "The predeclared fixed 20-control/4-residual reference remains 8/13 with 7/7 control retention plus e6.a, but it is non-verdict and cannot be promoted post hoc.",
+      "Per the frozen decision boundary, do not build STRUCTURED_SCIENTIFIC_GAP_JUDGE_V1 on this selector. A new evidence-first preservation objective or materially different iterative coverage mechanism is required."
+    ],
+    "next_architecture_boundary": "OPEN_NEW_EVIDENCE_FIRST_PRESERVATION_OBJECTIVE_OR_ITERATIVE_COVERAGE_DESIGN",
+    "structured_gap_judge_authorized": false,
+    "classifier_training_authorized": false,
+    "wave7b_authorized": false,
+    "rerun_authorized": false
+  },
+  "coordination_boundary": {
+    "semantic_control_parallel_task": "downstream_only",
+    "experiment_execution_base": "134936c8d884ee743faa82e18a886d9caebf62db",
+    "result_pr_base_main_sha": "291ce566c8544628584b91312c4ae3e784ca533e",
+    "rule": "Later semantic-control commits on research-engine/main are unrelated to this EXTRACT experiment and are not scientific inputs."
+  },
+  "boundaries": {
+    "production_standard_codex_extract_changed": false,
+    "accepted_qwen_verify_changed": false,
+    "ontology_or_semantic_control_in_extract": false,
+    "gitrunner_controller_provisioner_changed": false,
+    "structured_gap_judge_executed": false,
+    "wave7b_started": false
+  }
+}
