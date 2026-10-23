@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "contract_id": "semantic-control-integration-adapter-v1",
+  "status": "FROZEN_BEFORE_INTEGRATION_IMPLEMENTATION",
+  "prototype_result": {
+    "repository": "adamtrott78/research-engine",
+    "commit_sha": "4317830c4f3779cebb8a5cf0d7eeec369b85d5ea",
+    "path": "benchmarks/semantic_control/semantic-control-prototype-result.v1.json",
+    "git_blob_sha": "0225803dda8465c1345de57605d925af784299a9",
+    "verdict": "PROMOTE_TO_INTEGRATION",
+    "production_integration_authorized": false
+  },
+  "research_engine_read_boundary": {
+    "authoritative_store": "research_engine.postgres.PostgresStore",
+    "pinned_repository_commit": "4317830c4f3779cebb8a5cf0d7eeec369b85d5ea",
+    "allowed_read_methods": [
+      "claim_support",
+      "qualifiers_for_method",
+      "source_level_counts",
+      "provenance_path"
+    ],
+    "adapter_forbidden_methods": [
+      "initialize",
+      "put_work",
+      "record_verification_event",
+      "create_knowledge_checkpoint"
+    ],
+    "fixture_setup_only_methods": [
+      "PostgresStore.initialize",
+      "PostgresCorpusLoader.load",
+      "ephemeral fixture TRUNCATE"
+    ],
+    "invariant": "Fixture setup mutation is permitted only against CI's ephemeral non-production database; integration adapters themselves are read-only."
+  },
+  "semantic_output_boundary": {
+    "contract_source": {
+      "repository": "adamtrott78/research-engine",
+      "commit_sha": "4317830c4f3779cebb8a5cf0d7eeec369b85d5ea",
+      "path": "benchmarks/semantic_control/contracts.v1.json",
+      "git_blob_sha": "92768c904b4aa04ac5b304b41ff36719496befd7"
+    },
+    "observation_contract": "SemanticObservationV1",
+    "evidence_requirement_contract": "EvidenceRequirementV1",
+    "candidate_action_contract": "CandidateActionV1",
+    "decision_evaluation_contract": "DecisionEvaluationV1",
+    "required_layers": [
+      "EPISTEMIC",
+      "NORMATIVE",
+      "EXECUTION"
+    ],
+    "provenance_requirement": "Every semantic record must retain the exact authoritative source/checkpoint and read-query identity from which it was derived.",
+    "authority_rule": "SEMANTIC_CONTEXT_NEVER_GRANTS_AUTHORITY"
+  },
+  "workspace_control_read_boundary": {
+    "access_mode": "PINNED_GIT_READ_ONLY",
+    "source_manifest": "benchmarks/semantic_control_integration/workspace-control-source-manifest.v1.json",
+    "mutation_allowed": false
+  },
+  "extract_binding_gate": {
+    "state": "UNRESOLVED",
+    "owning_task_id": "research-engine-local-extract-redesign-v1",
+    "current_evidence_role": "DEPENDENCY_STATE_ONLY",
+    "accepted_binding_requires": [
+      "owning task durable checkpoint explicitly identifies an accepted EXTRACT architecture/output contract",
+      "exact research-engine commit and output artifact/schema identity",
+      "accepted scientific disposition rather than rejected/diagnostic Wave7/Family-C evidence",
+      "versioned adapter mapping accepted output into semantic records without changing EXTRACT internals"
+    ],
+    "forbidden_until_resolved": [
+      "infer an EXTRACT contract from WAVE7A3_REJECT",
+      "infer an EXTRACT contract from Family-C diagnostics",
+      "change EXTRACT prompts, retrieval, routing, Qwen/Codex choice, benchmarks, or production behavior",
+      "require RDF/ontology-native output from EXTRACT"
+    ]
+  },
+  "production_boundary": {
+    "production_mutation_authorized": false,
+    "database_schema_change_authorized": false,
+    "policy_change_authorized": false,
+    "extract_verify_change_authorized": false,
+    "lambda_or_executor_routing_change_authorized": false,
+    "next_promotion_requires_separate_task": true
+  }
+}
