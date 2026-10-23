@@ -35,15 +35,15 @@ def _region(raw: str) -> dict:
 
 
 def test_exact_propositions_split_terminal_sentences_with_exact_offsets() -> None:
-    raw = "First complete scientific claim. Second complete result!"
+    raw = "First complete scientific claim. Second complete scientific result!"
     rows = exact_propositions(_region(raw))
     assert len(rows) == 2
     assert rows[0]["raw_source_form"] == "First complete scientific claim."
     assert rows[0]["start_char"] == 100
     assert rows[0]["end_char"] == 132
-    assert rows[1]["raw_source_form"] == "Second complete result!"
+    assert rows[1]["raw_source_form"] == "Second complete scientific result!"
     assert rows[1]["start_char"] == 133
-    assert rows[1]["end_char"] == 156
+    assert rows[1]["end_char"] == 167
     assert rows[0]["proposition_id"].endswith(":s01")
     assert rows[1]["proposition_id"].endswith(":s02")
 
