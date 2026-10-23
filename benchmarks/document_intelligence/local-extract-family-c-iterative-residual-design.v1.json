@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "design_id": "local-extract-family-c-iterative-residual-design-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "baseline_result_sha": "c528da5112885d9e7a3cb84df6e887a4f1e8df4b",
+  "status": "DESIGN_ONLY_NO_EXECUTION_AUTHORIZED",
+  "purpose": "Define a materially different post-COMPOSITION_NEGATIVE architecture for teacher-blind residual detection and bounded iterative retrieval. The source-aware BM25 first pass becomes a protected baseline rather than one symmetric view competing with residual evidence.",
+  "authoritative_exclusion_evidence": {
+    "result_path": "benchmarks/document_intelligence/local-extract-post-wave7a3-coverage-result.v1.json",
+    "workflow_run_id": 40032590597,
+    "decision": "COMPOSITION_NEGATIVE",
+    "facts": [
+      "BALANCED_FACILITY_LOCATION_RRF_V1 supported 4/13 teacher atoms, recovered only e6.a, retained only 2/7 frozen source-aware control atoms, and retained 0.9375 of the coarse page-recall ceiling.",
+      "The frozen source-aware BM25 first pass remained 7/13 with all 7/7 control-supported atoms and full page-ceiling retention.",
+      "The predeclared non-verdict 20-control/4-residual quota preserved 7/7 control atoms and added e6.a for 8/13, showing that conservative residual augmentation can be complementary, but this control cannot be promoted or tuned post hoc.",
+      "Therefore symmetric one-shot composition is rejected; the next architecture must make first-pass preservation a hard teacher-blind optimization priority and residual evidence a sequential second objective."
+    ]
+  },
+  "coordination_boundary": {
+    "parallel_task": "workspace-knowledge-action-ontology-v1",
+    "authority": "downstream_only",
+    "rule": "No RDF, knowledge graph, SemanticObservation, ontology slice, or semantic-control mechanism is part of this EXTRACT design. The semantic-control task adapts to accepted EXTRACT output through an external versioned provenance-bearing adapter."
+  },
+  "external_research_evidence": [
+    {
+      "source": "Li et al., S2G-RAG: Structured Sufficiency and Gap Judging for Iterative Retrieval-Augmented QA, ACL 2026",
+      "url": "https://aclanthology.org/2026.acl-long.1185/",
+      "implementation": "https://github.com/nianaaa/S2G-RAG",
+      "evidence": [
+        "S2G-RAG separates a sufficiency/gap controller from retrieval and answer generation.",
+        "Its controller reads the question plus accumulated evidence, emits a strict sufficient flag and structured gap items, and turns unresolved gaps into the next retrieval query.",
+        "Its sentence-level evidence selector keeps a compact evidence context and returns source sentence IDs rather than generated evidence.",
+        "The repository exposes this controller schema and training pipeline, but no top-level license file was present in the inspected repository root; it is methodology evidence only until a separate license review."
+      ],
+      "implication": "EXTRACT can use an explicit structured scientific-gap controller after a protected first pass instead of generating a full replacement intent set."
+    },
+    {
+      "source": "Yang et al., Knowing You Don't Know: Learning When to Continue Search in Multi-round RAG through Self-Practicing, SIGIR 2025",
+      "url": "https://arxiv.org/abs/2505.02811",
+      "implementation": "https://github.com/ucscirkm/SIM-RAG",
+      "evidence": [
+        "SIM-RAG trains a lightweight critic to decide whether current evidence is sufficient or another retrieval round is needed.",
+        "The released implementation provides critic checkpoints, including smaller variants, demonstrating that sufficiency control can be separated from the answer model."
+      ],
+      "implication": "A trained local sufficiency critic is a credible later optimization, but training is deferred until EXTRACT establishes a valid residual-selection architecture."
+    },
+    {
+      "source": "Qian et al., RVR: Retrieve-Verify-Retrieve for Comprehensive Question Answering, 2026",
+      "url": "https://arxiv.org/abs/2602.18425",
+      "evidence": [
+        "RVR verifies an initial retrieval set and conditions later retrieval on already verified evidence to uncover not-yet-covered answers.",
+        "The architecture is sequential rather than symmetric one-shot fusion."
+      ],
+      "implication": "Residual queries should be conditioned on what the first pass already covered, not compete with the first pass from scratch."
+    },
+    {
+      "source": "Yao et al., SeaKR: Self-aware Knowledge Retrieval for Adaptive Retrieval Augmented Generation, ACL 2025",
+      "url": "https://aclanthology.org/2025.acl-long.1312/",
+      "evidence": [
+        "SeaKR uses model uncertainty to decide when retrieval is needed and which snippets reduce uncertainty."
+      ],
+      "implication": "Adaptive retrieval is supported broadly, but model-internal uncertainty is not selected here because it is less portable to the existing certified Qwen/vLLM boundary."
+    },
+    {
+      "source": "Shankar et al., DocETL: Agentic Query Rewriting and Evaluation for Complex Document Processing, PVLDB 2025",
+      "url": "https://arxiv.org/abs/2410.12189",
+      "evidence": [
+        "DocETL treats complex document processing as an iterative plan/rewrite/evaluate problem rather than a single fixed query."
+      ],
+      "implication": "A bounded residual-control loop is a materially distinct architecture for document extraction and can be evaluated as an offline stage before production integration."
+    },
+    {
+      "source": "Beyond Relevance: On the Relationship Between Retrieval and RAG Information Coverage, ICTIR 2026",
+      "url": "https://arxiv.org/abs/2607.07008",
+      "evidence": [
+        "Coverage-oriented retrieval metrics correlate with downstream information coverage when retrieval and generation objectives are aligned."
+      ],
+      "implication": "The controller should reason about set-level evidence coverage/sufficiency rather than passage-independent relevance alone."
+    }
+  ],
+  "architecture_families": [
+    {
+      "id": "FAMILY_C1_LEXICOGRAPHIC_PROTECTED_RESIDUAL_RETRIEVAL",
+      "role": "selected_first",
+      "architecture": [
+        "Run the frozen source-aware BM25 intent retrieval and RRF top-24 first pass unchanged.",
+        "Represent first-pass preservation with a teacher-blind control-intent coverage utility derived only from source-aware intent rankings.",
+        "Treat residual retrieval as a second objective that may replace a first-pass proposition only when the replacement does not reduce the frozen first-pass control-intent utility.",
+        "Use deterministic one-for-one swaps under the unchanged final budget of 24; stop when no feasible swap strictly improves residual-view coverage.",
+        "For the first premise diagnostic only, reuse the already-generated valid Wave 7A.3 author-anchored intents as a frozen residual-query proxy. They remain rejected as a standalone generator and are not promoted."
+      ],
+      "advantages": [
+        "Directly addresses the observed displacement failure by making baseline preservation lexicographically primary.",
+        "Can be tested with zero new model calls/downloads, isolating selection architecture from gap-generation quality.",
+        "Preserves BM25, page routing, proposition pool, top-24 budget, provenance, production EXTRACT, and accepted VERIFY."
+      ],
+      "risks": [
+        "Teacher-blind control-intent utility may not perfectly preserve teacher-supported scientific evidence.",
+        "The rejected author-anchored residual proxy may not expose enough useful residual opportunities even if the selector is sound."
+      ]
+    },
+    {
+      "id": "FAMILY_C2_STRUCTURED_SCIENTIFIC_GAP_JUDGE",
+      "role": "next_if_C1_feasible",
+      "architecture": [
+        "Run the protected source-aware first pass.",
+        "Give a bounded structured controller only the paper/task context, source-aware intent inventory, and exact first-pass evidence propositions.",
+        "Emit whether important scientific evidence appears insufficient and a small set of answer-free missing-evidence gaps.",
+        "Compile gap items into BM25 retrieval probes and run exactly one bounded residual retrieval round.",
+        "Use the validated lexicographic selector to integrate residual evidence without sacrificing first-pass control-intent coverage."
+      ],
+      "controller_contract": {
+        "id": "STRUCTURED_SCIENTIFIC_GAP_JUDGE_V1",
+        "candidate_runtime": "existing certified Qwen3.5-4B only in a narrow structured-controller role",
+        "output_shape": {
+          "sufficient": "boolean",
+          "gaps": [
+            {
+              "category": "method | dataset | result | limitation_or_future_work | other_scientific_evidence",
+              "missing_need": "short answer-free description of the missing scientific evidence need",
+              "retrieval_probe": "short answer-free retrieval query"
+            }
+          ]
+        },
+        "maximum_gap_items": 4,
+        "safeguards": [
+          "strict schema-constrained JSON",
+          "no generated evidence/source quote is accepted",
+          "no numeric answer-bearing text in retrieval probes",
+          "bounded source-copy guard",
+          "teacher corpus is never visible to the controller",
+          "one residual round only"
+        ]
+      },
+      "rationale": "This is the closest EXTRACT adaptation of S2G-RAG/RVR: explicit insufficiency detection followed by one targeted retrieval round, without making the controller authoritative over evidence."
+    },
+    {
+      "id": "FAMILY_C3_TRAINED_SUFFICIENCY_CRITIC",
+      "role": "deferred",
+      "architecture": [
+        "Collect versioned first-pass evidence states and downstream fallback/verification outcomes.",
+        "Train a compact local critic to decide sufficient versus retrieve-more and optionally classify gap categories.",
+        "Keep exact retrieval and source evidence outside the critic."
+      ],
+      "rationale": "SIM-RAG and S2G-RAG support learned sufficiency controllers, but training before the selection/control premise is validated would conflate two unknowns."
+    }
+  ],
+  "rejected_or_deferred": [
+    {
+      "id": "SYMMETRIC_ONE_SHOT_MULTIVIEW_FUSION",
+      "status": "REJECTED",
+      "reason": "COMPOSITION_NEGATIVE; balanced facility-location displaced established source-aware coverage."
+    },
+    {
+      "id": "PROMOTE_FIXED_20_4_QUOTA",
+      "status": "FORBIDDEN_POST_HOC",
+      "reason": "The 20/4 arm was predeclared diagnostic-only. Its 8/13 result is evidence that protected residual augmentation may be viable, not authority to promote or tune a fixed quota."
+    },
+    {
+      "id": "TRAIN_CONTRIBUTION_CLASSIFIER_NOW",
+      "status": "DEFERRED",
+      "reason": "A new residual generator should not be trained into an unvalidated selection/control architecture."
+    },
+    {
+      "id": "MODEL_INTERNAL_UNCERTAINTY_CONTROLLER",
+      "status": "DEFERRED",
+      "reason": "SeaKR-style hidden-state uncertainty would create a new model/runtime interface; explicit evidence-state sufficiency is more portable and testable first."
+    },
+    {
+      "id": "KNOWLEDGE_GRAPH_OR_ONTOLOGY_CONTROLLER",
+      "status": "OUT_OF_SCOPE",
+      "reason": "The parallel semantic-control task is downstream-only and provides no scientific authority over EXTRACT."
+    }
+  ],
+  "selected_first_diagnostic": {
+    "id": "ZERO_LOSS_RESIDUAL_AUGMENTATION_DIAGNOSTIC_V1",
+    "purpose": "Test whether a sequential lexicographic selector can add complementary residual evidence without reducing the frozen first-pass source-aware intent-coverage objective. This isolates the selection premise before any structured gap-controller model call.",
+    "new_model_calls": 0,
+    "new_model_downloads": 0,
+    "scientific_state_materialized": false,
+    "inputs": [
+      "exact valid Wave 7A.3 generated-intents artifact identified by SHA256 a5a970725c1f16a694633416ad9fbd98e58418c267891ac83b7783d8af218ebd",
+      "frozen QWEN35_SOURCE_AWARE_INTENTS_V1 accepted intents as first-pass control view",
+      "frozen QWEN35_AUTHOR_ANCHORED_OBLIGATIONS_V1 accepted intents only as a fixed residual-query proxy",
+      "same nine-paper corpus, exact authoritative PDFs, coarse selected-page proposition pool, BM25 retriever, per-intent depth 12, RRF k=60, and final proposition budget 24"
+    ],
+    "algorithm": {
+      "id": "LEXICOGRAPHIC_ZERO_LOSS_SWAP_V1",
+      "baseline_set": "source-aware BM25 RRF top-24",
+      "candidate_universe": "baseline propositions union residual-proxy per-intent BM25 top-12 propositions",
+      "control_utility": "U_C(S) = mean over source-aware intents of max_{p in S} 1/(60+rank_control_intent(p)); unranked proposition relevance is 0",
+      "residual_utility": "U_R(S) = mean over residual-proxy intents of max_{p in S} 1/(60+rank_residual_intent(p)); unranked proposition relevance is 0",
+      "feasibility": "one-for-one swap is feasible only when U_C(new_set) >= U_C(baseline_set) - 1e-15",
+      "improvement": "feasible swap must strictly increase U_R by more than 1e-15",
+      "selection": "repeatedly choose the feasible swap with maximum U_R gain; tie-break by greater U_C, then added proposition_id, then removed proposition_id; stop when no improving feasible swap exists",
+      "fixed_swap_limit": null,
+      "final_budget": 24,
+      "teacher_blind": true,
+      "no_post_result_tuning": true
+    },
+    "controls": [
+      "frozen source-aware BM25 RRF top-24",
+      "frozen author-anchored BM25 RRF top-24",
+      "previous BALANCED_FACILITY_LOCATION_RRF_V1 result",
+      "predeclared fixed 20-control/4-residual quota as non-verdict reference only"
+    ],
+    "predeclared_interpretation": {
+      "PROTECTED_AUGMENT_STRONG": [
+        "supports at least 9/13 teacher atoms",
+        "recovers both observed residual atoms e1.a and e6.a",
+        "retains all 7/7 frozen source-aware control-supported atoms",
+        "merged-page recall is at least 90% of the frozen coarse selected-page ceiling",
+        "hard safety and teacher-blind zero-loss constraint pass"
+      ],
+      "PROTECTED_AUGMENT_FEASIBLE": [
+        "no STRONG result",
+        "supports at least 8/13 teacher atoms",
+        "recovers at least 1 of e1.a/e6.a",
+        "retains all 7/7 frozen source-aware control-supported atoms",
+        "merged-page recall is at least 90% of the frozen coarse selected-page ceiling",
+        "hard safety and teacher-blind zero-loss constraint pass"
+      ],
+      "PROTECTED_AUGMENT_NEGATIVE": [
+        "neither STRONG nor FEASIBLE is met"
+      ]
+    },
+    "decision_boundary": {
+      "if_strong_or_feasible": "Freeze a separate STRUCTURED_SCIENTIFIC_GAP_JUDGE_V1 contract and test one bounded Qwen3.5-4B gap-controller round using the validated lexicographic selector; do not train a critic yet.",
+      "if_negative": "Do not build a Qwen gap judge on this selector. Revisit the teacher-blind preservation objective or another materially different iterative coverage mechanism with a new evidence-first checkpoint.",
+      "never": "Do not promote the fixed 20/4 quota, tune the zero-loss epsilon/utility after teacher results, train a contribution/sufficiency classifier, start Wave 7B, alter production EXTRACT/VERIFY, or use ontology/semantic-control mechanisms."
+    }
+  },
+  "boundaries": {
+    "wave7b": false,
+    "production_standard_codex_extract_changed": false,
+    "accepted_qwen_verify_changed": false,
+    "qwen_gap_judge_execution_authorized": false,
+    "trained_critic_authorized": false,
+    "contribution_classifier_authorized": false,
+    "new_model_download_authorized": false,
+    "final_proposition_budget_changed": false,
+    "ontology_or_semantic_control_in_extract": false,
+    "gitrunner_controller_provisioner_change": false
+  },
+  "next_safe_action": "CI-lock this Family C design checkpoint only. After durable merge/task synchronization, implement ZERO_LOSS_RESIDUAL_AUGMENTATION_DIAGNOSTIC_V1 exactly as frozen here, add deterministic unit tests for the lexicographic utility/swap constraint and verdict gates, run normal CI, then issue exactly one zero-generation diagnostic. Do not execute STRUCTURED_SCIENTIFIC_GAP_JUDGE_V1 unless the zero-loss selector premise is STRONG or FEASIBLE."
+}
