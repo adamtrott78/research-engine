@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "decision_id": "page-conditioned-proposition-retrieval-diagnostic-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "candidate_sha": "f0fca57cf11910d9736074051e378c53e8c680d5",
+  "workflow_run_id": 39896430384,
+  "artifact_id": 12477475240,
+  "artifact_zip_sha256": "7806b6e09bfa5f0a79b64140b7d9bdee6b0903e1efccfedfed8d137c8eee2ff9",
+  "report_sha256": "abc1569c100e8610b025f2ab02371a995c746578512036a0bdf4698746149a61",
+  "execution": {
+    "status": "PASS",
+    "qwen_model_calls": 0,
+    "external_model_downloads": 0,
+    "scientific_state_materialized": false,
+    "production_routing_changed": false
+  },
+  "legacy_six_claim": {
+    "wave6_selected_single_proposition_mean_f1": 0.30305743036333815,
+    "current_top12_best_single_proposition_mean_f1": 0.31908516604168774,
+    "selected_page_pool_best_single_proposition_mean_f1": 0.43276514777044994,
+    "page_conditioned_selected_proposition_mean_f1": 0.2607226107226107,
+    "parsed_pdf_best_single_proposition_mean_f1": 0.43276514777044994
+  },
+  "unique_atomized_teacher": {
+    "atom_count": 13,
+    "wave6_selected_single_proposition_mean_f1": 0.22837751648405338,
+    "current_top12_best_single_proposition_mean_f1": 0.2826007231638899,
+    "selected_page_pool_best_single_proposition_mean_f1": 0.36343825934770935,
+    "page_conditioned_selected_proposition_mean_f1": 0.20472730749170215,
+    "parsed_pdf_best_single_proposition_mean_f1": 0.36343825934770935
+  },
+  "scientific_disposition": {
+    "page_conditioning_hypothesis": "REJECTED",
+    "primary_residual": "RETRIEVAL_RANKING_SEMANTICS",
+    "secondary_residual": "EVALUATION_GRANULARITY",
+    "evidence_composition": "SECONDARY_NOT_PRIMARY",
+    "model_normalization": "NOT_JUSTIFIED_BY_THIS_DIAGNOSTIC",
+    "wave7_authorized": false,
+    "rationale": [
+      "The selected-page proposition pool reaches the full parsed-PDF best-single lexical ceiling on both grouped legacy claims and unique atoms, proving that coarse page routing already exposes the strongest available lexical evidence.",
+      "Reusing FACET_INTERLEAVED_BM25_V1 to rank propositions inside those pages regresses grouped mean F1 to 0.2607226107226107, below Wave 6 at 0.30305743036333815, and regresses unique-atom mean F1 to 0.20472730749170215, below the Wave-6 atom baseline 0.22837751648405338.",
+      "Therefore region-boundary removal/page conditioning alone is insufficient; the remaining deterministic retrieval failure is proposition-ranking/query semantics.",
+      "The result justifies research into stronger retrieval/reranking methods but does not justify a generation-model family change."
+    ]
+  },
+  "next_bounded_research": [
+    "Research and predeclare a smallest-possible retrieval/reranking candidate set targeted at proposition-ranking semantics; prioritize hybrid sparse+dense/multi-vector and late-interaction methods such as BGE-M3-class retrieval and ColBERT-style scoring.",
+    "Retain current page routing and exact proposition/provenance substrate as fixed controls unless a candidate specifically demonstrates that coarse page routing is limiting.",
+    "Add semantic-support evaluation alongside the frozen lexical metric before using retrieval gains to define Wave 7.",
+    "Do not download or run external retrieval models until the candidate-selection contract is durable."
+  ],
+  "boundaries": {
+    "production_extract": "STANDARD_CODEX_UNCHANGED",
+    "qwen_verify": "UNCHANGED",
+    "gitrunner_substrate": "UNCHANGED",
+    "generation_model_family_bakeoff": false,
+    "wave7": false
+  }
+}
