@@ -404,27 +404,29 @@ class BGEM3Scorer:
         self.colbert_linear = torch.nn.Linear(
             hidden_size,
             hidden_size,
-        )
+            device="cuda:0",
+            dtype=torch.float16,
+        ).eval()
         self.sparse_linear = torch.nn.Linear(
             hidden_size,
             1,
-        )
+            device="cuda:0",
+            dtype=torch.float16,
+        ).eval()
         self.colbert_linear.load_state_dict(
             torch.load(
                 model_path / "colbert_linear.pt",
-                map_location="cpu",
+                map_location="cuda:0",
                 weights_only=True,
             )
         )
         self.sparse_linear.load_state_dict(
             torch.load(
                 model_path / "sparse_linear.pt",
-                map_location="cpu",
+                map_location="cuda:0",
                 weights_only=True,
             )
         )
-        self.colbert_linear = self.colbert_linear.cuda().half().eval()
-        self.sparse_linear = self.sparse_linear.cuda().half().eval()
         self.load_seconds = time.perf_counter() - started
         self.max_passage_length = max_passage_length
         self.hybrid_weights = [float(value) for value in hybrid_weights]
