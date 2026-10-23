@@ -41,13 +41,13 @@ def test_coverage_utility_uses_best_rank_per_intent() -> None:
 
 
 def test_zero_loss_swap_improves_residual_without_reducing_control() -> None:
-    baseline = [_row("a"), _row("b")]
+    baseline = [_row("a"), _row("b"), _row("c")]
     control = _arm([
-        ["a", "x"],
-        ["b", "x"],
+        ["a"],
+        ["b"],
     ])
     residual = _arm([
-        ["r", "a"],
+        ["r", "c"],
     ])
 
     result = _lexicographic_zero_loss_swap(
