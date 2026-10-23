@@ -72,7 +72,7 @@ def test_semantic_support_is_additive_not_metric_replacement() -> None:
         "Do not replace or retune the legacy lexical metric" in item
         for item in design
     )
-    assert any("SciFact-style" in item for item in design)
+    assert any("No learned semantic evaluator" in item for item in design)
 
 
 def test_no_model_download_or_wave7_is_authorized_by_selection_checkpoint() -> None:
