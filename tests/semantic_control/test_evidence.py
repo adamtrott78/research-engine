@@ -71,6 +71,7 @@ def test_frozen_contradiction_derives_one_request_only_requirement():
 
 def test_all_six_durable_reason_types_are_supported():
     observations = [
+        *snapshot_observations(),
         synthetic_observation(
             "obs:missing",
             attributes={"missing_facets": ["hardware_shift_evaluation"]},
@@ -105,13 +106,13 @@ def test_all_six_durable_reason_types_are_supported():
         for reason in requirement["reason_types"]
     }
     assert reasons == {
+        "CONTRADICTION",
         "MISSING_FACET",
         "SOURCE_LEVEL_INSUFFICIENT",
         "VERIFICATION_INSUFFICIENT",
         "STALE",
         "BENCHMARK_CALIBRATED_INSUFFICIENCY",
     }
-    # CONTRADICTION is covered by the frozen pair test above.
     assert all(req["execution_effect"] == "REQUEST_ONLY" for req in requirements)
 
 
