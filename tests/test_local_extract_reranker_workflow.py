@@ -47,6 +47,7 @@ def test_reranker_workflow_runs_only_the_bounded_diagnostic() -> None:
     assert "local-extract-proposition-reranker-bakeoff.v1.json" in text
     assert "local-extract-teacher-atom-support.v1.json" in text
     assert "PROPOSITION_RERANKER_BAKEOFF_RECEIPT=PASS" in text
+    assert "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02" in text
     assert "scientific_state_materialized" in text
     assert "production_routing_changed" in text
     assert "qwen_verify_changed" in text
