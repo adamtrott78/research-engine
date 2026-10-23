@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "decision_id": "post-wave6-codex-parity-diagnostic-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "candidate_sha": "cc17d8e0ad46789c16c424d4ae2a11b9c929802f",
+  "workflow_run_id": 39895498387,
+  "artifact_id": 12476423267,
+  "artifact_zip_sha256": "b44a75f919e318d623002fe5fc788348d482135e9af4a157a5fb623aafc58d5c",
+  "report_sha256": "355f7f0ba62022f06d1bff9058ffd70711aad4289894b66fb608f80de3a42cc0",
+  "execution": {
+    "status": "PASS",
+    "qwen_model_calls": 0,
+    "external_model_downloads": 0,
+    "scientific_state_materialized": false,
+    "production_routing_changed": false
+  },
+  "recovery_inventory": {
+    "historical_standard_codex_evidence_objects": 71,
+    "normalized_teacher_claims_preserved": 6,
+    "normalized_teacher_papers_preserved": 1,
+    "rule": "The other 65 historical evidence objects remain semantically unlabeled; no replacement gold text was synthesized."
+  },
+  "retrieval": {
+    "current_top12_historical_page_recall": 0.7441860465116279,
+    "sentence_window_2_fixed_budget_page_recall": 0.7209302325581395,
+    "sentence_window_3_fixed_budget_page_recall": 0.5116279069767442,
+    "teacher_subset_expected_page_retrieval_fraction": 1,
+    "disposition": "CURRENT_PAGE_COVERAGE_IS_COARSE;_NAIVE_SENTENCE_WINDOW_RETRIEVAL_REJECTED"
+  },
+  "legacy_six_claim_lexical_oracle": {
+    "parsed_pdf_best_single_proposition_mean_f1": 0.43276514777044994,
+    "expected_teacher_page_best_single_proposition_mean_f1": 0.3999908433303438,
+    "current_top12_best_region_mean_f1": 0.27380476969124573,
+    "current_top12_best_single_proposition_mean_f1": 0.31908516604168774,
+    "current_wave6_selected_single_proposition_mean_f1": 0.30305743036333815,
+    "current_top12_best_bundle2_mean_f1": 0.33479450288273815,
+    "current_top12_best_bundle3_mean_f1": 0.33479450288273815,
+    "sentence_window2_fixed_budget_mean_f1": 0.19849349841120142,
+    "sentence_window3_fixed_budget_mean_f1": 0.17785480138841933
+  },
+  "unique_atomized_teacher_lexical_oracle": {
+    "atom_count": 13,
+    "parsed_pdf_best_single_proposition_mean_f1": 0.36343825934770935,
+    "expected_teacher_page_best_single_proposition_mean_f1": 0.3210191554037214,
+    "current_top12_best_region_mean_f1": 0.18038764397683515,
+    "current_top12_best_single_proposition_mean_f1": 0.2826007231638899,
+    "current_wave6_selected_single_proposition_mean_f1": 0.22837751648405338,
+    "current_top12_best_bundle2_mean_f1": 0.28886738516825683,
+    "current_top12_best_bundle3_mean_f1": 0.28886738516825683,
+    "sentence_window2_fixed_budget_mean_f1": 0.1533073740970866,
+    "sentence_window3_fixed_budget_mean_f1": 0.12094533326480474
+  },
+  "case_findings": [
+    {
+      "teacher_id": "e2",
+      "finding": "The correct same-transmission/different-transmission contrastive-pair proposition exists on teacher page 2 at F1 0.468085 but is absent from the current top-12 region candidate set; page 2 itself is nevertheless represented in top-12.",
+      "classification": "FINE_GRAINED_RETRIEVAL_MISS"
+    },
+    {
+      "teacher_id": "e4/e5",
+      "finding": "The correct wireless 13.4-27.8% proposition exists on teacher page 4 at F1 0.5/0.486486, while current top-12 retains the wired 10.8-19.9% proposition instead; page 4 itself is represented.",
+      "classification": "FINE_GRAINED_RETRIEVAL_MISS"
+    },
+    {
+      "teacher_id": "e1/e3/e6",
+      "finding": "Bounded multi-proposition bundles improve lexical alignment only modestly on the current candidate set, indicating composition is not the primary measured residual under the legacy lexical oracle.",
+      "classification": "SECONDARY_EVIDENCE_COMPOSITION"
+    }
+  ],
+  "scientific_disposition": {
+    "primary_residual": "RETRIEVAL",
+    "secondary_residual": "EVALUATION_GRANULARITY",
+    "evidence_composition": "SECONDARY_NOT_PRIMARY",
+    "model_normalization": "NOT_YET_JUSTIFIED",
+    "wave7_authorized": false,
+    "rationale": [
+      "For all six preserved Codex teacher claims, the expected page is already represented among current top-12 regions, yet multiple exact target propositions on those pages are absent from the candidate set.",
+      "Expected-page best-single lexical F1 materially exceeds current top-12 best-single F1 (0.399991 vs 0.319085 on grouped claims; 0.321019 vs 0.282601 on unique atoms).",
+      "Current-candidate bundle-3 improves grouped lexical F1 only from 0.319085 to 0.334795 and unique-atom F1 only from 0.282601 to 0.288867.",
+      "Naive two- and three-sentence fixed-budget retrieval reduces both 9-paper historical page recall and teacher lexical alignment.",
+      "Atomization does not make legacy lexical F1 a sufficient semantic metric, so semantic-support evaluation remains a separate research requirement."
+    ]
+  },
+  "next_bounded_research": [
+    "Test page-conditioned proposition retrieval: use current retrieval only to identify high-value pages, then rank exact propositions across all text on those selected pages under the existing downstream context budget.",
+    "Research hybrid sparse+dense and late-interaction reranking only against the residual left after the zero-model page-conditioned test; do not download a new model before this comparison is designed.",
+    "Add semantic-support evaluation alongside, not instead of, the frozen legacy lexical metric."
+  ],
+  "boundaries": {
+    "production_extract": "STANDARD_CODEX_UNCHANGED",
+    "qwen_verify": "UNCHANGED",
+    "gitrunner_substrate": "UNCHANGED",
+    "model_family_bakeoff": false,
+    "wave7": false
+  }
+}
