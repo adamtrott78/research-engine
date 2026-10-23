@@ -27,3 +27,10 @@ def test_wave7a2_workflow_preserves_scientific_boundaries() -> None:
     assert "qwen_verify_changed" in text
     assert "wave7b_started" in text
     assert "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02" in text
+
+
+def test_wave7a2_workflow_references_existing_v2_contract() -> None:
+    text=WORKFLOW.read_text()
+    relative="benchmarks/document_intelligence/local-extract-wave7a2-evidence-conditioned.v2.json"
+    assert relative in text
+    assert (ROOT/relative).is_file()
