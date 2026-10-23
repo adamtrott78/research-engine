@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "measurement_id": "semantic-control-re-adapter-overhead-v1",
+  "runtime_repository_commit": "b09df52942fc0b7b49ee7f82a6f8242df0924fba",
+  "adapter_merge_commit": "e57a2f18b52ba175e4e205b47336b5031bad65e1",
+  "ci_run_id": 40037743704,
+  "ci_job_id": 120701255180,
+  "timing_scope": "pure relational-result to semantic-observation projection plus exact reconstruction validation; excludes database read",
+  "query_results": [
+    {
+      "query_id": "Q1_CLAIM_SUPPORT",
+      "warmup_repetitions": 10,
+      "measured_repetitions": 500,
+      "latency_ns": {
+        "min": 83084,
+        "mean": 88947,
+        "p50": 87182,
+        "p95": 100509,
+        "max": 154725
+      }
+    },
+    {
+      "query_id": "Q2_METHOD_QUALIFIERS",
+      "warmup_repetitions": 10,
+      "measured_repetitions": 500,
+      "latency_ns": {
+        "min": 43270,
+        "mean": 45837,
+        "p50": 45106,
+        "p95": 51653,
+        "max": 57948
+      }
+    },
+    {
+      "query_id": "Q3_SOURCE_LEVEL_COUNTS",
+      "warmup_repetitions": 10,
+      "measured_repetitions": 500,
+      "latency_ns": {
+        "min": 43712,
+        "mean": 48434,
+        "p50": 46613,
+        "p95": 57235,
+        "max": 260474
+      }
+    },
+    {
+      "query_id": "Q4_PROVENANCE_PATH",
+      "warmup_repetitions": 10,
+      "measured_repetitions": 500,
+      "latency_ns": {
+        "min": 36663,
+        "mean": 39702,
+        "p50": 39112,
+        "p95": 42573,
+        "max": 61674
+      }
+    }
+  ],
+  "performance_promotion_claim": false,
+  "latency_threshold_applied": false,
+  "production_database_access": false,
+  "production_mutation": false
+}
