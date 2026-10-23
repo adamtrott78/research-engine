@@ -890,6 +890,7 @@ def run_reranker_bakeoff(
         hybrid_weights=[
             float(value) for value in bge_cfg["hybrid_weights"]
         ],
+        batch_size=int(bge_cfg["batch_size"]),
     )
     selections.update(_selected_for_scorer(bge, papers))
     bge_metrics = bge.resource_metrics()
