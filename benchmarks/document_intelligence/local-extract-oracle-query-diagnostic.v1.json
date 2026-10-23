@@ -1,0 +1,175 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "local-extract-oracle-query-diagnostic-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "baseline_sha": "943bd68ebf82f2ae0fb269b071600bc921021533",
+  "hypothesis": "The negative generic reranker bakeoff is caused primarily by under-specified broad paper/facet queries. If the same frozen candidate pool and frozen rankers receive atom-specific answer-free evidence intents, direct supporting propositions should move sharply upward in rank.",
+  "diagnostic_scope": {
+    "teacher_item_id": "arxiv:2403.04036",
+    "unique_atom_count": 13,
+    "candidate_pool": "all exact propositions on pages reached by the existing top-12 coarse FACET_INTERLEAVED_BM25_V1 region route for the teacher paper",
+    "expected_page_not_used_for_ranking": true,
+    "top_k": [
+      1,
+      3,
+      12
+    ],
+    "no_generation_calls": true
+  },
+  "fixed_controls": [
+    "authoritative PDF SHA and extraction path unchanged",
+    "coarse exact_source_regions(max_chars=650) and top-12 region route unchanged",
+    "page-conditioned exact proposition pool unchanged",
+    "BGE-M3 revision 5617a9f61b028005a4858fdac845db406aefb181 unchanged",
+    "Qwen3-Reranker-0.6B revision e61197ed45024b0ed8a2d74b80b4d909f1255473 unchanged",
+    "BGE-M3 dense/sparse/ColBERT/fixed 0.4/0.2/0.4 hybrid scoring unchanged",
+    "Qwen3 reranker instruction/model scoring unchanged",
+    "deterministic 13-atom authoritative-PDF support anchors unchanged",
+    "no expected-page filtering during ranking",
+    "no post-result query edits or threshold tuning",
+    "no production EXTRACT/VERIFY change and no Wave 7 execution"
+  ],
+  "query_modes": {
+    "TARGET_TEXT_ORACLE": {
+      "verdict_eligible": false,
+      "description": "Upper-bound sanity ceiling. Query is the frozen teacher atom normalized_form and therefore contains answer text.",
+      "source": "local-extract-teacher-atom-support.v1.json normalized_form"
+    },
+    "INTENT_QUERY_ORACLE": {
+      "verdict_eligible": true,
+      "description": "Answer-free hand-frozen evidence-intent question. It specifies which scientific fact is sought but omits the target answer/value.",
+      "queries": {
+        "e1.a": "How is pre-training performed before classification, including which domains provide unlabeled data and what kind of representation is learned?",
+        "e1.b": "How is the classifier trained after representation learning, and which domain provides the device labels?",
+        "e1.c": "Which domain's data is used during the testing stage?",
+        "e2.a": "How are positive pairs constructed for contrastive learning?",
+        "e2.b": "How are negative pairs constructed for contrastive learning?",
+        "e3.a": "How many transmitting devices are used in the wireless testbed, and what kind of devices are they?",
+        "e3.b": "What wireless frame standard is transmitted by the testbed devices?",
+        "e3.c": "What receiver hardware and sampling rate are used to capture the wireless frames?",
+        "e4.a": "By how much does CTL improve accuracy over the CNN baseline in wired scenarios?",
+        "e4.b": "By how much does CTL improve accuracy over the CNN baseline in wireless scenarios?",
+        "e6.a": "What future work do the authors identify for wireless-channel impairments such as fading or mobility?",
+        "e6.b": "What future work do the authors identify for contrastive-learning scalability as the number of devices or amount of data grows?",
+        "e6.c": "What future work do the authors identify for devices that are consistently misclassified?"
+      }
+    }
+  },
+  "arms": [
+    {
+      "id": "BM25_DIRECT",
+      "kind": "deterministic"
+    },
+    {
+      "id": "BGE_M3_DENSE",
+      "kind": "neural",
+      "model": "BGE_M3"
+    },
+    {
+      "id": "BGE_M3_SPARSE",
+      "kind": "neural",
+      "model": "BGE_M3"
+    },
+    {
+      "id": "BGE_M3_COLBERT",
+      "kind": "neural",
+      "model": "BGE_M3"
+    },
+    {
+      "id": "BGE_M3_HYBRID_040_020_040",
+      "kind": "neural",
+      "model": "BGE_M3"
+    },
+    {
+      "id": "QWEN3_RERANKER_0_6B",
+      "kind": "neural",
+      "model": "QWEN3_RERANKER_0_6B"
+    }
+  ],
+  "model_inputs": {
+    "BGE_M3": {
+      "repository": "BAAI/bge-m3",
+      "revision": "5617a9f61b028005a4858fdac845db406aefb181",
+      "max_passage_length": 512,
+      "hybrid_weights": [
+        0.4,
+        0.2,
+        0.4
+      ],
+      "batch_size": 8
+    },
+    "QWEN3_RERANKER_0_6B": {
+      "repository": "Qwen/Qwen3-Reranker-0.6B",
+      "revision": "e61197ed45024b0ed8a2d74b80b4d909f1255473",
+      "max_length": 2048,
+      "batch_size": 16,
+      "instruction": "Judge whether the scientific proposition directly answers the evidence-intent query. Prefer a proposition that states the requested method detail, dataset fact, quantitative result, limitation, or future-work fact rather than merely sharing topic words."
+    }
+  },
+  "evaluation": {
+    "support_metric": "For each atom, required authoritative-PDF anchors must all be present within propositions ranked at or above k on the frozen expected page. Expected page is evaluation-only and never supplied to a ranker.",
+    "metrics": [
+      "support_recall@1",
+      "support_recall@3",
+      "support_recall@12",
+      "MRR",
+      "mean_best_token_f1@1",
+      "mean_best_token_f1@3",
+      "mean_best_token_f1@12",
+      "known_miss_recovery@12"
+    ],
+    "known_misses": [
+      "e2.a",
+      "e2.b",
+      "e4.b"
+    ],
+    "broad_query_support_baselines": {
+      "BM25_DIRECT": {
+        "supported_at_12": 2,
+        "known_miss_recovery_count": 0
+      },
+      "BGE_M3_DENSE": {
+        "supported_at_12": 2,
+        "known_miss_recovery_count": 2
+      },
+      "BGE_M3_SPARSE": {
+        "supported_at_12": 1,
+        "known_miss_recovery_count": 0
+      },
+      "BGE_M3_COLBERT": {
+        "supported_at_12": 2,
+        "known_miss_recovery_count": 2
+      },
+      "BGE_M3_HYBRID_040_020_040": {
+        "supported_at_12": 2,
+        "known_miss_recovery_count": 2
+      },
+      "QWEN3_RERANKER_0_6B": {
+        "supported_at_12": 1,
+        "known_miss_recovery_count": 0
+      }
+    }
+  },
+  "predeclared_verdict": {
+    "QUERY_REPRESENTATION_CONFIRMED": "At least one INTENT_QUERY_ORACLE arm supports >=10 of 13 atoms at top-12 and recovers all three known misses e2.a/e2.b/e4.b.",
+    "QUERY_REPRESENTATION_PARTIAL": "No arm meets CONFIRMED, but at least one INTENT_QUERY_ORACLE arm supports >=7 of 13 atoms at top-12 OR recovers all three known misses.",
+    "RANKER_LIMIT_SUPPORTED": "No INTENT_QUERY_ORACLE arm meets CONFIRMED or PARTIAL. Precise answer-free intent alone is insufficient, so supervised/domain-adapted ranking or another representation change remains necessary.",
+    "target_text_oracle_is_not_verdict_eligible": true
+  },
+  "execution": {
+    "lane": "gpu",
+    "execution_contract_id": "gpu-single-public-ci-v1",
+    "runtime_id": "qwen35-vllm-cu129-image-native-sampler-v3",
+    "gpu_count": 1,
+    "exact_model_downloads": 2,
+    "models_loaded_sequentially": true,
+    "expected_runs": 1
+  },
+  "boundaries": {
+    "scientific_state_materialization_authorized": false,
+    "production_extract_change_authorized": false,
+    "qwen_verify_change_authorized": false,
+    "wave7_execution_authorized": false,
+    "generation_model_change_authorized": false
+  }
+}
