@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "snapshot_id": "workspace-control-integration-inputs-v1",
+  "workspace_control_commit": "91459f5f6afa0d71394d63155c2fe8dfdc65a4b7",
+  "inputs": [
+    {
+      "source_id": "wc-workload-policy",
+      "git_blob_sha": "71bd0bb9c63436964462b1f9b889686ac328ee1d",
+      "kind": "workload_policy",
+      "record": {
+        "policy_id": "lambda-ci-workload-policy-v1",
+        "policy_epoch": 3,
+        "authority_principle": "workflow_or_candidate_input_is_a_claim_root_owned_policy_is_authority",
+        "live_lambda_mutation_authorized_by_this_contract": false,
+        "workloads": {
+          "gpu-small": {
+            "policy_decision": "EXISTING_P5_CAPABILITY",
+            "admission_enabled_after_enforcement": true,
+            "resource_class": "gpu_small_v1",
+            "state_effect_class": "CI_VALIDATION_ONLY"
+          },
+          "gpu-heavy": {
+            "policy_decision": "DENY",
+            "admission_enabled_after_enforcement": false,
+            "underlying_profile": "gpu-heavy",
+            "denial_reason": "dual-GPU authority requires a separate post-pilot acceptance gate"
+          }
+        }
+      }
+    },
+    {
+      "source_id": "wc-research-engine-project",
+      "git_blob_sha": "3088d8aece6fb261de329cd9081eee2349469efb",
+      "kind": "project_routes",
+      "record": {
+        "project_id": "research-engine",
+        "status": "ACTIVE",
+        "routes": {
+          "gpu-small": {
+            "activation_state": "MIGRATION_LIVE_EQUIVALENT",
+            "lane": "gpu",
+            "execution_contract_id": "gpu-single-public-ci-v1",
+            "workload_class": "gpu-small",
+            "workflow_path": ".github/workflows/lambda-ci-p5-gpu-autonomous.yml",
+            "workflow_blob_sha": "e02e35306ae82c4ba393631cbaa1521ca53a28b4"
+          },
+          "model-eval-local-extract-wave7a3": {
+            "activation_state": "MIGRATION_LIVE_EQUIVALENT",
+            "lane": "gpu",
+            "execution_contract_id": "model-dual-public-v1",
+            "workload_class": "gpu-heavy",
+            "workflow_path": ".github/workflows/lambda-ci-local-extract-wave7a3.yml",
+            "workflow_blob_sha": "0f12d06667c6c45e5c0ee9bc5b3d4a3ba45844b8"
+          }
+        }
+      }
+    },
+    {
+      "source_id": "wc-execution-contracts",
+      "git_blob_sha": "9eeb0ef9223821f1768350e24891eeb3bc72a940",
+      "kind": "execution_contracts",
+      "record": {
+        "contracts": {
+          "gpu-single-public-ci-v1": {
+            "lifecycle": "MIGRATION_PLUS_P6_VALIDATION_REQUIRED",
+            "execution_profile": "gpu-small",
+            "state_effect_class": "CI_VALIDATION_ONLY",
+            "gpu_count": 1,
+            "admission_enabled_after_generic_activation": true
+          },
+          "model-dual-public-v1": {
+            "lifecycle": "ACCEPTED_MIGRATION_EQUIVALENT",
+            "execution_profile": "gpu-heavy",
+            "state_effect_class": "NON_SCIENTIFIC_MODEL_EVAL_ONLY",
+            "gpu_count": 2,
+            "admission_enabled_after_generic_activation": true
+          }
+        }
+      }
+    },
+    {
+      "source_id": "wc-pilot-contract",
+      "git_blob_sha": "9f0994b48c6190c148341f69bf94184d75f48f79",
+      "kind": "pilot_contract",
+      "record": {
+        "status": "RESEARCH_VALIDATED_STATIC_IMPLEMENTATION_NEXT",
+        "selected_topology": "PINNED_GITHUB_SCALESET_LISTENER_PLUS_NARROW_ROOT_PROVISIONER_PLUS_EPHEMERAL_PROJECT_UID_SYSTEMD_SANDBOX",
+        "ordinary_ci": "GitHub-hosted CI remains enabled and unchanged",
+        "heavyweight_runtime": "human-terminal Lambda execution remains break-glass until pilot acceptance",
+        "root_provisioner_github_credential": "none",
+        "production_access_default": "denied"
+      }
+    },
+    {
+      "source_id": "wc-extract-task",
+      "git_blob_sha": "0987bffffead2ed8021fd16e7717a20d9cb8be89",
+      "kind": "dependency_task",
+      "record": {
+        "task_id": "research-engine-local-extract-redesign-v1",
+        "status": "CHECKPOINTED",
+        "current_stage": "family_c_iterative_residual_design",
+        "research_engine_checkpoint": "9c03a6714f1bd244c463906cc9aad083cb4a4429",
+        "accepted_output_checkpoint_present": false,
+        "extract_binding_authority": false
+      }
+    }
+  ]
+}
