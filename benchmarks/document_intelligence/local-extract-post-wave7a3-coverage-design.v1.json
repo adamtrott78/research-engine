@@ -1,0 +1,312 @@
+{
+  "schema_version": 1,
+  "design_id": "local-extract-post-wave7a3-coverage-preserving-multiview-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "baseline_sha": "80da2cae9f8d80a7e7049a9b5339807becc54a98",
+  "status": "DESIGN_ONLY_NO_EXECUTION_AUTHORIZED",
+  "purpose": "Start the evidence-first design phase after the implementation-valid Wave 7A.3 rejection. The next architecture must preserve the strong source-aware control while recovering complementary high-salience residual evidence; it must not treat a new salience view as a replacement for baseline coverage.",
+  "authoritative_exclusion_evidence": {
+    "result_path": "benchmarks/document_intelligence/local-extract-wave7a3-author-anchored-result.v1.json",
+    "workflow_run_id": 40027366528,
+    "candidate_sha": "dcdcfc8c85ddda2bfbf8fe439c79a8e0784ee276",
+    "decision": "WAVE7A3_REJECT",
+    "scientific_gate_consumed": true,
+    "facts": [
+      "The repaired candidate was implementation-valid on all 9 papers: 35 accepted anchors and 93 accepted evidence intents.",
+      "Source-aware BM25 reproduced the frozen Wave 7A.2 control at 7/13 teacher atoms.",
+      "Author-anchored BM25 recovered residual atoms e1.a and e6.a but fell to 5/13 total support and retained only 3/7 frozen control-supported atoms.",
+      "Author-anchored BGE recovered e6.a but tied its matching control at 4/13.",
+      "BM25 candidate page recall retained 100% of the coarse selected-page ceiling, so page routing is not reopened.",
+      "The valid rejection therefore localizes the residual to complementary evidence coverage: salience gains displaced established coverage rather than extending it."
+    ]
+  },
+  "coordination_boundary": {
+    "parallel_task": "workspace-knowledge-action-ontology-v1",
+    "authority": "coordination_only",
+    "rule": "The ontology/semantic-control task is a downstream consumer and is not scientific authority over EXTRACT. No RDF, knowledge graph, SemanticObservation, ontology slice, or semantic-control mechanism is introduced into this design unless EXTRACT evidence independently justifies it.",
+    "future_integration": "accepted EXTRACT output -> versioned provenance-bearing evidence/output adapter -> semantic-control prototype",
+    "cross_task_checkpointing": "durable Git/task-capsule checkpoints and exact SHAs only; Heartbeat is liveness/ownership only"
+  },
+  "residual_reframe": {
+    "old_question": "Can a more salient intent generator recover the atoms missed by source-aware generation?",
+    "new_question": "Can a teacher-blind multi-view retrieval/selection architecture preserve the source-aware control's established coverage while adding complementary residual evidence within the unchanged top-24 proposition budget?",
+    "reason": "Wave 7A.3 proves that a salience view can discover complementary residuals, but standalone replacement loses strong control-supported evidence. The next independent variable is coverage-preserving composition, not another replacement prompt."
+  },
+  "posthoc_design_diagnostic": {
+    "scientific_status": "NON_VERDICT_DESIGN_EVIDENCE_ONLY",
+    "source_artifact": {
+      "artifact_id": 12533721500,
+      "artifact_zip_sha256": "cd02b842ad44bbadab7aad661ff424cc6108f8047d260df5d0064fba2b4f35fb",
+      "report_sha256": "a87c643b28b25f6581f0bf4dd356646e0bccd168a67ecbfaf58b662b4e0f8e35"
+    },
+    "teacher_paper": "arxiv:2403.04036",
+    "observations": {
+      "source_aware_bm25_supported_atoms": [
+        "e2.a",
+        "e2.b",
+        "e3.a",
+        "e3.b",
+        "e4.a",
+        "e4.b",
+        "e6.b"
+      ],
+      "author_anchored_bm25_supported_atoms": [
+        "e1.a",
+        "e3.a",
+        "e4.a",
+        "e4.b",
+        "e6.a"
+      ],
+      "union_of_both_standalone_top24_support": [
+        "e1.a",
+        "e2.a",
+        "e2.b",
+        "e3.a",
+        "e3.b",
+        "e4.a",
+        "e4.b",
+        "e6.a",
+        "e6.b"
+      ],
+      "union_support_count": 9,
+      "naive_control_candidate_quota_support_counts": {
+        "12_12": 4,
+        "14_10": 5,
+        "16_8": 5,
+        "18_6": 6,
+        "20_4": 8,
+        "22_2": 8
+      },
+      "simple_lexical_mmr_best_support_count_in_fixed_sweep": 6
+    },
+    "interpretation": [
+      "The two valid views contain complementary evidence with a 9/13 union ceiling, so complementarity is real.",
+      "Naive concatenation, fixed branch quotas, and a simple lexical MMR sweep do not realize that union under a 24-item budget.",
+      "The first new experiment should test an explicitly coverage-oriented set objective before paying the cost and domain-risk of training a new salience classifier.",
+      "These diagnostics do not alter the valid WAVE7A3_REJECT and are not promotion evidence."
+    ]
+  },
+  "external_research_evidence": [
+    {
+      "source": "Pramanick et al., The Nature of NLP: Analyzing Contributions in NLP Papers, ACL 2025",
+      "url": "https://aclanthology.org/2025.acl-long.1224/",
+      "evidence": [
+        "NLPContributions contains nearly 2k manually annotated research-paper abstracts with contribution statements and contribution types.",
+        "The paper demonstrates a fine-tuned SciBERT contribution detector/classifier with approximately 0.80 F1, establishing that trained scientific-contribution tagging is feasible with a compact encoder.",
+        "The official repository provides Apache-2.0 training/inference code and CC-BY-SA-4.0 data but does not ship the trained checkpoint in-repository."
+      ],
+      "implication": "A trained contribution/discourse detector is a credible residual-view candidate, but it requires a separate training/domain-transfer gate because the supervision is NLP-abstract-specific rather than the mixed EXTRACT corpus."
+    },
+    {
+      "source": "Lee et al., Disentangling Questions from Query Generation for Task-Adaptive Retrieval, Findings of EMNLP 2024",
+      "url": "https://aclanthology.org/2024.findings-emnlp.274/",
+      "evidence": [
+        "The paper explicitly challenges equating retrieval queries with natural-language questions.",
+        "It frames query generation as compilation of high-level search intent into task-adaptive queries and reports gains on underexplored BEIR intents."
+      ],
+      "implication": "The next EXTRACT architecture should not require every evidence need to be expressed as an answer-free question; retriever-specific query compilation is a materially distinct design axis."
+    },
+    {
+      "source": "Li et al., DMQR-RAG: Diverse Multi-Query Rewriting for RAG, 2024",
+      "url": "https://arxiv.org/abs/2411.13154",
+      "evidence": [
+        "Different query rewrites expose different information and retrieve diverse documents.",
+        "The work also reports that more rewrites can add noise, motivating adaptive strategy selection rather than indiscriminate query multiplication."
+      ],
+      "implication": "Use multiple complementary views only with a bounded selection/coverage mechanism."
+    },
+    {
+      "source": "Nair et al., A Dense Subset Index for Collective Query Coverage, ICLR 2026",
+      "url": "https://proceedings.iclr.cc/paper_files/paper/2026/hash/6ded182245f8e4db3963d2027174133d-Abstract-Conference.html",
+      "evidence": [
+        "The retrieval objective is a small collection whose items collectively cover query representations rather than independent top-ranked items.",
+        "The paper establishes collective coverage as a submodular objective and uses iterative selection to assemble covering sets."
+      ],
+      "implication": "This directly matches the Wave 7A.3 failure mode: evidence propositions should collaborate to cover multiple atomic needs instead of competing only on one fused relevance score."
+    },
+    {
+      "source": "Nguyen and Kan, MUSS: Multilevel Subset Selection for Relevance and Diversity, UAI 2026",
+      "url": "https://proceedings.mlr.press/v337/nguyen26d.html",
+      "evidence": [
+        "MUSS treats relevant-and-diverse subset selection as an explicit objective and reports RAG QA gains.",
+        "The public implementation demonstrates scalable relevance/diversity selection, but its repository license is CC BY-NC 4.0."
+      ],
+      "implication": "MUSS is methodology evidence, not a production dependency. Any EXTRACT implementation should use an independently implemented bounded objective compatible with project licensing."
+    },
+    {
+      "source": "Qian et al., RVR: Retrieve-Verify-Retrieve for Comprehensive Question Answering, 2026",
+      "url": "https://arxiv.org/abs/2602.18425",
+      "evidence": [
+        "RVR performs retrieval, verifies a high-quality subset, then launches later retrieval conditioned on what has already been covered.",
+        "It reports improved complete recall on multi-answer retrieval, including out-of-domain gains."
+      ],
+      "implication": "An iterative residual-retrieval architecture is a credible fallback family if one-shot multi-view set selection cannot preserve and extend coverage."
+    }
+  ],
+  "architecture_families": [
+    {
+      "id": "FAMILY_A_COVERAGE_PRESERVING_MULTIVIEW_COMPILER",
+      "role": "preferred_first",
+      "architecture": [
+        "Keep QWEN35_SOURCE_AWARE_INTENTS_V1 as a frozen baseline view; do not replace it.",
+        "Represent an independent residual view separately rather than merging it into the baseline prompt.",
+        "Compile each view into retriever-specific probes; a probe need not be phrased as a question.",
+        "Retrieve per probe against the unchanged proposition pool.",
+        "Select the final top-24 proposition set with a teacher-blind set-level coverage objective that gives equal aggregate weight to the baseline and residual views.",
+        "Evaluate whether the selected set preserves frozen control coverage while adding residual atoms."
+      ],
+      "advantages": [
+        "Directly targets the observed Wave 7A.3 displacement failure.",
+        "Can be tested first with zero new model downloads and zero new generation using already-frozen valid-run intents.",
+        "Keeps provenance, proposition pool, retrieval budget, production routing, and Qwen VERIFY unchanged."
+      ],
+      "risks": [
+        "Existing residual view is itself scientifically rejected as a standalone generator and may not provide enough useful coverage.",
+        "A set objective can still over-select redundant or broad intents without a stronger residual signal."
+      ]
+    },
+    {
+      "id": "FAMILY_B_TRAINED_DISCOURSE_RESIDUAL_DETECTOR",
+      "role": "next_if_composition_feasible",
+      "architecture": [
+        "Fine-tune or otherwise validate a compact scientific contribution/discourse classifier on public annotated scientific-text data.",
+        "Use the classifier only to identify candidate residual contribution/result/limitation/method evidence not already represented by the frozen baseline view.",
+        "Compile classifier-positive residuals into retrieval probes and feed them into the same coverage-preserving selector.",
+        "Never allow the classifier to replace exact PDF provenance or the frozen baseline coverage path."
+      ],
+      "advantages": [
+        "Materially different from repeated Qwen prompt variants.",
+        "Directly implements the trained contribution/discourse direction deferred by the Wave 7A.3 contract.",
+        "Compact encoder inference is compatible with the local-first objective."
+      ],
+      "risks": [
+        "NLPContributions supervision is NLP-abstract-specific and MuLMS-style argumentative zoning is domain-specific; cross-domain transfer must be measured before use.",
+        "The official NLPContributions repository does not provide a ready in-repository trained checkpoint, so training and immutable model packaging would be new work."
+      ]
+    },
+    {
+      "id": "FAMILY_C_ITERATIVE_RETRIEVE_VERIFY_RETRIEVE",
+      "role": "fallback_architecture",
+      "architecture": [
+        "Run the frozen baseline retrieval first.",
+        "Use a teacher-blind local coverage verifier over selected-page propositions and the current evidence set.",
+        "Generate or compile only residual probes for uncovered evidence strata.",
+        "Run one bounded second retrieval round and select the final top-24 set.",
+        "Stop after the bounded second round; unresolved evidence remains for later Codex fallback in a future production design."
+      ],
+      "advantages": [
+        "Coverage is explicit and residual-directed rather than one-shot.",
+        "Matches external comprehensive-retrieval evidence while preserving the baseline first pass."
+      ],
+      "risks": [
+        "Requires a reliable definition of uncovered evidence without teacher leakage.",
+        "Adds orchestration and latency, so it should not precede the cheaper set-composition diagnostic."
+      ]
+    }
+  ],
+  "rejected_or_deferred": [
+    {
+      "id": "AUTHOR_ANCHORED_REPLACEMENT",
+      "status": "REJECTED_BY_VALID_WAVE7A3",
+      "reason": "Recovered some residual atoms but displaced strong control coverage."
+    },
+    {
+      "id": "NAIVE_BRANCH_CONCATENATION_OR_FIXED_QUOTA",
+      "status": "REJECTED_BY_POSTHOC_DESIGN_DIAGNOSTIC",
+      "reason": "Did not realize the observed 9/13 union support under the fixed top-24 budget."
+    },
+    {
+      "id": "GENERIC_LEXICAL_MMR_ON_BRANCH_UNION",
+      "status": "REJECTED_AS_FIRST_SELECTOR",
+      "reason": "A fixed teacher-blind lexical MMR sweep reached at most 6/13 support in the post-hoc diagnostic."
+    },
+    {
+      "id": "ONTOLOGY_OR_KNOWLEDGE_GRAPH_CONTROL",
+      "status": "OUT_OF_SCOPE",
+      "reason": "The parallel semantic-control task is downstream coordination context, not EXTRACT scientific evidence."
+    },
+    {
+      "id": "NEW_GENERATION_MODEL_FAMILY",
+      "status": "DEFERRED",
+      "reason": "The valid Wave 7A.3 result does not justify a generation-model change."
+    },
+    {
+      "id": "RERANKER_TRAINING",
+      "status": "DEFERRED",
+      "reason": "The valid Wave 7A.3 result does not reopen retriever capacity or justify trained reranking."
+    }
+  ],
+  "selected_first_diagnostic": {
+    "id": "MULTIVIEW_SUBMODULAR_COVERAGE_DIAGNOSTIC_V1",
+    "purpose": "Test only whether a teacher-blind set-level selector can preserve baseline evidence and realize complementary residual coverage from already-generated valid Wave 7A.3 views. This is an architecture-premise diagnostic, not Wave 7B and not a rerun of the rejected author-anchored generator.",
+    "inputs": [
+      "exact valid Wave 7A.3 generated-intents artifact identified by hash",
+      "same nine-paper corpus and exact authoritative PDFs",
+      "same coarse top-12 selected-page proposition pool",
+      "QWEN35_SOURCE_AWARE_INTENTS_V1 accepted intents as frozen baseline view",
+      "QWEN35_AUTHOR_ANCHORED_OBLIGATIONS_V1 accepted intents as a frozen diagnostic residual view only"
+    ],
+    "new_model_calls": 0,
+    "new_model_downloads": 0,
+    "scientific_state_materialized": false,
+    "retrieval": {
+      "retriever": "BM25_DIRECT_ONLY_FOR_FIRST_DIAGNOSTIC",
+      "per_intent_depth": 12,
+      "final_global_proposition_budget": 24,
+      "reason": "BM25 is the strongest frozen source-aware control at 7/13 and avoids reopening retriever capacity."
+    },
+    "selector": {
+      "id": "BALANCED_FACILITY_LOCATION_RRF_V1",
+      "candidate_pool": "union of per-intent top-12 proposition rankings from the two frozen views",
+      "per_intent_relevance": "1/(60+rank) for rank 1..12, else 0",
+      "branch_weighting": "Each branch contributes exactly 0.5 total objective weight, divided uniformly across its post-guard intents.",
+      "objective": "F(S)=0.5/|C| * sum_{i in control} max_{p in S} r(i,p) + 0.5/|R| * sum_{i in residual} max_{p in S} r(i,p)",
+      "selection": "Greedy maximum marginal gain until |S|=24; deterministic proposition_id tie-break.",
+      "teacher_blind": true,
+      "no_weight_tuning_after_result": true
+    },
+    "controls": [
+      "frozen source-aware BM25 RRF top-24",
+      "frozen author-anchored BM25 RRF top-24",
+      "equal-weight branch-level RRF over the two frozen top-24 lists",
+      "fixed 20-control/4-residual quota diagnostic"
+    ],
+    "predeclared_interpretation": {
+      "COMPOSITION_CONFIRMED": [
+        "supports at least 9/13 teacher atoms",
+        "recovers both observed complementary residual atoms e1.a and e6.a",
+        "retains all 7/7 frozen source-aware BM25 control-supported atoms",
+        "merged-page recall is at least 90% of the frozen coarse selected-page ceiling",
+        "hard provenance and anti-leak boundaries remain intact"
+      ],
+      "COMPOSITION_PARTIAL": [
+        "no CONFIRMED arm exists",
+        "supports at least 8/13 teacher atoms",
+        "recovers at least 1 residual atom",
+        "retains at least 6/7 frozen source-aware BM25 control-supported atoms",
+        "improves total support by at least 1 atom over the frozen 7/13 control"
+      ],
+      "COMPOSITION_NEGATIVE": [
+        "neither CONFIRMED nor PARTIAL is met"
+      ]
+    },
+    "decision_boundary": {
+      "if_confirmed": "Open a separate evidence-first design/training contract for FAMILY_B so a trained contribution/discourse residual detector can replace the rejected author-anchor residual proxy without changing the validated selector.",
+      "if_partial": "Do not train a classifier yet; inspect which baseline/residual coverage terms conflict and decide whether one bounded selector revision is evidence-justified.",
+      "if_negative": "Do not train a contribution classifier into the same one-shot composition architecture. Move to FAMILY_C or another materially different coverage mechanism after a new design checkpoint."
+    }
+  },
+  "boundaries": {
+    "wave7b": false,
+    "production_standard_codex_extract_changed": false,
+    "accepted_qwen_verify_changed": false,
+    "qwen35_generation_model_changed": false,
+    "retriever_capacity_reopened": false,
+    "retrieval_budget_changed": false,
+    "new_model_training_authorized": false,
+    "new_model_download_authorized": false,
+    "ontology_or_semantic_control_in_extract": false,
+    "gitrunner_controller_provisioner_change": false
+  },
+  "next_safe_action": "CI-lock this design checkpoint only. After merge and durable task synchronization, implement the zero-generation MULTIVIEW_SUBMODULAR_COVERAGE_DIAGNOSTIC_V1 exactly as frozen here, route it through existing bounded execution authority, and run exactly one diagnostic. Do not train/download a contribution classifier, start Wave 7B, or change production EXTRACT/VERIFY before that diagnostic is checkpointed."
+}
