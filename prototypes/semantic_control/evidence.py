@@ -184,13 +184,10 @@ def derive_evidence_requirements(
     *,
     as_of: str | None = None,
 ) -> list[dict[str, Any]]:
-    records = {record["observation_id"]: record for record in observations}
-    if len(records) != len(list(observations)) if not isinstance(observations, list) else False:
-        raise ValueError("duplicate observation_id")
-
-    # Re-materialize safely for arbitrary iterables.
-    records_list = list(records.values())
+    records_list = list(observations)
     records = {record["observation_id"]: record for record in records_list}
+    if len(records) != len(records_list):
+        raise ValueError("duplicate observation_id")
     requirements: list[dict[str, Any]] = []
 
     seen_pairs: set[tuple[str, str]] = set()
