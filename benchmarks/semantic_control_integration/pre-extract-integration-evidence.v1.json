@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "evidence_id": "semantic-control-pre-extract-integration-run-40039432119",
+  "pr_number": 203,
+  "pr_head_sha": "dd5717ebc7d2963b6c262f2ac3578b06826dbae8",
+  "ci_run_id": 40039432119,
+  "ci_job_id": 120706748226,
+  "result_marker": "SEMANTIC_CONTROL_PRE_EXTRACT_INTEGRATION_V1",
+  "status": "PRE_EXTRACT_INTEGRATION_PASS",
+  "extract_binding": "BLOCKED_EVIDENCE",
+  "production_promotion_authorized": false,
+  "source": "GitHub Actions job log warning emitted by test_pre_extract_cross_system_integration_and_emit_result"
+}

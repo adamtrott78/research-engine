@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "gate_id": "accepted-extract-output-v1",
+  "observed_at_repository_commit": "9566532288bf500db8997b9befcc339788609184",
+  "source": {
+    "path": "benchmarks/document_intelligence/local-extract-proposition-alignment-preservation-result.v1.json",
+    "git_blob_sha": "921ec0e061fe59d436c0826ff251b3d4dbb26de3"
+  },
+  "scientific_result": {
+    "alignment_augment_decision": "ALIGNMENT_AUGMENT_FEASIBLE",
+    "primary_disposition": "DIRECT_PROPOSITION_ALIGNMENT_PRESERVATION_FEASIBLE",
+    "next_architecture_boundary": "OPEN_SEPARATE_SEMANTIC_CERTIFICATE_GENERALIZATION_DESIGN",
+    "semantic_generalization_design_authorized": true,
+    "semantic_generalization_execution_authorized": false,
+    "production_promotion_authorized": false,
+    "wave7b_authorized": false
+  },
+  "accepted_output_checkpoint_present": false,
+  "gate_status": "BLOCKED_EVIDENCE",
+  "interpretation": "The feasible proposition-alignment diagnostic is positive scientific evidence, but it is not a durable accepted EXTRACT architecture/output contract. It explicitly opens another design phase and does not authorize semantic-generalization execution or production promotion."
+}
