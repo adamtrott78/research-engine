@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "fixture_id": "local-extract-teacher-atom-support-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "source_item_id": "arxiv:2403.04036",
+  "source_sha256": "1097bdfabf6cd1b1e26ff9df58b6bb810e4bf74fbd3890ad20e86316d2ee0c91",
+  "source_authority": "AUTHORITATIVE_PDF_TEXT",
+  "purpose": "Frozen deterministic semantic-support oracle for the 13 unique teacher atoms. It supplements, but never replaces, the legacy lexical F1 metrics.",
+  "normalization": {
+    "algorithm": "lowercase then remove every non-ASCII-alphanumeric character",
+    "support_rule": "For each atom, every required anchor must occur in at least one selected exact proposition on the expected page. Different anchors may be satisfied by different selected propositions, allowing bounded evidence composition without a learned evaluator.",
+    "top_k": 12
+  },
+  "atoms": [
+    {
+      "id": "e1.a",
+      "parent_teacher_id": "e1",
+      "type": "method",
+      "page_number": 2,
+      "normalized_form": "The proposed framework pre-trains on unlabeled source and target data to learn domain-invariant representations.",
+      "required_anchors": [
+        "pretrainthemodelbasedonthesourceandtargetdataset",
+        "learnadomaininvariantrepresentationwithoutdevicelabels"
+      ]
+    },
+    {
+      "id": "e1.b",
+      "parent_teacher_id": "e1",
+      "type": "method",
+      "page_number": 2,
+      "normalized_form": "The proposed framework trains a classifier using source-domain device labels.",
+      "required_anchors": [
+        "trainaclassifierbasedontheextractedfeaturesandthedevicelabelsfromthesourcedomainonly"
+      ]
+    },
+    {
+      "id": "e1.c",
+      "parent_teacher_id": "e1",
+      "type": "method",
+      "page_number": 2,
+      "normalized_form": "The proposed framework tests on target-domain data.",
+      "required_anchors": [
+        "trainedclassifieronthetargetdataduringthetestingstage"
+      ]
+    },
+    {
+      "id": "e2.a",
+      "parent_teacher_id": "e2",
+      "type": "method",
+      "page_number": 2,
+      "normalized_form": "Positive pairs are frames from the same transmission.",
+      "required_anchors": [
+        "sametransmissionformpositivepairs"
+      ]
+    },
+    {
+      "id": "e2.b",
+      "parent_teacher_id": "e2",
+      "type": "method",
+      "page_number": 2,
+      "normalized_form": "Negative pairs are frames from different transmissions.",
+      "required_anchors": [
+        "differenttransmissionsformnegativepairs"
+      ]
+    },
+    {
+      "id": "e3.a",
+      "parent_teacher_id": "e3",
+      "type": "dataset",
+      "page_number": 2,
+      "normalized_form": "The wireless testbed used 15+ PyCom/IoT transmitters.",
+      "required_anchors": [
+        "testbedof15pycomiottransmittingdevices"
+      ]
+    },
+    {
+      "id": "e3.b",
+      "parent_teacher_id": "e3",
+      "type": "dataset",
+      "page_number": 2,
+      "normalized_form": "The wireless testbed used IEEE 802.11b frames.",
+      "required_anchors": [
+        "transmitieee80211bwififrames"
+      ]
+    },
+    {
+      "id": "e3.c",
+      "parent_teacher_id": "e3",
+      "type": "dataset",
+      "page_number": 2,
+      "normalized_form": "The wireless testbed sampled frames with an Ettus USRP B210 at 45 MSps.",
+      "required_anchors": [
+        "ettususrp",
+        "b210receiver",
+        "samplerateof45msps"
+      ]
+    },
+    {
+      "id": "e4.a",
+      "parent_teacher_id": "e4",
+      "type": "result",
+      "page_number": 4,
+      "normalized_form": "Against the CNN baseline, CTL improved accuracy by 10.8–19.9% in wired scenarios.",
+      "required_anchors": [
+        "largeincreasesinaccuracy",
+        "108199",
+        "wiredscenarios",
+        "cnnbaseline"
+      ]
+    },
+    {
+      "id": "e4.b",
+      "parent_teacher_id": "e4",
+      "type": "result",
+      "page_number": 4,
+      "normalized_form": "Against the CNN baseline, CTL improved accuracy by 13.4–27.8% in wireless scenarios.",
+      "required_anchors": [
+        "wirelessscenarios",
+        "134278",
+        "cnnbaseline"
+      ]
+    },
+    {
+      "id": "e6.a",
+      "parent_teacher_id": "e6",
+      "type": "limitation",
+      "page_number": 6,
+      "normalized_form": "The authors identify wireless-channel impairments as an area for further research.",
+      "required_anchors": [
+        "wirelesschannelimpairments",
+        "fadingandmobility",
+        "improvingthemodelsrobustness"
+      ]
+    },
+    {
+      "id": "e6.b",
+      "parent_teacher_id": "e6",
+      "type": "limitation",
+      "page_number": 6,
+      "normalized_form": "The authors identify contrastive-learning scalability as an area for further research.",
+      "required_anchors": [
+        "improvingthescalabilityofcontrastivelearning",
+        "significantincreaseintheamountofdata",
+        "numberofdevicesgrows"
+      ]
+    },
+    {
+      "id": "e6.c",
+      "parent_teacher_id": "e6",
+      "type": "limitation",
+      "page_number": 6,
+      "normalized_form": "The authors identify consistently misclassified devices as an area for further research.",
+      "required_anchors": [
+        "certaindevicesareconsistentlymisclassified",
+        "weplantoinvestigatethecauseofthemisclassifications"
+      ]
+    }
+  ],
+  "exclusions": [
+    "e5.a is omitted because the post-Wave-6 diagnostic marks it duplicate_of e4.b; the semantic oracle therefore has 13 unique atoms.",
+    "The support oracle does not label propositions unrelated to these 13 atoms as unsupported; the historical teacher corpus is incomplete and absence of a teacher atom is not a negative label."
+  ],
+  "boundaries": {
+    "frozen_before_neural_rankings": true,
+    "learned_evaluator_used": false,
+    "legacy_lexical_metric_replaced": false
+  }
+}
