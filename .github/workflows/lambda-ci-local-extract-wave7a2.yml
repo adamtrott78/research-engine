@@ -114,9 +114,9 @@ jobs:
           workdir="$RUNNER_TEMP/local-extract-wave7a2-work"
           PYTHONPATH="$PWD/src:$pydeps" \
             "$P5_EXPANDED_RUNTIME_PYTHON" \
-            benchmarks/document_intelligence/run_local_extract_wave7a2_generate.py \
+            benchmarks/document_intelligence/run_local_extract_wave7a2_generate_v2.py \
             --fixture benchmarks/document_intelligence/local-extract-wave1-corpus.v1.json \
-            --contract benchmarks/document_intelligence/local-extract-wave7a2-evidence-conditioned.v1.json \
+            --contract benchmarks/document_intelligence/local-extract-wave7a2-evidence-conditioned-v2.v2.json \
             --output "$generated" \
             --workdir "$workdir"
           "$P5_EXPANDED_RUNTIME_PYTHON" - "$generated" <<'PY'
@@ -151,7 +151,7 @@ jobs:
             "$P5_EXPANDED_RUNTIME_PYTHON" \
             benchmarks/document_intelligence/run_local_extract_wave7a2_evaluate.py \
             --fixture benchmarks/document_intelligence/local-extract-wave1-corpus.v1.json \
-            --contract benchmarks/document_intelligence/local-extract-wave7a2-evidence-conditioned.v1.json \
+            --contract benchmarks/document_intelligence/local-extract-wave7a2-evidence-conditioned-v2.v2.json \
             --support-fixture benchmarks/document_intelligence/local-extract-teacher-atom-support.v1.json \
             --generated "$generated" \
             --output "$output" \
@@ -175,7 +175,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: local-extract-wave7a2-evidence-conditioned
+          name: local-extract-wave7a2-evidence-conditioned-v2
           path: |
             ${{ runner.temp }}/local-extract-wave7a2-generated-intents.json
             ${{ runner.temp }}/local-extract-wave7a2-report.json

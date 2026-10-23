@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "decision_id": "local-extract-wave7a2-invalid-implementation-run-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "candidate_sha": "5993d4bdabe8fe2a9ea8c259d811f7930ea046c1",
+  "workflow_run_id": 40009297107,
+  "artifact_id": 12525752567,
+  "artifact_zip_sha256": "a189e6e6bd782bf9ec11b055d7a4f9ab2251b61b55e16e6bc954a99ede3cecfe",
+  "generated_intents_sha256": "bd39a6f1350e495f20378874ccee36be6ec63b8690dabd58d1d566df72da117b",
+  "report_sha256": "28a4ed55306b3278728f84cc7d423d07378622fe4c7f3ccd6141267b5e07244c",
+  "raw_report_decision": "WAVE7A2_REJECT",
+  "scientific_gate_consumed": false,
+  "classification": "INVALID_IMPLEMENTATION",
+  "reasons": [
+    "Evidence-conditioned pass-1 region references were emitted as the full display marker suffix (for example bare region_id plus ' page=2'), while the guard required the bare source region ID; valid questions were therefore rejected as UNKNOWN_REGION_ID.",
+    "Several long generation outputs reached malformed/truncated JSON before semantic guarding.",
+    "The source-aware control was not an exact reproduction of Wave 7A because its source-context marker/prompt formatting changed to carry region IDs, causing widespread schema failures."
+  ],
+  "authorized_fix_boundary": [
+    "Replace long source region IDs in the candidate prompt with short deterministic aliases and map aliases back to selected regions.",
+    "Restore the exact Wave-7A source-aware control prompt/context/guard implementation.",
+    "Increase candidate JSON output headroom only enough to prevent truncation while keeping intent-count and scientific gates unchanged.",
+    "Do not change retrieval, fusion budget, model family/revision, anti-leak teacher audit, promotion thresholds, page routing, or Wave 7B boundary."
+  ]
+}
