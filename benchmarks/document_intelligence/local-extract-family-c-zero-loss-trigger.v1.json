@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "purpose": "INERT_TRIGGER_ONLY",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "base_implementation_sha": "134936c8d884ee743faa82e18a886d9caebf62db",
+  "diagnostic_id": "ZERO_LOSS_RESIDUAL_AUGMENTATION_DIAGNOSTIC_V1",
+  "scientific_semantics_changed": false,
+  "merge_forbidden": true
+}
