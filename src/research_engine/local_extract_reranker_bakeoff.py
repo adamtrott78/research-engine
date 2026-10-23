@@ -854,6 +854,26 @@ def run_reranker_bakeoff(
         for arm_id, row in arm_results.items()
         if bool(row["promising"])
     ]
+
+    import importlib.metadata
+    import huggingface_hub
+    import torch
+    import transformers
+
+    package_versions = {}
+    for name in (
+        "FlagEmbedding",
+        "sentence-transformers",
+        "datasets",
+        "peft",
+        "ir-datasets",
+        "accelerate",
+    ):
+        try:
+            package_versions[name] = importlib.metadata.version(name)
+        except importlib.metadata.PackageNotFoundError:
+            package_versions[name] = None
+
     return {
         "schema_version": 1,
         "operation": "LOCAL_EXTRACT_PROPOSITION_RERANKER_BAKEOFF",
@@ -876,6 +896,13 @@ def run_reranker_bakeoff(
             }
             for row in papers
         ],
+        "runtime_environment": {
+            "python_packages": package_versions,
+            "torch": torch.__version__,
+            "transformers": transformers.__version__,
+            "huggingface_hub": huggingface_hub.__version__,
+            "cuda_runtime": torch.version.cuda,
+        },
         "model_revisions": {
             key: {
                 "repository": str(value["repository"]),
