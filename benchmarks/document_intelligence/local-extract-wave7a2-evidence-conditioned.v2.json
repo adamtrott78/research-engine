@@ -236,6 +236,7 @@
   "interface_corrections": [
     "QWEN35_SOURCE_AWARE_INTENTS_V1 uses the exact Wave-7A source context, prompt, and guard helpers without region-ID marker changes.",
     "QWEN35_EVIDENCE_GAP_INTENTS_V1 uses short deterministic region aliases R01..R12 instead of exposing long region IDs in the output contract.",
-    "Candidate pass-1/pass-2 JSON output headroom increased only to prevent truncation; intent-count limits and all scientific thresholds are unchanged."
+    "Candidate pass-1/pass-2 JSON output headroom increased only to prevent truncation; intent-count limits and all scientific thresholds are unchanged.",
+    "Candidate parser requires an intents list but ignores harmless extra top-level/item metadata instead of rejecting otherwise valid questions."
   ]
 }
