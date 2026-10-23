@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "decision_id": "local-extract-wave7-intent-generation-result-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "candidate_sha": "857a0217fbe8ca3ec23a695b0375ffa086ada961",
+  "workflow_run_id": 39999168786,
+  "artifact_id": 12521293743,
+  "artifact_zip_sha256": "6ac40eb89d6959e49da41b8d2249e605a13025013b86fb817adc7e8e23ba8a5d",
+  "generated_intents_sha256": "4e5bfa50f0ca18358c0c261c423b61a11a9b0bfa20e1953e2c811a65fb80c52c",
+  "report_sha256": "c50e09eef0918f230195b26c4f27f8d5d74fe4868faaeb6e891cfbe0a8ab1d57",
+  "wave7a_decision": "WAVE7A_REJECT",
+  "qualifying_pairs": [],
+  "generation_metrics": {
+    "paper_count": 9,
+    "model_calls": 18,
+    "model_init_seconds": 161.69113286299398,
+    "inference_seconds": 76.63745071098674,
+    "prompt_tokens": 26714,
+    "output_tokens": 8116,
+    "peak_gpu_memory_mib_by_uuid": {
+      "GPU-a333e68b-d1dc-6d25-1678-97b527bf55ea": 12275,
+      "GPU-cfed3394-a935-63aa-9325-c4cae7b568b6": 12742
+    }
+  },
+  "bge_metrics": {
+    "model_download_bytes": 2295419274,
+    "model_download_seconds": 16.26711915701162,
+    "model_load_seconds": 2.423396786005469,
+    "ranking_inference_seconds": 124.93161386850988,
+    "peak_gpu_memory_mib": 2654.2236328125,
+    "model_snapshot_tree_sha256": "0bd07dd957f4b437fc39654f6a4e559b3b6adef6a84cefcdff3fe37b75835921"
+  },
+  "pairs": {
+    "DETERMINISTIC_SCIENCE_SCHEMA_V1__BM25_DIRECT": {
+      "teacher_supported_atoms_at_24": 1,
+      "teacher_support_recall_at_24": 0.07692307692307693,
+      "known_miss_recovery_count": 0,
+      "known_miss_recovered": [],
+      "teacher_mean_best_token_f1_at_24": 0.24816950478003688,
+      "nine_paper_page_recall": 0.6976744186046512,
+      "fraction_of_coarse_page_ceiling": 0.9375,
+      "teacher_leak_reject_fraction": 0
+    },
+    "DETERMINISTIC_SCIENCE_SCHEMA_V1__BGE_M3_HYBRID_040_020_040": {
+      "teacher_supported_atoms_at_24": 3,
+      "teacher_support_recall_at_24": 0.23076923076923078,
+      "known_miss_recovery_count": 0,
+      "known_miss_recovered": [],
+      "teacher_mean_best_token_f1_at_24": 0.2548129637887665,
+      "nine_paper_page_recall": 0.7209302325581395,
+      "fraction_of_coarse_page_ceiling": 0.96875,
+      "teacher_leak_reject_fraction": 0
+    },
+    "QWEN35_FRONTMATTER_INTENTS_V1__BM25_DIRECT": {
+      "teacher_supported_atoms_at_24": 2,
+      "teacher_support_recall_at_24": 0.15384615384615385,
+      "known_miss_recovery_count": 2,
+      "known_miss_recovered": [
+        "e2.a",
+        "e2.b"
+      ],
+      "teacher_mean_best_token_f1_at_24": 0.19482305460127952,
+      "nine_paper_page_recall": 0.6511627906976745,
+      "fraction_of_coarse_page_ceiling": 0.875,
+      "teacher_leak_reject_fraction": 0.08333333333333333
+    },
+    "QWEN35_FRONTMATTER_INTENTS_V1__BGE_M3_HYBRID_040_020_040": {
+      "teacher_supported_atoms_at_24": 1,
+      "teacher_support_recall_at_24": 0.07692307692307693,
+      "known_miss_recovery_count": 0,
+      "known_miss_recovered": [],
+      "teacher_mean_best_token_f1_at_24": 0.26017906398892365,
+      "nine_paper_page_recall": 0.6511627906976745,
+      "fraction_of_coarse_page_ceiling": 0.875,
+      "teacher_leak_reject_fraction": 0.08333333333333333
+    },
+    "QWEN35_SOURCE_AWARE_INTENTS_V1__BM25_DIRECT": {
+      "teacher_supported_atoms_at_24": 5,
+      "teacher_support_recall_at_24": 0.38461538461538464,
+      "known_miss_recovery_count": 2,
+      "known_miss_recovered": [
+        "e2.a",
+        "e2.b"
+      ],
+      "teacher_mean_best_token_f1_at_24": 0.26982000945084156,
+      "nine_paper_page_recall": 0.7441860465116279,
+      "fraction_of_coarse_page_ceiling": 1,
+      "teacher_leak_reject_fraction": 0.08333333333333333
+    },
+    "QWEN35_SOURCE_AWARE_INTENTS_V1__BGE_M3_HYBRID_040_020_040": {
+      "teacher_supported_atoms_at_24": 4,
+      "teacher_support_recall_at_24": 0.3076923076923077,
+      "known_miss_recovery_count": 1,
+      "known_miss_recovered": [
+        "e4.b"
+      ],
+      "teacher_mean_best_token_f1_at_24": 0.27453499000965736,
+      "nine_paper_page_recall": 0.7441860465116279,
+      "fraction_of_coarse_page_ceiling": 1,
+      "teacher_leak_reject_fraction": 0.08333333333333333
+    }
+  },
+  "teacher_intent_diagnostic": {
+    "frontmatter_summary": [
+      "Generated one useful broad pair-construction question, but another pair question leaked the gold same/different-transmission answer and was rejected.",
+      "Did not generate separate targeted intents for classifier-label source, test-domain use, receiver/sampling setup, or the three distinct future-work atoms."
+    ],
+    "source_aware_summary": [
+      "Generated strong intents for positive-pair construction, testbed hardware, acquisition settings, quantitative comparison scenarios, and wireless-impairment future work.",
+      "One pretraining question leaked the gold domain-invariant-representation phrase and was rejected.",
+      "Did not generate a separate negative-pair intent, source-label classifier-training intent, target-domain testing intent, scalability future-work intent, or persistent-misclassification future-work intent.",
+      "This is primarily intent coverage/specificity failure: broad page coverage remained perfect relative to the coarse routing ceiling."
+    ]
+  },
+  "scientific_disposition": {
+    "primary_conclusion": "AUTOMATIC_INTENT_GENERATION_NOT_YET_ORACLE_LIKE",
+    "oracle_query_hypothesis": "STILL_SUPPORTED",
+    "primary_residual": "INTENT_COVERAGE_AND_ATOMICITY",
+    "retrieval_capacity": "NOT_REOPENED",
+    "page_routing": "SUFFICIENT_FOR_THIS_CONTROL",
+    "next_research_target": "COVERAGE_GUIDED_HIERARCHICAL_INTENT_DECOMPOSITION",
+    "wave7b_authorized": false,
+    "rationale": [
+      "The oracle experiment already proved that precise answer-free intents allow existing BM25/BGE/Qwen rankers to recover the teacher evidence.",
+      "Wave 7A source-aware Qwen preserved 100% of the nine-paper coarse selected-page recall ceiling, so the generator did not lose the correct document neighborhoods.",
+      "However, its 12 questions covered only a subset of the teacher atomic facts; missing or merged intents explain the low 5/13 BM25 and 4/13 BGE support.",
+      "The next design should enforce coverage over explicit scientific subslots and recursively decompose compound categories into separate atomic questions before retrieval.",
+      "A custom reranker or larger generation model is not justified by this result."
+    ]
+  },
+  "boundaries": {
+    "production_extract": "STANDARD_CODEX_UNCHANGED",
+    "qwen_verify": "UNCHANGED",
+    "scientific_state_materialized": false,
+    "reranker_training": false,
+    "generation_model_change": false,
+    "wave7b": false
+  }
+}
