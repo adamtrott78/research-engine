@@ -1,0 +1,109 @@
+{
+  "all_answers_correct": true,
+  "baseline_id": "semantic-control-relational-baseline-v1",
+  "baseline_result_sha256": "09a2b695580a2262629bca33dc568fe450edea726d92d70c1b9f24d5c0d5fcca",
+  "execution_environment": {
+    "ci_database_url_source": "RESEARCH_ENGINE_DATABASE_URL",
+    "postgres_server_version": "18.6 (Debian 18.6-1.pgdg12+2)",
+    "production_database_access": false,
+    "psycopg_version": "3.3.6",
+    "python_version": "3.12.15"
+  },
+  "fixture_identity": {
+    "evidence_objects": 21,
+    "evidence_relations": 11,
+    "git_blob_sha": "742feb261a72a760c7cb7a472beaca0cb283e4f8",
+    "source_level_counts": {
+      "FULLTEXT_PDF_LAYOUT": 18,
+      "OCR_DERIVED": 3
+    },
+    "works": 5
+  },
+  "latency_threshold_applied": false,
+  "performance_promotion_claim": false,
+  "production_mutation": false,
+  "query_results": [
+    {
+      "answer_correct": true,
+      "canonical_result_sha256": "162dfbbfbb25f5eeacf6815910879ded7566fbdc0fb94138f8630cf467d3381c",
+      "latency_ns": {
+        "max": 10588774,
+        "mean": 9883576,
+        "min": 8802706,
+        "p50": 9875312,
+        "p95": 10554582
+      },
+      "measured_repetitions": 50,
+      "query_id": "Q1_CLAIM_SUPPORT",
+      "store_method": "claim_support",
+      "warmup_repetitions": 5
+    },
+    {
+      "answer_correct": true,
+      "canonical_result_sha256": "4ae8445bfab97a5cb70a1f975b8364622f3886011f12f2262770ebd702f2aef9",
+      "latency_ns": {
+        "max": 18988581,
+        "mean": 10888380,
+        "min": 8842501,
+        "p50": 9929321,
+        "p95": 18500285
+      },
+      "measured_repetitions": 50,
+      "query_id": "Q2_METHOD_QUALIFIERS",
+      "store_method": "qualifiers_for_method",
+      "warmup_repetitions": 5
+    },
+    {
+      "answer_correct": true,
+      "canonical_result_sha256": "baf07cdcc4d2b419a3d1e954ec68e19e4f09f9c624565725acab9680d06a1a48",
+      "latency_ns": {
+        "max": 10904338,
+        "mean": 8851315,
+        "min": 7519180,
+        "p50": 8831432,
+        "p95": 9959113
+      },
+      "measured_repetitions": 50,
+      "query_id": "Q3_SOURCE_LEVEL_COUNTS",
+      "store_method": "source_level_counts",
+      "warmup_repetitions": 5
+    },
+    {
+      "answer_correct": true,
+      "canonical_result_sha256": "fa5c87d9126cafdcca25134e8e5415661735a29626e6ce0184a5bcb318400a7c",
+      "latency_ns": {
+        "max": 10608834,
+        "mean": 9429667,
+        "min": 8323430,
+        "p50": 9413461,
+        "p95": 9975347
+      },
+      "measured_repetitions": 50,
+      "query_id": "Q4_PROVENANCE_PATH",
+      "store_method": "provenance_path",
+      "warmup_repetitions": 5
+    }
+  ],
+  "repository_checkpoint": "4317830c4f3779cebb8a5cf0d7eeec369b85d5ea",
+  "schema_version": 1,
+  "timing_methodology": {
+    "canonical_result_hash_each_repetition": true,
+    "clock": "time.perf_counter_ns",
+    "correctness_each_repetition": true,
+    "execution_order": "Run all warmups for one query, then 50 measured calls for that query; repeat in frozen query order.",
+    "measured_repetitions_per_query": 50,
+    "pass_fail_latency_threshold": null,
+    "percentile_rule": "Nearest-rank on sorted nanosecond samples: rank=ceil(p*N), one-indexed.",
+    "performance_claim_allowed": false,
+    "rationale": "This stage establishes an empirical baseline; thresholds must not be invented retroactively.",
+    "reported_statistics_ns": [
+      "min",
+      "mean",
+      "p50",
+      "p95",
+      "max"
+    ],
+    "timing_scope": "Whole public PostgresStore method call, including the method's current connection/open-close behavior.",
+    "warmup_repetitions_per_query": 5
+  }
+}
