@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "fixture_set_id": "semantic-control-adapter-inputs-v1",
+  "inputs": [
+    {
+      "input_id": "re:wave7a3-result",
+      "adapter": "research_engine_wave7a3_result",
+      "source_id": "re-wave7a3-result",
+      "record": {
+        "decision": "WAVE7A3_REJECT",
+        "implementation_validity": "PASS",
+        "scientific_gate_consumed": true,
+        "author_salience_hypothesis": "REJECTED_AS_IMPLEMENTED",
+        "wave7b_authorized": false,
+        "production_extract_changed": false,
+        "qwen_verify_changed": false
+      }
+    },
+    {
+      "input_id": "wc:extract-task",
+      "adapter": "workspace_task_capsule",
+      "source_id": "wc-extract-task",
+      "record": {
+        "task_id": "research-engine-local-extract-redesign-v1",
+        "status": "CHECKPOINTED",
+        "current_stage": "post_wave6_codex_parity_diagnostics",
+        "next_action_class": "STOP_AND_REDESIGN"
+      }
+    },
+    {
+      "input_id": "wc:gpu-heavy-policy",
+      "adapter": "workspace_workload_policy",
+      "source_id": "wc-workload-policy",
+      "record": {
+        "policy_id": "lambda-ci-workload-policy-v1",
+        "policy_epoch": 3,
+        "workload_class": "gpu-heavy",
+        "policy_decision": "DENY",
+        "denial_reason": "dual-GPU authority requires a separate post-pilot acceptance gate"
+      }
+    },
+    {
+      "input_id": "wc:wave7a3-route",
+      "adapter": "workspace_project_route",
+      "source_id": "wc-research-engine-project",
+      "record": {
+        "project_id": "research-engine",
+        "route_id": "model-eval-local-extract-wave7a3",
+        "lane": "gpu",
+        "activation_state": "MIGRATION_LIVE_EQUIVALENT",
+        "execution_contract_id": "model-dual-public-v1",
+        "workflow_path": ".github/workflows/lambda-ci-local-extract-wave7a3.yml"
+      }
+    }
+  ]
+}
