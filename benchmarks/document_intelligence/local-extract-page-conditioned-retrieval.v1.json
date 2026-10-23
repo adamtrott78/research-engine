@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "local-extract-page-conditioned-proposition-retrieval-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "baseline_sha": "837def54ab744e66ca8395aabce501b20af750c7",
+  "parent_diagnostic_run_id": 39895498387,
+  "hypothesis": "The current top-12 650-character region retriever often lands on the correct teacher page but excludes the exact evidence region. Preserve the existing coarse region retrieval only as page routing, then enumerate every exact complete proposition on those selected pages and rerank at most twelve propositions with the unchanged FACET_INTERLEAVED_BM25_V1 query/facet logic. If selected teacher alignment improves materially toward the selected-page proposition ceiling, the primary residual is region-boundary/fine-grained retrieval and no new neural retriever is yet justified.",
+  "fixed": [
+    "nine-paper / 71-evidence-object preserved exact-SHA corpus",
+    "production-parity pypdf extraction",
+    "Wave-2 exact_source_regions(max_chars=650) coarse region construction",
+    "FACET_INTERLEAVED_BM25_V1 coarse retrieval query and facet definitions",
+    "top_k_regions=12 for coarse page routing",
+    "Wave-4 deterministic complete-proposition enumeration semantics",
+    "maximum 12 selected propositions per paper",
+    "preserved six-claim legacy lexical F1 control",
+    "preserved 13 unique atomized teacher rows from post-Wave-6 diagnostic contract",
+    "zero Qwen/model calls",
+    "zero external retrieval-model downloads",
+    "no scientific-state materialization",
+    "no production routing or VERIFY change"
+  ],
+  "changed": [
+    "After selecting the current top-12 coarse regions, discard the region boundary for fine retrieval but retain the unique selected page IDs.",
+    "Enumerate all exact complete propositions from the full authoritative text of those selected pages.",
+    "Alias each proposition as a retrieval row and run unchanged FACET_INTERLEAVED_BM25_V1 over that page-conditioned proposition pool.",
+    "Retain at most the first 12 ranked propositions globally per paper; no per-region quota."
+  ],
+  "predeclared_metrics": [
+    "selected_page_pool_best_single_proposition_mean_f1",
+    "page_conditioned_selected_proposition_mean_f1",
+    "legacy current_top12_best_single_proposition_mean_f1",
+    "legacy Wave6 selected proposition mean_f1",
+    "same metrics on 13 unique teacher atoms",
+    "teacher-case recovery for e2, e4, e5",
+    "selected proposition count and source chars"
+  ],
+  "predeclared_interpretation": [
+    "If page-conditioned selected proposition mean F1 materially exceeds Wave-6 selected proposition F1 and closes a substantial fraction of the gap to the selected-page pool ceiling, classify the deterministic coarse-to-fine retrieval hypothesis as supported.",
+    "If the selected-page pool ceiling is materially above current top-12 availability but the page-conditioned selector fails to recover it, retrieval remains primary but ranking semantics require a stronger retriever/reranker.",
+    "If the selected-page pool itself does not improve availability, reject the page-conditioning hypothesis and move to broader retrieval research.",
+    "Do not change legacy thresholds or teacher labels after seeing results.",
+    "Do not start Wave 7 from this diagnostic; first checkpoint the scientific disposition."
+  ],
+  "boundaries": {
+    "qwen_model_calls": 0,
+    "external_model_downloads": 0,
+    "wave7_authorized": false,
+    "production_extract_change_authorized": false,
+    "qwen_verify_change_authorized": false,
+    "gitrunner_substrate_change_authorized": false
+  }
+}
