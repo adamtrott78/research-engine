@@ -1,0 +1,206 @@
+name: Lambda CI Local EXTRACT Proposition Reranker Bakeoff
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  proposition-reranker-bakeoff:
+    name: "${{ format('wc-admission-v1|workload=model-eval-local-extract-reranker-v1|pr={0}|request={1}', github.event.issue.number, github.event.comment.body) }}"
+    if: >-
+      github.event.issue.pull_request &&
+      github.actor == 'adamtrott78' &&
+      github.event.comment.author_association == 'OWNER' &&
+      startsWith(github.event.comment.body, '/lambda-ci-local-extract-reranker-bakeoff ')
+    runs-on: lambda-research-engine-gpu
+    timeout-minutes: 45
+
+    steps:
+      - name: Verify exact PR head
+        id: gate
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          expected_sha="$(printf '%s\n' "$COMMENT_BODY" | awk '{print $2}')"
+          [[ "$expected_sha" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "Invalid reranker bakeoff SHA" >&2
+            exit 20
+          }
+          pr_json="$(
+            curl -fsSL \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$REPOSITORY/pulls/$PR_NUMBER"
+          )"
+          actual_sha="$(
+            python3 -c 'import json,sys; print(json.load(sys.stdin)["head"]["sha"])' \
+              <<<"$pr_json"
+          )"
+          [[ "$actual_sha" == "$expected_sha" ]]
+          echo "expected_sha=$expected_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Prove single-GPU public-payload execution boundary
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          expected_runtime="/srv/workspace-ci/research-engine/expanded-runtimes/qwen35-vllm-cu129-image-native-sampler-v3/f67ff9a26690c55930232c915e59e826e3cca2dd89012de9e35a852032b38f74"
+          [[ "$(id -un)" == "ci-research-engine" ]]
+          [[ "${P5_EXPANDED_RUNTIME:-}" == "$expected_runtime" ]]
+          [[ "${P5_EXPANDED_RUNTIME_PYTHON:-}" == "$expected_runtime/bin/python" ]]
+          [[ "${P5_EXPANDED_RUNTIME_TREE_SHA256:-}" == "b0cbb4efbe8673bdb421bad8036d29864bffe0687a9a654bbd95f54544659e63" ]]
+          [[ "${P5_EXPANDED_RUNTIME_MANIFEST_SHA256:-}" == "f67ff9a26690c55930232c915e59e826e3cca2dd89012de9e35a852032b38f74" ]]
+          [[ -z "${P5_MODEL_ID:-}" ]]
+          [[ -z "${P5_MODEL_PATH:-}" ]]
+          [[ -n "${P5_GPU_TARGET_UUID:-}" ]]
+          [[ -n "${P5_GPU_SELECTED_DEVICE:-}" ]]
+          [[ "${CUDA_VISIBLE_DEVICES:-}" == "$P5_GPU_TARGET_UUID" ]]
+          [[ "$P5_GPU_TARGET_UUID" == "GPU-a333e68b-d1dc-6d25-1678-97b527bf55ea" ]]
+          [[ ! -r /var/lib/workspace-ci/controller/github-token ]]
+          [[ ! -r /home/atrott ]]
+          if [[ -e /var/run/docker.sock ]]; then
+            [[ ! -r /var/run/docker.sock ]]
+            [[ ! -w /var/run/docker.sock ]]
+          fi
+
+      - name: Checkout exact candidate SHA
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ steps.gate.outputs.expected_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          clean: true
+
+      - name: Install exact benchmark dependencies ephemerally
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          pydeps="$RUNNER_TEMP/reranker-pydeps"
+          mkdir -m 0700 "$pydeps"
+
+          pypdf_wheel="$RUNNER_TEMP/pypdf-6.21.1-py3-none-any.whl"
+          curl -fsSL --retry 3 --retry-delay 2 \
+            "https://files.pythonhosted.org/packages/85/e6/24c944e473c34e818cf1b98085796fcd780465ecfe17663f2bf8fee1958b/pypdf-6.21.1-py3-none-any.whl" \
+            -o "$pypdf_wheel"
+          [[ "$(sha256sum "$pypdf_wheel" | awk '{print $1}')" == "553e2d42f5bb3bb2a785a7d3de8ef90bb7df74b5413eff5a7b4388007ea9254b" ]]
+          "$P5_EXPANDED_RUNTIME_PYTHON" -m zipfile -e "$pypdf_wheel" "$pydeps"
+
+          flag_wheel="$RUNNER_TEMP/flagembedding-1.4.2-py3-none-any.whl"
+          curl -fsSL --retry 3 --retry-delay 2 \
+            "https://files.pythonhosted.org/packages/6e/4a/eb1a033d744e5a854f0918b2a002fca0d7db72078aa70b5145d5100141c1/flagembedding-1.4.2-py3-none-any.whl" \
+            -o "$flag_wheel"
+          [[ "$(sha256sum "$flag_wheel" | awk '{print $1}')" == "35e33a08e8ed5e299eabbe3bc23518eb66a424dd29ee08fb3802bf9aef9e9bf2" ]]
+
+          PIP_DISABLE_PIP_VERSION_CHECK=1 \
+          "$P5_EXPANDED_RUNTIME_PYTHON" -m pip install \
+            --no-input --target "$pydeps" "$flag_wheel"
+
+          PYTHONPATH="$pydeps" "$P5_EXPANDED_RUNTIME_PYTHON" - <<'PY'
+          import importlib.metadata
+          import torch
+          import transformers
+          import huggingface_hub
+          import FlagEmbedding
+          import pypdf
+
+          assert pypdf.__version__ == "6.21.1"
+          assert importlib.metadata.version("FlagEmbedding") == "1.4.2"
+          major_minor = tuple(
+              int(part)
+              for part in transformers.__version__.split(".")[:2]
+          )
+          assert major_minor >= (4, 51)
+          assert torch.cuda.is_available()
+          assert torch.cuda.device_count() == 1
+          print(
+              "RERANKER_RUNTIME_PREFLIGHT=PASS "
+              f"torch={torch.__version__} "
+              f"transformers={transformers.__version__} "
+              f"huggingface_hub={huggingface_hub.__version__}"
+          )
+          PY
+
+      - name: Run bounded proposition reranker bakeoff
+        env:
+          EXPECTED_SHA: ${{ steps.gate.outputs.expected_sha }}
+          HF_HUB_DISABLE_TELEMETRY: "1"
+          DO_NOT_TRACK: "1"
+          TOKENIZERS_PARALLELISM: "false"
+          VLLM_NO_USAGE_STATS: "1"
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$(git rev-parse HEAD)" == "$EXPECTED_SHA" ]]
+          if git config --local --get-regexp '^http\..*\.extraheader$' >/dev/null 2>&1; then
+            echo "Checkout credentials remained in candidate git config" >&2
+            exit 40
+          fi
+
+          unset HF_HUB_OFFLINE || true
+          unset TRANSFORMERS_OFFLINE || true
+
+          pydeps="$RUNNER_TEMP/reranker-pydeps"
+          output="$RUNNER_TEMP/local-extract-proposition-reranker-bakeoff.json"
+          workdir="$RUNNER_TEMP/local-extract-proposition-reranker-work"
+
+          PYTHONPATH="$PWD/src:$pydeps" \
+            "$P5_EXPANDED_RUNTIME_PYTHON" \
+            benchmarks/document_intelligence/run_local_extract_reranker_bakeoff.py \
+            --fixture benchmarks/document_intelligence/local-extract-wave1-corpus.v1.json \
+            --contract benchmarks/document_intelligence/local-extract-proposition-reranker-bakeoff.v1.json \
+            --support-fixture benchmarks/document_intelligence/local-extract-teacher-atom-support.v1.json \
+            --output "$output" \
+            --workdir "$workdir"
+
+          "$P5_EXPANDED_RUNTIME_PYTHON" - "$output" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          report = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert report["paper_count"] == 9
+          assert report["external_model_downloads"] == 2
+          assert report["qwen35_extract_model_calls"] == 0
+          assert report["scientific_state_materialized"] is False
+          assert report["production_routing_changed"] is False
+          assert report["qwen_verify_changed"] is False
+          assert set(report["arms"]) == {
+              "PAGE_CONDITIONED_BM25_CONTROL",
+              "BGE_M3_DENSE",
+              "BGE_M3_SPARSE",
+              "BGE_M3_COLBERT",
+              "BGE_M3_HYBRID_040_020_040",
+              "QWEN3_RERANKER_0_6B",
+          }
+          control = report["arms"]["PAGE_CONDITIONED_BM25_CONTROL"]
+          assert abs(
+              control["grouped_teacher"]["mean_f1"]
+              - 0.2607226107226107
+          ) < 1e-12
+          assert abs(
+              control["unique_atoms"]["mean_f1"]
+              - 0.20472730749170215
+          ) < 1e-12
+          assert control["semantic_support"]["atom_count"] == 13
+          assert report["decision"] in {"PROMISING", "NEGATIVE"}
+          print("PROPOSITION_RERANKER_BAKEOFF_RECEIPT=PASS")
+          PY
+
+      - name: Upload proposition reranker report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b5409e92b4886f43607fa02 # v4.6.2
+        with:
+          name: local-extract-proposition-reranker-bakeoff
+          path: ${{ runner.temp }}/local-extract-proposition-reranker-bakeoff.json
+          if-no-files-found: error
+          retention-days: 14

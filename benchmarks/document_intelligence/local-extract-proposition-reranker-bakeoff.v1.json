@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "local-extract-proposition-reranker-bakeoff-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "baseline_sha": "12adf7616b9ad8c3601e7a7ae13e8126824812ac",
+  "hypothesis": "The remaining Local EXTRACT retrieval failure is proposition-ranking semantics, not coarse page routing. On the exact proposition pool from pages already reached by the current top-12 coarse regions, semantic neural ranking should recover direct teacher evidence more reliably than FACET_INTERLEAVED_BM25_V1 without increasing the downstream top-12 proposition budget.",
+  "fixed": [
+    "preserved exact-SHA nine-paper / 71-evidence-object corpus",
+    "Wave-2 exact_source_regions(max_chars=650) coarse region construction",
+    "FACET_INTERLEAVED_BM25_V1 top-12 coarse region retrieval used only to determine candidate pages",
+    "all exact complete propositions from those selected authoritative-PDF pages",
+    "same five ranking channels: global plus method, dataset, evaluation, robustness facets",
+    "same facet-interleave and proposition deduplication semantics",
+    "maximum 12 selected propositions per paper",
+    "preserved six grouped Codex teacher claims and frozen 13 unique teacher atoms",
+    "legacy token_f1 measurements unchanged",
+    "deterministic authoritative-PDF atom-support oracle unchanged",
+    "zero Qwen3.5 EXTRACT normalization calls",
+    "no scientific-state materialization",
+    "production STANDARD Codex EXTRACT unchanged",
+    "accepted page-scoped Qwen VERIFY unchanged"
+  ],
+  "arms": [
+    {
+      "id": "PAGE_CONDITIONED_BM25_CONTROL",
+      "kind": "deterministic_control",
+      "model": null
+    },
+    {
+      "id": "BGE_M3_DENSE",
+      "kind": "neural_ranker",
+      "model": "BGE_M3",
+      "score_key": "dense"
+    },
+    {
+      "id": "BGE_M3_SPARSE",
+      "kind": "neural_ranker",
+      "model": "BGE_M3",
+      "score_key": "sparse"
+    },
+    {
+      "id": "BGE_M3_COLBERT",
+      "kind": "neural_ranker",
+      "model": "BGE_M3",
+      "score_key": "colbert"
+    },
+    {
+      "id": "BGE_M3_HYBRID_040_020_040",
+      "kind": "neural_ranker",
+      "model": "BGE_M3",
+      "score_key": "colbert+sparse+dense",
+      "fixed_weights": [
+        0.4,
+        0.2,
+        0.4
+      ]
+    },
+    {
+      "id": "QWEN3_RERANKER_0_6B",
+      "kind": "neural_ranker",
+      "model": "QWEN3_RERANKER_0_6B",
+      "score_key": "yes_probability"
+    }
+  ],
+  "model_inputs": {
+    "BGE_M3": {
+      "repository": "BAAI/bge-m3",
+      "revision": "5617a9f61b028005a4858fdac845db406aefb181",
+      "license": "MIT",
+      "ephemeral_download": true,
+      "persistent_cache": false,
+      "package": {
+        "name": "FlagEmbedding",
+        "version": "1.4.2",
+        "wheel_url": "https://files.pythonhosted.org/packages/6e/4a/eb1a033d744e5a854f0918b2a002fca0d7db72078aa70b5145d5100141c1/flagembedding-1.4.2-py3-none-any.whl",
+        "wheel_sha256": "35e33a08e8ed5e299eabbe3bc23518eb66a424dd29ee08fb3802bf9aef9e9bf2"
+      },
+      "max_passage_length": 512,
+      "hybrid_weights": [
+        0.4,
+        0.2,
+        0.4
+      ]
+    },
+    "QWEN3_RERANKER_0_6B": {
+      "repository": "Qwen/Qwen3-Reranker-0.6B",
+      "revision": "e61197ed45024b0ed8a2d74b80b4d909f1255473",
+      "license": "Apache-2.0",
+      "ephemeral_download": true,
+      "persistent_cache": false,
+      "max_length": 2048,
+      "batch_size": 16,
+      "instruction": "Judge whether the scientific proposition contains direct evidence relevant to the research query and requested evidence facet. Prefer propositions that directly state the method, dataset, quantitative result, limitation, robustness condition, or evaluation fact rather than merely sharing topic words."
+    }
+  },
+  "scoring_protocol": {
+    "channel_queries": "reuse current global query and the exact EVIDENCE_FACETS extensions",
+    "per_channel": "score every page-conditioned exact proposition independently",
+    "selection": "sort descending within each channel, then interleave channel depth in current global/method/dataset/evaluation/robustness order with proposition-id deduplication until top_k=12",
+    "tie_breaker": "proposition_id ascending",
+    "no_query_rewriting": true,
+    "no_post_result_tuning": true
+  },
+  "evaluation": {
+    "teacher_support_fixture": "benchmarks/document_intelligence/local-extract-teacher-atom-support.v1.json",
+    "grouped_teacher_count": 6,
+    "unique_atom_count": 13,
+    "legacy_metrics": [
+      "selected proposition mean token_f1 on six grouped claims",
+      "selected proposition mean token_f1 on 13 unique atoms",
+      "teacher coverage at token_f1>=0.5"
+    ],
+    "semantic_metrics": [
+      "deterministic atom-support recall@12",
+      "known-miss recovery count across e2.a, e2.b, e4.b",
+      "supporting proposition IDs"
+    ],
+    "resource_metrics": [
+      "selected source chars per arm",
+      "model download bytes",
+      "model load seconds",
+      "ranking inference seconds",
+      "peak GPU memory MiB"
+    ]
+  },
+  "predeclared_decision": {
+    "wave6_grouped_mean_f1": 0.30305743036333815,
+    "selected_page_pool_grouped_ceiling_f1": 0.43276514777044994,
+    "wave6_atom_mean_f1": 0.22837751648405338,
+    "selected_page_pool_atom_ceiling_f1": 0.36343825934770935,
+    "minimum_gap_closure_fraction": 0.25,
+    "minimum_known_miss_recovery_count": 2,
+    "promising_rule": "An arm must improve both grouped and unique-atom mean token_f1 over Wave 6, close at least 25% of the Wave6-to-selected-page-pool ceiling gap on both views, recover at least two of e2.a/e2.b/e4.b, and not reduce deterministic atom-support recall relative to the best control.",
+    "negative_rule": "If no arm satisfies the promising rule, do not change the generation model. Revisit query/task representation or supervised/domain adaptation for proposition ranking.",
+    "wave7_rule": "A PROMISING arm authorizes design of one retrieval-focused Wave 7 candidate only after this diagnostic result is checkpointed; this bakeoff itself is not Wave 7."
+  },
+  "execution": {
+    "lane": "gpu",
+    "execution_contract_id": "gpu-single-public-ci-v1",
+    "runtime_id": "qwen35-vllm-cu129-image-native-sampler-v3",
+    "model_binding": null,
+    "gpu_count": 1,
+    "public_payload_network": true,
+    "model_downloads": "exact pinned public revisions, ephemeral job storage only",
+    "models_loaded_sequentially": true,
+    "new_privileged_authority_required": false,
+    "gitrunner_substrate_change_required": false,
+    "controller_change_required": false,
+    "provisioner_change_required": false,
+    "runtime_change_required": false
+  },
+  "boundaries": {
+    "exactly_one_bounded_bakeoff_run_after_route_install": true,
+    "scientific_state_materialization_authorized": false,
+    "production_extract_change_authorized": false,
+    "qwen_verify_change_authorized": false,
+    "wave7_execution_authorized": false,
+    "generation_model_family_bakeoff_authorized": false
+  }
+}
