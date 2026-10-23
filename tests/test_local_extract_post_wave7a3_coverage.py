@@ -23,14 +23,14 @@ def test_facility_location_balances_branch_weight_not_intent_count() -> None:
     branches = {
         "control": {
             "rankings": [
-                {"intent_index": 0, "ranking": _ranking("c1", "shared")},
-                {"intent_index": 1, "ranking": _ranking("c2", "shared")},
-                {"intent_index": 2, "ranking": _ranking("c3", "shared")},
+                {"intent_index": 0, "ranking": _ranking("c1")},
+                {"intent_index": 1, "ranking": _ranking("c2")},
+                {"intent_index": 2, "ranking": _ranking("c3")},
             ]
         },
         "residual": {
             "rankings": [
-                {"intent_index": 0, "ranking": _ranking("r1", "shared")},
+                {"intent_index": 0, "ranking": _ranking("r1")},
             ]
         },
     }
@@ -44,7 +44,7 @@ def test_facility_location_balances_branch_weight_not_intent_count() -> None:
     }
 
 
-def test_facility_location_prefers_collective_coverage_before_redundancy() -> None:
+def test_facility_location_rewards_one_item_covering_multiple_intents() -> None:
     branches = {
         "control": {
             "rankings": [
@@ -60,7 +60,8 @@ def test_facility_location_prefers_collective_coverage_before_redundancy() -> No
         },
     }
     selected = _facility_location_merge(branches, rrf_k=60, budget=4)
-    assert {row["proposition_id"] for row in selected} == {"a", "b", "c", "d"}
+    assert selected[0]["proposition_id"] == "x"
+    assert len({row["proposition_id"] for row in selected}) == 4
 
 
 def test_quota_merge_is_deterministic_and_deduplicated() -> None:
