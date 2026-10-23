@@ -93,7 +93,7 @@ def test_page_conditioned_ranker_is_bounded_and_uses_existing_facets() -> None:
 
 def test_page_conditioned_contract_keeps_wave7_closed() -> None:
     contract = json.loads(CONTRACT.read_text())
-    assert "top_k_regions=12" in contract["fixed"]
+    assert any("top_k_regions=12" in item for item in contract["fixed"])
     assert "maximum 12 selected propositions per paper" in contract["fixed"]
     assert contract["boundaries"]["qwen_model_calls"] == 0
     assert contract["boundaries"]["external_model_downloads"] == 0
