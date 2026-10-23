@@ -2,14 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from research_engine.local_extract_family_c_zero_loss import (
-    _verdict as _unused_family_c_verdict,
-)
 from research_engine.local_extract_post_wave7a3_coverage import (
     CONTROL_ID,
     CONTROL_RRF_ID,
-    CONTROL_SUPPORTED_ATOMS,
-    OBSERVED_RESIDUAL_ATOMS,
     QUOTA_ID,
     RESIDUAL_ID,
     RESIDUAL_RRF_ID,
