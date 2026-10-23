@@ -17,6 +17,8 @@ def test_wave7a3_workflow_is_exact_sha_and_bounded() -> None:
     assert "<= 27" in text
     assert "WAVE7A3_GENERATION_RECEIPT=PASS" in text
     assert "WAVE7A3_EVAL_RECEIPT=PASS" in text
+    assert "INVALID_IMPLEMENTATION" in text
+    assert 'report["implementation_validity"]["status"]' in text
 
 
 def test_wave7a3_workflow_references_existing_inputs() -> None:

@@ -160,9 +160,15 @@ jobs:
           import json, pathlib, sys
           report=json.loads(pathlib.Path(sys.argv[1]).read_text())
           assert report["wave7a3_decision"] in {
-              "WAVE7A3_PROMISING","WAVE7A3_PARTIAL","WAVE7A3_REJECT"
+              "INVALID_IMPLEMENTATION","WAVE7A3_PROMISING",
+              "WAVE7A3_PARTIAL","WAVE7A3_REJECT"
           }
-          assert len(report["pairs"]) == 6
+          if report["wave7a3_decision"] == "INVALID_IMPLEMENTATION":
+              assert report["implementation_validity"]["status"] == "FAIL_CLOSED"
+              assert report["pairs"] == {}
+          else:
+              assert report["implementation_validity"]["status"] == "PASS"
+              assert len(report["pairs"]) == 6
           assert report["scientific_state_materialized"] is False
           assert report["production_routing_changed"] is False
           assert report["qwen_verify_changed"] is False

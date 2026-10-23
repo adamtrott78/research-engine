@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "decision_id": "local-extract-wave7a3-validity-repair-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "invalid_run": {
+    "candidate_sha": "8e3481c4ad00ffe26cd175d0e6c6275081d70ab0",
+    "workflow_run_id": 40021544696,
+    "artifact_id": 12530229453,
+    "scientific_disposition": "INVALID_IMPLEMENTATION",
+    "scientific_gate_consumed": false
+  },
+  "root_cause": {
+    "generic_helper": "research_engine.local_extract_wave1.model_claims",
+    "parser": "parse_json_object(first '{' through last '}')",
+    "observed_failures": {
+      "json_decode_extra_data_papers": 5,
+      "invalid_top_level_schema_papers": 4,
+      "accepted_anchor_count_total": 0,
+      "accepted_intent_count_total": 0
+    },
+    "diagnosis": "Wave 7A.3 reused an unconstrained claim-era text-generation helper for a new anchors JSON schema. Multiple-object output therefore raised JSONDecodeError: Extra data, while syntactically valid but wrong root objects reached the anchor guard as INVALID_TOP_LEVEL_SCHEMA."
+  },
+  "accepted_runtime_evidence": {
+    "workflow_run_id": 40021544696,
+    "vllm_engine_version": "0.30.0",
+    "structured_outputs_config_present": true,
+    "runtime_contract": "qwen35-vllm-cu129-image-native-sampler-v3",
+    "model_id": "qwen3.5-4b",
+    "model_revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a"
+  },
+  "bounded_repair": {
+    "candidate_only_schema_constrained_generation": true,
+    "source_aware_control_generation_unchanged": true,
+    "strict_full_json_parse": true,
+    "semantic_guards_preserved": true,
+    "teacher_answers_added_to_prompt": false,
+    "implementation_validity_gate": {
+      "interface_failure_invalidates_run": true,
+      "completely_fail_closed_candidate_invalidates_run": true,
+      "invalid_decision": "INVALID_IMPLEMENTATION",
+      "scientific_gate_consumed_on_invalid": false
+    }
+  },
+  "control_parity_audit": {
+    "valid_wave7a2_run_id": 40014005088,
+    "invalid_wave7a3_run_id": 40021544696,
+    "selected_region_lists_identical_papers": 9,
+    "control_context_sha256_identical_papers": 9,
+    "operational_contract_fields_identical": true,
+    "operational_contract_note": "The only source-aware contract-object difference is the descriptive role label: one_shot_control versus frozen_one_shot_control.",
+    "generated_text_sha256_identical_papers": 3,
+    "generated_text_sha256_different_papers": 6,
+    "different_output_papers": [
+      "arxiv:2411.03636",
+      "arxiv:2209.03142",
+      "arxiv:2306.13895",
+      "arxiv:2403.04036",
+      "arxiv:2609.20765",
+      "arxiv:2108.13099"
+    ],
+    "first_control_call_output_changed": true,
+    "interpretation": "The control representation, prompt construction, selected context, sampling settings, model revision, and guard semantics are unchanged. The 7/13 to 5/13 BM25 drift is therefore documented as local generation nondeterminism rather than representation drift; the control is not tuned after observing the run."
+  },
+  "frozen_scientific_contract": {
+    "residual_atoms": [
+      "e1.a",
+      "e1.b",
+      "e1.c",
+      "e3.c",
+      "e6.a",
+      "e6.c"
+    ],
+    "control_supported_atoms": [
+      "e2.a",
+      "e2.b",
+      "e3.a",
+      "e3.b",
+      "e4.a",
+      "e4.b",
+      "e6.b"
+    ],
+    "promotion_thresholds_changed": false,
+    "retrieval_budget_changed": false,
+    "model_family_changed": false,
+    "production_extract_changed": false,
+    "qwen_verify_changed": false,
+    "wave7b_started": false
+  }
+}
