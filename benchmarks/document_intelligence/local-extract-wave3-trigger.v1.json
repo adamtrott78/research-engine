@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "purpose": "One-shot Local EXTRACT Wave 3 benchmark trigger branch.",
+  "benchmark_contract": "benchmarks/document_intelligence/local-extract-wave3-contract.v1.json",
+  "implementation_base_sha": "06deb296df52c7f1a4593c36dca1f92223d88b78",
+  "scientific_state_materialized": false,
+  "production_routing_changed": false
+}
