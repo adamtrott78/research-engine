@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "local-extract-post-wave6-codex-parity-diagnostics-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "source_fixture": "benchmarks/document_intelligence/local-extract-wave1-corpus.v1.json",
+  "baseline_sha": "265a7e4784209d411383cb09da4fe0adcf50f319",
+  "recovery_inventory": {
+    "historical_evidence_object_count": 71,
+    "normalized_teacher_claims_preserved": 6,
+    "normalized_teacher_papers_preserved": 1,
+    "teacher_paper_id": "arxiv:2403.04036",
+    "status": "GITHUB_DURABLE_SOURCES_PRESERVE_ONLY_SIX_NORMALIZED_TEACHER_CLAIMS",
+    "evidence": [
+      "local-extract-wave1-corpus.v1.json states that historical counts/page locations are preserved for all nine papers but full normalized teacher text is preserved only for the explicit subset",
+      "research-engine PR #128 describes the benchmark as all-nine page/count controls plus a preserved six-claim normalized teacher subset"
+    ],
+    "rule": "The other 65 historical evidence objects are UNKNOWN for normalized-text semantics, never negative labels. No replacement teacher text is synthesized in this diagnostic."
+  },
+  "fixed_control": {
+    "current_region_construction": "WAVE2_EXACT650_V1",
+    "current_retrieval": "FACET_INTERLEAVED_BM25_V1",
+    "current_top_k_regions": 12,
+    "current_selector": "PAPER_GLOBAL_BM25_THEN_PER_REGION_TOP_V1",
+    "legacy_teacher_metric": "unchanged token_f1 with F1>=0.5 continuity gate",
+    "no_generation": true,
+    "no_model_download": true,
+    "no_scientific_state_materialization": true,
+    "production_routing_changed": false,
+    "verify_changed": false
+  },
+  "diagnostic_ladder": [
+    "parsed_pdf_best_single_proposition",
+    "expected_teacher_page_best_single_proposition",
+    "current_top12_best_region",
+    "current_top12_best_single_proposition",
+    "current_wave6_selected_single_proposition",
+    "current_top12_best_bundle_2",
+    "current_top12_best_bundle_3",
+    "sentence_window_2_fixed_budget",
+    "sentence_window_3_fixed_budget"
+  ],
+  "fixed_budget_rule": "Alternative retrieval arms use the same selected raw-source character budget as the current top-12 region arm for each paper.",
+  "teacher_atomization": [
+    {
+      "id": "e1.a",
+      "parent_teacher_id": "e1",
+      "page_number": 2,
+      "type": "method",
+      "normalized_form": "The proposed framework pre-trains on unlabeled source and target data to learn domain-invariant representations."
+    },
+    {
+      "id": "e1.b",
+      "parent_teacher_id": "e1",
+      "page_number": 2,
+      "type": "method",
+      "normalized_form": "The proposed framework trains a classifier using source-domain device labels."
+    },
+    {
+      "id": "e1.c",
+      "parent_teacher_id": "e1",
+      "page_number": 2,
+      "type": "method",
+      "normalized_form": "The proposed framework tests on target-domain data."
+    },
+    {
+      "id": "e2.a",
+      "parent_teacher_id": "e2",
+      "page_number": 2,
+      "type": "method",
+      "normalized_form": "Positive pairs are frames from the same transmission."
+    },
+    {
+      "id": "e2.b",
+      "parent_teacher_id": "e2",
+      "page_number": 2,
+      "type": "method",
+      "normalized_form": "Negative pairs are frames from different transmissions."
+    },
+    {
+      "id": "e3.a",
+      "parent_teacher_id": "e3",
+      "page_number": 2,
+      "type": "dataset",
+      "normalized_form": "The wireless testbed used 15+ PyCom/IoT transmitters."
+    },
+    {
+      "id": "e3.b",
+      "parent_teacher_id": "e3",
+      "page_number": 2,
+      "type": "dataset",
+      "normalized_form": "The wireless testbed used IEEE 802.11b frames."
+    },
+    {
+      "id": "e3.c",
+      "parent_teacher_id": "e3",
+      "page_number": 2,
+      "type": "dataset",
+      "normalized_form": "The wireless testbed sampled frames with an Ettus USRP B210 at 45 MSps."
+    },
+    {
+      "id": "e4.a",
+      "parent_teacher_id": "e4",
+      "page_number": 4,
+      "type": "result",
+      "normalized_form": "Against the CNN baseline, CTL improved accuracy by 10.8–19.9% in wired scenarios."
+    },
+    {
+      "id": "e4.b",
+      "parent_teacher_id": "e4",
+      "page_number": 4,
+      "type": "result",
+      "normalized_form": "Against the CNN baseline, CTL improved accuracy by 13.4–27.8% in wireless scenarios."
+    },
+    {
+      "id": "e5.a",
+      "parent_teacher_id": "e5",
+      "page_number": 4,
+      "type": "result",
+      "normalized_form": "Against CNN, CTL improved accuracy by 13.4–27.8% in wireless scenarios.",
+      "duplicate_of": "e4.b"
+    },
+    {
+      "id": "e6.a",
+      "parent_teacher_id": "e6",
+      "page_number": 6,
+      "type": "limitation",
+      "normalized_form": "The authors identify wireless-channel impairments as an area for further research."
+    },
+    {
+      "id": "e6.b",
+      "parent_teacher_id": "e6",
+      "page_number": 6,
+      "type": "limitation",
+      "normalized_form": "The authors identify contrastive-learning scalability as an area for further research."
+    },
+    {
+      "id": "e6.c",
+      "parent_teacher_id": "e6",
+      "page_number": 6,
+      "type": "limitation",
+      "normalized_form": "The authors identify consistently misclassified devices as an area for further research."
+    }
+  ],
+  "interpretation": {
+    "retrieval_residual": "Target semantics are materially stronger in full-PDF/expected-page propositions than in the current top-12 candidate set, or a fixed-budget sentence-window arm materially improves atom support.",
+    "evidence_composition_residual": "Current top-12 contains complementary exact propositions and the best 2-3 proposition bundle materially exceeds the best single proposition.",
+    "evaluation_granularity_residual": "Atomized teacher alignment is materially stronger than grouped multi-fact teacher alignment without changing source candidates.",
+    "model_normalization_residual": "Reserved for a later stage only if bounded exact evidence is demonstrably sufficient and evaluation is aligned but Qwen normalization remains below the semantic gate.",
+    "stop": "No bounded local architecture shows a credible path to the predeclared precision/coverage floor."
+  },
+  "boundaries": {
+    "wave7_authorized": false,
+    "production_extract_change_authorized": false,
+    "qwen_verify_change_authorized": false,
+    "gitrunner_substrate_change_authorized": false,
+    "model_family_bakeoff_authorized": false
+  }
+}
