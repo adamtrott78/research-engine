@@ -398,20 +398,17 @@ class BGEM3Scorer:
         )
         self.model = AutoModel.from_pretrained(
             str(model_path),
-            torch_dtype=torch.float16,
             local_files_only=True,
-        ).cuda().eval()
+        ).cuda().half().eval()
         hidden_size = int(self.model.config.hidden_size)
         self.colbert_linear = torch.nn.Linear(
             hidden_size,
             hidden_size,
-            dtype=torch.float16,
-        ).cuda().eval()
+        )
         self.sparse_linear = torch.nn.Linear(
             hidden_size,
             1,
-            dtype=torch.float16,
-        ).cuda().eval()
+        )
         self.colbert_linear.load_state_dict(
             torch.load(
                 model_path / "colbert_linear.pt",
@@ -426,6 +423,8 @@ class BGEM3Scorer:
                 weights_only=True,
             )
         )
+        self.colbert_linear = self.colbert_linear.cuda().half().eval()
+        self.sparse_linear = self.sparse_linear.cuda().half().eval()
         self.load_seconds = time.perf_counter() - started
         self.max_passage_length = max_passage_length
         self.hybrid_weights = [float(value) for value in hybrid_weights]
