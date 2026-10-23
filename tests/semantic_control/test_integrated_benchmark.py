@@ -80,3 +80,11 @@ def test_benchmark_module_has_no_production_or_external_runtime_imports():
     ]
     for fragment in forbidden_import_fragments:
         assert fragment not in text
+
+
+def test_integrated_runner_exactly_matches_persisted_result_artifact():
+    actual = run_integrated_benchmark(BASE)
+    expected = json.loads(
+        (BASE / "semantic-control-prototype-result.v1.json").read_text()
+    )
+    assert actual == expected

@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "semantic-control-integrated-benchmark-v1",
+  "prototype_scope": "FROZEN_FIXTURES_ONLY",
+  "case_results": {
+    "P1_PROVENANCE": true,
+    "P2_CONTRADICTION": true,
+    "P3_SUPERSESSION": true,
+    "P4_AUTHORITY_ESCAPE": true,
+    "P4_MISSING_AUTHORITY": true,
+    "P5_EXPLAINABILITY": true,
+    "P6_MULTI_HOP_QUERY": true,
+    "P7_FAILURE_ISOLATION": true,
+    "P8_CONTROLLED_UPDATE": true
+  },
+  "component_checks": {
+    "adapter_deterministic": true,
+    "twin_deterministic": true,
+    "evidence_layer_pass": true,
+    "positive_authority_control": "ALLOW",
+    "fake_epistemic_allow_result": "ABSTAIN",
+    "gpu_heavy_result": "DENY",
+    "wave7b_result": "ABSTAIN"
+  },
+  "hard_gates": {
+    "authorization_escapes_zero": true,
+    "benchmark_provenance_complete": true,
+    "contradictions_preserved": true,
+    "history_preserved_and_replayable": true,
+    "adapter_rebuild_deterministic": true,
+    "twin_rebuild_deterministic": true,
+    "expected_answer_agreement": true,
+    "projection_failure_isolated": true,
+    "evidence_requests_are_request_only": true,
+    "candidate_actions_remain_non_authoritative": true,
+    "positive_authority_control_allows": true
+  },
+  "authorization_escape_count": 0,
+  "latency_baseline": {
+    "status": "NOT_MEASURED_IN_PROTOTYPE_SCOPE",
+    "performance_promotion_claim": false,
+    "reason": "prototype v1 forbids live database/runtime coupling; relational baseline must be measured in a separate integration task before any performance claim"
+  },
+  "production_boundaries": {
+    "production_integration_authorized": false,
+    "database_schema_changed": false,
+    "production_extract_changed": false,
+    "qwen_verify_changed": false,
+    "policy_changed": false,
+    "executor_invoked": false,
+    "separate_integration_task_required": true
+  },
+  "verdict": "PROMOTE_TO_INTEGRATION"
+}
