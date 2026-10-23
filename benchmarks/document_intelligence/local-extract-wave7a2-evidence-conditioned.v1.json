@@ -1,0 +1,229 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "local-extract-wave7a2-evidence-conditioned-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "baseline_sha": "a08d41b5de1721ef0a5427294ed8c06a8335120a",
+  "scientific_question": "Does evidence-conditioned, gap-guided atomic question induction recover substantially more teacher evidence than one-shot source-aware Qwen or a fixed checklist, without teacher leakage or any retriever/model-family change?",
+  "research_basis": [
+    {
+      "source": "Document Expansion by Query Prediction",
+      "year": 2019,
+      "lesson": "Generate questions from passages/documents rather than rely on a single incoming query."
+    },
+    {
+      "source": "CLAIMDECOMP",
+      "year": 2022,
+      "lesson": "Useful decomposition is possible, but comprehensive subquestion coverage is difficult without supporting evidence."
+    },
+    {
+      "source": "Iterative decomposition/retrieval systems (UniRAG, Hi-Q, S2G-RAG, FIRE)",
+      "year": 2025,
+      "lesson": "Interleave decomposition with evidence inspection or explicit missing-information/gap checks instead of committing to one static question set."
+    }
+  ],
+  "frozen_controls": {
+    "wave7a_run_id": 39999168786,
+    "source_aware_bm25_teacher_atoms": 5,
+    "source_aware_bge_teacher_atoms": 4,
+    "source_aware_page_recall_fraction_of_ceiling": 1,
+    "oracle_run_id": 39991479494,
+    "oracle_bm25_teacher_atoms": 11,
+    "oracle_bge_teacher_atoms": 13
+  },
+  "generator_arms": [
+    {
+      "id": "DETERMINISTIC_SCIENCE_SCHEMA_V1",
+      "role": "baseline",
+      "model_calls_per_paper": 0,
+      "max_intents": 12
+    },
+    {
+      "id": "QWEN35_SOURCE_AWARE_INTENTS_V1",
+      "role": "one_shot_control",
+      "model_id": "qwen3.5-4b",
+      "model_revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+      "input_scope": "topic + title + exact existing coarse top-12 source regions",
+      "max_input_chars": 9000,
+      "min_intents": 6,
+      "max_intents": 12,
+      "max_output_tokens": 768,
+      "temperature": 0,
+      "top_p": 1,
+      "seed": 7
+    },
+    {
+      "id": "QWEN35_EVIDENCE_GAP_INTENTS_V1",
+      "role": "candidate",
+      "verdict_eligible": true,
+      "model_id": "qwen3.5-4b",
+      "model_revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+      "input_scope": "topic + title + exact existing coarse top-12 source regions",
+      "max_input_chars": 9000,
+      "pass1": {
+        "purpose": "evidence_to_atomic_questions",
+        "min_intents": 8,
+        "max_intents": 18,
+        "max_output_tokens": 1152
+      },
+      "pass2": {
+        "purpose": "coverage_gap_audit",
+        "max_additional_intents": 10,
+        "max_output_tokens": 896
+      },
+      "max_total_intents": 24,
+      "temperature": 0,
+      "top_p": 1,
+      "seed": 7
+    }
+  ],
+  "deterministic_intents": [
+    {
+      "facet": "method",
+      "question": "What is the main method, framework, or algorithm proposed or evaluated?"
+    },
+    {
+      "facet": "method",
+      "question": "How is the model or method trained, pre-trained, adapted, or otherwise prepared?"
+    },
+    {
+      "facet": "method",
+      "question": "How are training examples, pairs, labels, or supervision signals constructed?"
+    },
+    {
+      "facet": "dataset",
+      "question": "What datasets, testbeds, devices, samples, or domains are used?"
+    },
+    {
+      "facet": "dataset",
+      "question": "What acquisition hardware, software, sensing setup, or measurement settings are used?"
+    },
+    {
+      "facet": "evaluation",
+      "question": "What baseline methods or comparison systems are used?"
+    },
+    {
+      "facet": "evaluation",
+      "question": "What evaluation metrics or success criteria are reported?"
+    },
+    {
+      "facet": "evaluation",
+      "question": "What quantitative results, gains, losses, or comparisons are reported?"
+    },
+    {
+      "facet": "evaluation",
+      "question": "Under what experimental conditions, scenarios, domains, or splits are results reported?"
+    },
+    {
+      "facet": "robustness",
+      "question": "What robustness, generalization, domain-shift, or failure-case results are reported?"
+    },
+    {
+      "facet": "limitation",
+      "question": "What limitations, weaknesses, or unresolved failure modes do the authors identify?"
+    },
+    {
+      "facet": "limitation",
+      "question": "What future work or follow-up research do the authors propose?"
+    }
+  ],
+  "evidence_gap_schema": {
+    "top_level_key": "intents",
+    "item_keys": [
+      "region_id",
+      "question"
+    ],
+    "question_min_chars": 20,
+    "question_max_chars": 220,
+    "no_numbers": true,
+    "no_answers": true,
+    "no_verbatim_source_quote_longer_than_tokens": 8,
+    "region_id_must_be_from_selected_context": true,
+    "deduplicate_casefolded": true
+  },
+  "teacher_anti_leak_audit": {
+    "purpose": "Teacher-only post-generation audit; never shown to generator.",
+    "forbidden_normalized_substrings": [
+      "sourceandtargetdataset",
+      "domaininvariantrepresentation",
+      "sourcedomainonly",
+      "targetdataduringthetestingstage",
+      "sametransmission",
+      "differenttransmissions",
+      "15pycom",
+      "80211b",
+      "ettususrp",
+      "b210receiver",
+      "45msps",
+      "108199",
+      "134278"
+    ],
+    "numeric_token_policy": "Any generated query containing a digit is rejected before retrieval.",
+    "source_copy_policy": "Reject a generated query if it copies a contiguous >=9-token sequence from source context."
+  },
+  "retrieval": {
+    "candidate_pool": "Same exact propositions on pages reached by existing top-12 FACET_INTERLEAVED_BM25_V1 coarse region route.",
+    "retriever_arms": [
+      {
+        "id": "BM25_DIRECT",
+        "model_calls": 0
+      },
+      {
+        "id": "BGE_M3_HYBRID_040_020_040",
+        "repository": "BAAI/bge-m3",
+        "revision": "5617a9f61b028005a4858fdac845db406aefb181",
+        "hybrid_weights": [
+          0.4,
+          0.2,
+          0.4
+        ],
+        "batch_size": 8,
+        "max_passage_length": 512
+      }
+    ],
+    "per_intent_depth": 12,
+    "fusion": {
+      "id": "RRF_V1",
+      "k": 60,
+      "global_proposition_budget": 24,
+      "deduplicate_by": "proposition_id"
+    }
+  },
+  "predeclared_verdict": {
+    "WAVE7A2_PROMISING": [
+      "Candidate teacher leak reject fraction <=0.20.",
+      "Candidate with BM25 or BGE hybrid supports >=10/13 teacher atoms in fused top-24.",
+      "Candidate recovers all three historical misses e2.a/e2.b/e4.b.",
+      "Candidate nine-paper merged page recall >=90% of coarse selected-page recall ceiling.",
+      "Candidate improves teacher supported atoms by >=3 over the matching one-shot source-aware Wave 7A control."
+    ],
+    "WAVE7A2_PARTIAL": [
+      "No candidate pair meets PROMISING, but candidate supports >=8/13 teacher atoms OR recovers all three historical misses.",
+      "No hard provenance or anti-leak boundary fails."
+    ],
+    "WAVE7A2_REJECT": [
+      "Candidate meets neither PROMISING nor PARTIAL, or a hard safety boundary fails."
+    ],
+    "production_promotion_authorized": false,
+    "wave7b_authorized": false
+  },
+  "execution": {
+    "expected_runs": 1,
+    "lane": "gpu",
+    "execution_contract_id": "model-dual-public-v1",
+    "trusted_model_id": "qwen3.5-4b",
+    "trusted_runtime_id": "qwen35-vllm-cu129-image-native-sampler-v3",
+    "generation_model_calls_per_paper_max": 3,
+    "public_model_downloads": 1,
+    "scientific_state_materialized": false
+  },
+  "boundaries": {
+    "production_extract_change": false,
+    "qwen_verify_change": false,
+    "generation_model_change": false,
+    "reranker_training": false,
+    "page_routing_change": false,
+    "retrieval_budget_change": false,
+    "gitrunner_controller_provisioner_change": false,
+    "wave7b": false
+  }
+}
