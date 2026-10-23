@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "decision_id": "local-extract-post-wave7a3-coverage-result-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "implementation_sha": "ec592f877bde55c213dadf3a84aad5dec76197c2",
+  "trigger_pr": 184,
+  "trigger_head_sha": "1f4557c27dd7bf47c682d050b319dbac01c5efa8",
+  "trigger_comment_id": 6375834988,
+  "workflow_run_id": 40032590597,
+  "artifact_id": 12535338326,
+  "artifact_zip_sha256": "ba8eb8d9e3b0bb80c7b194ce5f77f557f767f0983908c95c333a31cca7cc761e",
+  "report_sha256": "550e04010624426cc1331edfe64da3f0aabc64332cf555957de4d45c1032a8eb",
+  "generated_intents_sha256": "a5a970725c1f16a694633416ad9fbd98e58418c267891ac83b7783d8af218ebd",
+  "composition_decision": "COMPOSITION_NEGATIVE",
+  "scientific_gate_consumed": true,
+  "candidate_selector": {
+    "id": "BALANCED_FACILITY_LOCATION_RRF_V1",
+    "supported_atoms_at_24": 4,
+    "supported_atoms": [
+      "e3.a",
+      "e3.c",
+      "e4.a",
+      "e6.a"
+    ],
+    "observed_residual_atoms_recovered": [
+      "e6.a"
+    ],
+    "observed_residual_recovery_count": 1,
+    "frozen_control_atoms_retained": [
+      "e3.a",
+      "e4.a"
+    ],
+    "frozen_control_retention_count": 2,
+    "historical_evidence_bearing_page_count": 43,
+    "coarse_selected_page_hits": 32,
+    "coarse_selected_page_recall_ceiling": 0.7441860465116279,
+    "merged24_page_hits": 30,
+    "historical_evidence_bearing_page_recall_in_merged24": 0.6976744186046512,
+    "merged24_page_recall_fraction_of_ceiling": 0.9375
+  },
+  "controls": {
+    "FROZEN_SOURCE_AWARE_BM25_RRF_V1": {
+      "supported_atoms_at_24": 7,
+      "supported_atoms": [
+        "e2.a",
+        "e2.b",
+        "e3.a",
+        "e3.b",
+        "e4.a",
+        "e4.b",
+        "e6.b"
+      ],
+      "observed_residual_recovery_count": 0,
+      "frozen_control_retention_count": 7,
+      "merged24_page_recall_fraction_of_ceiling": 1
+    },
+    "FROZEN_AUTHOR_ANCHORED_BM25_RRF_V1": {
+      "supported_atoms_at_24": 5,
+      "supported_atoms": [
+        "e1.a",
+        "e3.a",
+        "e4.a",
+        "e4.b",
+        "e6.a"
+      ],
+      "observed_residual_atoms_recovered": [
+        "e1.a",
+        "e6.a"
+      ],
+      "observed_residual_recovery_count": 2,
+      "frozen_control_retention_count": 3,
+      "merged24_page_recall_fraction_of_ceiling": 1
+    },
+    "EQUAL_WEIGHT_BRANCH_RRF_V1": {
+      "supported_atoms_at_24": 5,
+      "supported_atoms": [
+        "e3.a",
+        "e4.a",
+        "e4.b",
+        "e6.a",
+        "e6.b"
+      ],
+      "observed_residual_atoms_recovered": [
+        "e6.a"
+      ],
+      "observed_residual_recovery_count": 1,
+      "frozen_control_retention_count": 4,
+      "merged24_page_recall_fraction_of_ceiling": 1
+    },
+    "CONTROL20_RESIDUAL4_QUOTA_V1": {
+      "supported_atoms_at_24": 8,
+      "supported_atoms": [
+        "e2.a",
+        "e2.b",
+        "e3.a",
+        "e3.b",
+        "e4.a",
+        "e4.b",
+        "e6.a",
+        "e6.b"
+      ],
+      "observed_residual_atoms_recovered": [
+        "e6.a"
+      ],
+      "observed_residual_recovery_count": 1,
+      "frozen_control_retention_count": 7,
+      "merged24_page_recall_fraction_of_ceiling": 1,
+      "verdict_eligible": false,
+      "interpretation": "Diagnostic-only evidence that a conservative residual allocation can add one residual atom without displacing frozen control coverage. It does not override COMPOSITION_NEGATIVE and may not be promoted or tuned post hoc."
+    }
+  },
+  "teacher_leak_reject_count": 1,
+  "hard_safety": {
+    "teacher_blind_selector": true,
+    "scientific_state_materialized_false": true,
+    "production_routing_changed_false": true,
+    "qwen_verify_changed_false": true,
+    "wave7b_started_false": true,
+    "ontology_or_semantic_control_in_extract_false": true,
+    "qwen_model_calls": 0,
+    "external_model_downloads": 0
+  },
+  "scientific_disposition": {
+    "primary": "COVERAGE_PRESERVING_FACILITY_LOCATION_REJECTED",
+    "findings": [
+      "The verdict-eligible balanced facility-location objective overweights broad multi-intent coverage and displaces strong source-aware evidence, collapsing teacher support from the 7/13 control to 4/13.",
+      "The fixed 20-control/4-residual quota control preserves 7/7 control-supported atoms and adds e6.a for 8/13 total, but it is a predeclared non-verdict control and cannot be promoted post hoc.",
+      "Simple one-shot set composition is not established. Do not train a contribution/discourse classifier into this architecture.",
+      "Per the frozen decision boundary, the next EXTRACT phase must be a new evidence-first design for FAMILY_C iterative retrieve-verify-retrieve or another materially different coverage mechanism."
+    ],
+    "next_architecture_boundary": "OPEN_NEW_EVIDENCE_FIRST_FAMILY_C_OR_MATERIALLY_DIFFERENT_COVERAGE_DESIGN",
+    "classifier_training_authorized": false,
+    "wave7b_authorized": false,
+    "rerun_authorized": false
+  },
+  "boundaries": {
+    "production_standard_codex_extract_changed": false,
+    "accepted_qwen_verify_changed": false,
+    "ontology_or_semantic_control_in_extract": false,
+    "gitrunner_controller_provisioner_changed": false,
+    "wave7b_started": false
+  }
+}
