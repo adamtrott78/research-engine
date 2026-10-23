@@ -95,26 +95,15 @@ jobs:
           [[ "$(sha256sum "$pypdf_wheel" | awk '{print $1}')" == "553e2d42f5bb3bb2a785a7d3de8ef90bb7df74b5413eff5a7b4388007ea9254b" ]]
           "$P5_EXPANDED_RUNTIME_PYTHON" -m zipfile -e "$pypdf_wheel" "$pydeps"
 
-          flag_wheel="$RUNNER_TEMP/flagembedding-1.4.2-py3-none-any.whl"
-          curl -fsSL --retry 3 --retry-delay 2 \
-            "https://files.pythonhosted.org/packages/6e/4a/eb1a033d744e5a854f0918b2a002fca0d7db72078aa70b5145d5100141c1/flagembedding-1.4.2-py3-none-any.whl" \
-            -o "$flag_wheel"
-          [[ "$(sha256sum "$flag_wheel" | awk '{print $1}')" == "35e33a08e8ed5e299eabbe3bc23518eb66a424dd29ee08fb3802bf9aef9e9bf2" ]]
-
-          PIP_DISABLE_PIP_VERSION_CHECK=1 \
-          "$P5_EXPANDED_RUNTIME_PYTHON" -m pip install \
-            --no-input --target "$pydeps" "$flag_wheel"
-
           PYTHONPATH="$pydeps" "$P5_EXPANDED_RUNTIME_PYTHON" - <<'PY'
-          import importlib.metadata
           import torch
           import transformers
           import huggingface_hub
-          import FlagEmbedding
           import pypdf
 
           assert pypdf.__version__ == "6.21.1"
-          assert importlib.metadata.version("FlagEmbedding") == "1.4.2"
+          assert torch.__version__ == "2.13.0+cu129"
+          assert torch.version.cuda == "12.9"
           major_minor = tuple(
               int(part)
               for part in transformers.__version__.split(".")[:2]
