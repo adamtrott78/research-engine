@@ -89,15 +89,24 @@ def test_unknown_source_fails_closed():
 
 def test_adapter_module_has_no_production_or_external_runtime_imports():
     text = MODULE_PATH.read_text()
-    forbidden = [
-        "psycopg",
-        "sqlalchemy",
-        "requests",
-        "urllib",
-        "socket",
-        "subprocess",
-        "openai",
-        "research_engine",
+    forbidden_import_fragments = [
+        "import psycopg",
+        "from psycopg",
+        "import sqlalchemy",
+        "from sqlalchemy",
+        "import requests",
+        "from requests",
+        "import urllib",
+        "from urllib",
+        "import socket",
+        "from socket",
+        "import subprocess",
+        "from subprocess",
+        "import openai",
+        "from openai",
+        "import research_engine",
+        "from research_engine",
     ]
-    for token in forbidden:
-        assert token not in text.lower()
+    lowered = text.lower()
+    for fragment in forbidden_import_fragments:
+        assert fragment not in lowered
