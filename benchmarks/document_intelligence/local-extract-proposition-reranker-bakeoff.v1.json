@@ -69,18 +69,40 @@
       "license": "MIT",
       "ephemeral_download": true,
       "persistent_cache": false,
-      "package": {
-        "name": "FlagEmbedding",
-        "version": "1.4.2",
-        "wheel_url": "https://files.pythonhosted.org/packages/6e/4a/eb1a033d744e5a854f0918b2a002fca0d7db72078aa70b5145d5100141c1/flagembedding-1.4.2-py3-none-any.whl",
-        "wheel_sha256": "35e33a08e8ed5e299eabbe3bc23518eb66a424dd29ee08fb3802bf9aef9e9bf2"
-      },
       "max_passage_length": 512,
       "hybrid_weights": [
         0.4,
         0.2,
         0.4
-      ]
+      ],
+      "reference_implementation": {
+        "repository": "FlagOpen/FlagEmbedding",
+        "tag": "v1.4.2",
+        "commit": "fd1a2bdf69488ffebe0327999d4400d8c8058a0b",
+        "files": [
+          "FlagEmbedding/inference/embedder/encoder_only/m3.py",
+          "FlagEmbedding/finetune/embedder/encoder_only/m3/modeling.py",
+          "FlagEmbedding/finetune/embedder/encoder_only/m3/runner.py"
+        ],
+        "use": "Algorithm/provenance reference only; FlagEmbedding is not installed at runtime."
+      },
+      "runtime_adapter": {
+        "id": "LOCAL_MINIMAL_BGE_M3_V1",
+        "dependencies": [
+          "accepted qwen35-vllm-cu129-image-native-sampler-v3 torch",
+          "accepted qwen35-vllm-cu129-image-native-sampler-v3 transformers"
+        ],
+        "runtime_package_install_required": false,
+        "semantics": [
+          "AutoModel XLM-R backbone loaded from the exact BGE-M3 snapshot",
+          "colbert_linear.pt and sparse_linear.pt loaded with torch.load(weights_only=True)",
+          "dense score = normalized CLS inner product",
+          "sparse score = ReLU learned token weights, per-token-id amax, inner product",
+          "ColBERT score = normalized token late interaction MaxSim averaged across query tokens",
+          "hybrid score = 0.4*dense + 0.2*sparse + 0.4*ColBERT"
+        ]
+      },
+      "batch_size": 8
     },
     "QWEN3_RERANKER_0_6B": {
       "repository": "Qwen/Qwen3-Reranker-0.6B",
@@ -147,7 +169,8 @@
     "gitrunner_substrate_change_required": false,
     "controller_change_required": false,
     "provisioner_change_required": false,
-    "runtime_change_required": false
+    "runtime_change_required": false,
+    "runtime_dependency_policy": "Use the accepted expanded runtime for Torch/Transformers; install only the exact pure-Python pypdf benchmark dependency ephemerally. Do not install FlagEmbedding or another Torch/Transformers stack."
   },
   "boundaries": {
     "exactly_one_bounded_bakeoff_run_after_route_install": true,

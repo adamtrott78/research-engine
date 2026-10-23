@@ -383,44 +383,178 @@ class BGEM3Scorer:
         *,
         max_passage_length: int,
         hybrid_weights: list[float],
+        batch_size: int = 8,
     ) -> None:
         import torch
-        from FlagEmbedding import BGEM3FlagModel
+        import torch.nn.functional as F
+        from transformers import AutoModel, AutoTokenizer
 
         torch.cuda.empty_cache()
         torch.cuda.reset_peak_memory_stats()
         started = time.perf_counter()
-        self.model = BGEM3FlagModel(
+        self.tokenizer = AutoTokenizer.from_pretrained(
             str(model_path),
-            use_fp16=True,
-            pooling_method="cls",
-            devices="cuda:0",
+            local_files_only=True,
+        )
+        self.model = AutoModel.from_pretrained(
+            str(model_path),
+            torch_dtype=torch.float16,
+            local_files_only=True,
+        ).cuda().eval()
+        hidden_size = int(self.model.config.hidden_size)
+        self.colbert_linear = torch.nn.Linear(
+            hidden_size,
+            hidden_size,
+            dtype=torch.float16,
+        ).cuda().eval()
+        self.sparse_linear = torch.nn.Linear(
+            hidden_size,
+            1,
+            dtype=torch.float16,
+        ).cuda().eval()
+        self.colbert_linear.load_state_dict(
+            torch.load(
+                model_path / "colbert_linear.pt",
+                map_location="cpu",
+                weights_only=True,
+            )
+        )
+        self.sparse_linear.load_state_dict(
+            torch.load(
+                model_path / "sparse_linear.pt",
+                map_location="cpu",
+                weights_only=True,
+            )
         )
         self.load_seconds = time.perf_counter() - started
         self.max_passage_length = max_passage_length
-        self.hybrid_weights = hybrid_weights
+        self.hybrid_weights = [float(value) for value in hybrid_weights]
+        if len(self.hybrid_weights) != 3:
+            raise ValueError("BGE-M3 hybrid weights must have length three")
+        self.batch_size = batch_size
         self._torch = torch
+        self._functional = F
         self.inference_seconds = 0.0
+
+    def _encode(
+        self,
+        texts: list[str],
+        *,
+        max_length: int,
+    ) -> tuple[Any, Any, Any, Any]:
+        torch = self._torch
+        F = self._functional
+        inputs = self.tokenizer(
+            texts,
+            max_length=max_length,
+            padding=True,
+            truncation=True,
+            return_token_type_ids=False,
+            return_tensors="pt",
+        )
+        inputs = {
+            key: value.to(self.model.device)
+            for key, value in inputs.items()
+        }
+        with torch.no_grad():
+            hidden = self.model(
+                **inputs,
+                return_dict=True,
+            ).last_hidden_state
+            dense = F.normalize(hidden[:, 0], dim=-1)
+            sparse_weights = torch.relu(self.sparse_linear(hidden))
+            sparse = torch.zeros(
+                hidden.size(0),
+                int(self.model.config.vocab_size),
+                dtype=sparse_weights.dtype,
+                device=hidden.device,
+            )
+            sparse = sparse.scatter_reduce(
+                dim=-1,
+                index=inputs["input_ids"],
+                src=sparse_weights.squeeze(-1),
+                reduce="amax",
+            )
+            unused = {
+                self.tokenizer.cls_token_id,
+                self.tokenizer.eos_token_id,
+                self.tokenizer.pad_token_id,
+                self.tokenizer.unk_token_id,
+            }
+            unused = [value for value in unused if value is not None]
+            if unused:
+                sparse[:, unused] = 0
+            colbert = self.colbert_linear(hidden[:, 1:])
+            colbert = colbert * inputs["attention_mask"][:, 1:, None].float()
+            colbert = F.normalize(colbert, dim=-1)
+        return dense, sparse, colbert, inputs["attention_mask"]
+
+    def _score_batch(
+        self,
+        query: str,
+        documents: list[str],
+    ) -> dict[str, list[float]]:
+        torch = self._torch
+        queries = [query] * len(documents)
+        q_dense, q_sparse, q_colbert, q_mask = self._encode(
+            queries,
+            max_length=512,
+        )
+        p_dense, p_sparse, p_colbert, _ = self._encode(
+            documents,
+            max_length=self.max_passage_length,
+        )
+
+        dense_scores = (q_dense * p_dense).sum(dim=-1)
+        sparse_scores = (q_sparse * p_sparse).sum(dim=-1)
+        token_scores = torch.einsum(
+            "bqd,bpd->bqp",
+            q_colbert,
+            p_colbert,
+        )
+        colbert_scores = token_scores.max(dim=-1).values.sum(dim=-1)
+        q_token_count = q_mask[:, 1:].sum(dim=-1).clamp(min=1)
+        colbert_scores = colbert_scores / q_token_count
+
+        dense_weight, sparse_weight, colbert_weight = self.hybrid_weights
+        weight_sum = dense_weight + sparse_weight + colbert_weight
+        hybrid_scores = (
+            dense_scores * dense_weight
+            + sparse_scores * sparse_weight
+            + colbert_scores * colbert_weight
+        ) / weight_sum
+        return {
+            "BGE_M3_DENSE": [
+                float(value) for value in dense_scores.float().cpu().tolist()
+            ],
+            "BGE_M3_SPARSE": [
+                float(value) for value in sparse_scores.float().cpu().tolist()
+            ],
+            "BGE_M3_COLBERT": [
+                float(value) for value in colbert_scores.float().cpu().tolist()
+            ],
+            "BGE_M3_HYBRID_040_020_040": [
+                float(value) for value in hybrid_scores.float().cpu().tolist()
+            ],
+        }
 
     def score(
         self,
         query: str,
         propositions: list[dict[str, Any]],
     ) -> dict[str, list[float]]:
-        pairs = [
-            [query, str(row["display_text"])] for row in propositions
-        ]
+        documents = [str(row["display_text"]) for row in propositions]
+        all_scores = {arm_id: [] for arm_id in self.arm_ids}
         started = time.perf_counter()
-        scores = self.model.compute_score(
-            pairs,
-            max_passage_length=self.max_passage_length,
-            weights_for_different_modes=self.hybrid_weights,
-        )
+        for start in range(0, len(documents), self.batch_size):
+            batch = documents[start:start + self.batch_size]
+            if not batch:
+                continue
+            batch_scores = self._score_batch(query, batch)
+            for arm_id in self.arm_ids:
+                all_scores[arm_id].extend(batch_scores[arm_id])
         self.inference_seconds += time.perf_counter() - started
-        return {
-            arm_id: [float(value) for value in scores[key]]
-            for arm_id, key in BGE_ARM_KEYS.items()
-        }
+        return all_scores
 
     def resource_metrics(self) -> dict[str, Any]:
         return {
@@ -434,8 +568,17 @@ class BGEM3Scorer:
     def close(self) -> None:
         torch = self._torch
         model = self.model
+        tokenizer = self.tokenizer
+        colbert_linear = self.colbert_linear
+        sparse_linear = self.sparse_linear
         self.model = None
+        self.tokenizer = None
+        self.colbert_linear = None
+        self.sparse_linear = None
         del model
+        del tokenizer
+        del colbert_linear
+        del sparse_linear
         gc.collect()
         torch.cuda.empty_cache()
 
@@ -747,6 +890,7 @@ def run_reranker_bakeoff(
         hybrid_weights=[
             float(value) for value in bge_cfg["hybrid_weights"]
         ],
+        batch_size=int(bge_cfg["batch_size"]),
     )
     selections.update(_selected_for_scorer(bge, papers))
     bge_metrics = bge.resource_metrics()
@@ -862,7 +1006,6 @@ def run_reranker_bakeoff(
 
     package_versions = {}
     for name in (
-        "FlagEmbedding",
         "sentence-transformers",
         "datasets",
         "peft",

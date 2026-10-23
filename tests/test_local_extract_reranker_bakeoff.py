@@ -150,7 +150,7 @@ def test_bakeoff_contract_is_exactly_two_models_and_one_run() -> None:
     assert contract["boundaries"]["wave7_execution_authorized"] is False
 
 
-def test_model_revisions_and_flagembedding_wheel_are_pinned() -> None:
+def test_model_revisions_and_bge_reference_are_pinned() -> None:
     contract = json.loads(CONTRACT.read_text())
     bge = contract["model_inputs"]["BGE_M3"]
     qwen = contract["model_inputs"]["QWEN3_RERANKER_0_6B"]
@@ -160,9 +160,13 @@ def test_model_revisions_and_flagembedding_wheel_are_pinned() -> None:
     assert qwen["revision"] == (
         "e61197ed45024b0ed8a2d74b80b4d909f1255473"
     )
-    assert bge["package"]["version"] == "1.4.2"
-    assert bge["package"]["wheel_sha256"] == (
-        "35e33a08e8ed5e299eabbe3bc23518eb66a424dd29ee08fb3802bf9aef9e9bf2"
+    reference = bge["reference_implementation"]
+    assert reference["tag"] == "v1.4.2"
+    assert reference["commit"] == (
+        "fd1a2bdf69488ffebe0327999d4400d8c8058a0b"
     )
+    assert bge["runtime_adapter"]["id"] == "LOCAL_MINIMAL_BGE_M3_V1"
+    assert bge["runtime_adapter"]["runtime_package_install_required"] is False
+    assert bge["batch_size"] == 8
     support = json.loads(SUPPORT.read_text())
     assert len(support["atoms"]) == 13

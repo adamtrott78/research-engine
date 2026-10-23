@@ -33,12 +33,10 @@ def test_reranker_workflow_uses_exact_ephemeral_dependencies() -> None:
         "553e2d42f5bb3bb2a785a7d3de8ef90bb7df74b5413eff5a7b4388007ea9254b"
         in text
     )
-    assert "flagembedding-1.4.2-py3-none-any.whl" in text
-    assert (
-        "35e33a08e8ed5e299eabbe3bc23518eb66a424dd29ee08fb3802bf9aef9e9bf2"
-        in text
-    )
-    assert '--target "$pydeps"' in text
+    assert "flagembedding-1.4.2-py3-none-any.whl" not in text.lower()
+    assert "pip install" not in text
+    assert "torch.__version__ == \"2.13.0+cu129\"" in text
+    assert 'PYTHONPATH="$pydeps"' in text
 
 
 def test_reranker_workflow_runs_only_the_bounded_diagnostic() -> None:
