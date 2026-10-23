@@ -1,0 +1,210 @@
+{
+  "schema_version": 1,
+  "decision_id": "local-extract-wave7a2-evidence-conditioned-result-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "candidate_sha": "e662b3f0f647bf4408210074d38b5ecb8d9ab291",
+  "workflow_run_id": 40014005088,
+  "artifact_id": 12528565875,
+  "artifact_zip_sha256": "8d0d14cdcb0ae5a0f443d5b9ca5990fd767e086e197f4bb215c4c916d9bdc921",
+  "generated_intents_sha256": "2ddbb9b19e00c7c03b0064f6818916b60c2a3ec4e43434b4f60a08f64be348db",
+  "report_sha256": "fa869d95a411057f5fc3ac089e9d446175946120067597bcc8810b1a8cf4639c",
+  "wave7a2_decision": "WAVE7A2_REJECT",
+  "qualifying_pairs": [],
+  "invalid_predecessor_runs": [
+    {
+      "run_id": 40009297107,
+      "disposition": "INVALID_IMPLEMENTATION",
+      "scientific_gate_consumed": false,
+      "reason": "Evidence-intent interface used unstable/raw region identifiers, output headroom was insufficient for some JSON payloads, and the source-aware control was not exact-parity."
+    },
+    {
+      "run_id": 40012022289,
+      "disposition": "INVALID_IMPLEMENTATION",
+      "scientific_gate_consumed": false,
+      "reason": "Trusted workflow referenced nonexistent contract path local-extract-wave7a2-evidence-conditioned-v2.v2.json and failed before Qwen/model execution."
+    }
+  ],
+  "valid_run_controls": {
+    "exact_sha_admission": true,
+    "trusted_qwen_dual_gpu_binding": true,
+    "generation_phase_pass": true,
+    "frozen_bm25_bge_evaluation_pass": true,
+    "artifact_upload_pass": true,
+    "hard_safety_pass": true,
+    "scientific_state_materialized": false,
+    "production_extract_changed": false,
+    "qwen_verify_changed": false,
+    "wave7b_started": false
+  },
+  "generation_metrics": {
+    "paper_count": 9,
+    "model_calls": 27,
+    "model_init_seconds": 162.10149604600156,
+    "inference_seconds": 137.95531965399277,
+    "prompt_tokens": 50190,
+    "output_tokens": 14463,
+    "peak_gpu_memory_mib_by_uuid": {
+      "GPU-a333e68b-d1dc-6d25-1678-97b527bf55ea": 12313,
+      "GPU-cfed3394-a935-63aa-9325-c4cae7b568b6": 12780
+    }
+  },
+  "bge_metrics": {
+    "model_download_bytes": 2295419274,
+    "model_download_seconds": 16.765090397006134,
+    "model_load_seconds": 2.431438364001224,
+    "ranking_inference_seconds": 156.93451774024288,
+    "peak_gpu_memory_mib": 2654.2236328125,
+    "model_snapshot_tree_sha256": "0bd07dd957f4b437fc39654f6a4e559b3b6adef6a84cefcdff3fe37b75835921"
+  },
+  "pairs": {
+    "QWEN35_EVIDENCE_GAP_INTENTS_V1__BM25_DIRECT": {
+      "teacher_supported_atoms_at_24": 2,
+      "teacher_support_recall_at_24": 0.15384615384615385,
+      "supported_atoms": [
+        "e3.b",
+        "e4.b"
+      ],
+      "known_miss_recovery_count": 1,
+      "known_miss_recovered": [
+        "e4.b"
+      ],
+      "teacher_mean_best_token_f1_at_24": 0.26508766371987336,
+      "teacher_leak_reject_fraction": 0.15384615384615385,
+      "nine_paper_page_recall": 0.7441860465116279,
+      "fraction_of_coarse_page_ceiling": 1,
+      "delta_supported_atoms_vs_matching_control": -5
+    },
+    "QWEN35_EVIDENCE_GAP_INTENTS_V1__BGE_M3_HYBRID_040_020_040": {
+      "teacher_supported_atoms_at_24": 2,
+      "teacher_support_recall_at_24": 0.15384615384615385,
+      "supported_atoms": [
+        "e3.c",
+        "e4.b"
+      ],
+      "known_miss_recovery_count": 1,
+      "known_miss_recovered": [
+        "e4.b"
+      ],
+      "teacher_mean_best_token_f1_at_24": 0.24322881231131405,
+      "teacher_leak_reject_fraction": 0.15384615384615385,
+      "nine_paper_page_recall": 0.7209302325581395,
+      "fraction_of_coarse_page_ceiling": 0.96875,
+      "delta_supported_atoms_vs_matching_control": -2
+    },
+    "QWEN35_SOURCE_AWARE_INTENTS_V1__BM25_DIRECT": {
+      "teacher_supported_atoms_at_24": 7,
+      "teacher_support_recall_at_24": 0.5384615384615384,
+      "supported_atoms": [
+        "e2.a",
+        "e2.b",
+        "e3.a",
+        "e3.b",
+        "e4.a",
+        "e4.b",
+        "e6.b"
+      ],
+      "known_miss_recovery_count": 3,
+      "known_miss_recovered": [
+        "e2.a",
+        "e2.b",
+        "e4.b"
+      ],
+      "teacher_mean_best_token_f1_at_24": 0.28671762802925754,
+      "teacher_leak_reject_fraction": 0.1,
+      "nine_paper_page_recall": 0.7441860465116279,
+      "fraction_of_coarse_page_ceiling": 1
+    },
+    "QWEN35_SOURCE_AWARE_INTENTS_V1__BGE_M3_HYBRID_040_020_040": {
+      "teacher_supported_atoms_at_24": 4,
+      "teacher_support_recall_at_24": 0.3076923076923077,
+      "supported_atoms": [
+        "e3.a",
+        "e3.c",
+        "e4.a",
+        "e4.b"
+      ],
+      "known_miss_recovery_count": 1,
+      "known_miss_recovered": [
+        "e4.b"
+      ],
+      "teacher_mean_best_token_f1_at_24": 0.2522704639693876,
+      "teacher_leak_reject_fraction": 0.1,
+      "nine_paper_page_recall": 0.7441860465116279,
+      "fraction_of_coarse_page_ceiling": 1
+    },
+    "DETERMINISTIC_SCIENCE_SCHEMA_V1__BM25_DIRECT": {
+      "teacher_supported_atoms_at_24": 1,
+      "teacher_support_recall_at_24": 0.07692307692307693,
+      "supported_atoms": [
+        "e3.a"
+      ],
+      "known_miss_recovery_count": 0,
+      "nine_paper_page_recall": 0.6976744186046512,
+      "fraction_of_coarse_page_ceiling": 0.9375
+    },
+    "DETERMINISTIC_SCIENCE_SCHEMA_V1__BGE_M3_HYBRID_040_020_040": {
+      "teacher_supported_atoms_at_24": 3,
+      "teacher_support_recall_at_24": 0.23076923076923078,
+      "supported_atoms": [
+        "e3.a",
+        "e4.a",
+        "e6.a"
+      ],
+      "known_miss_recovery_count": 0,
+      "nine_paper_page_recall": 0.7209302325581395,
+      "fraction_of_coarse_page_ceiling": 0.96875
+    }
+  },
+  "teacher_intent_diagnostic": {
+    "evidence_gap_candidate": {
+      "raw_intents": 28,
+      "accepted_intents": 13,
+      "pass1_accepted": 10,
+      "pass2_accepted": 3,
+      "diagnosis": [
+        "Atomicity improved, but the candidate allocated intent budget to background, citation, and definitional facts that were answerable from selected regions but not salient to the paper's principal scientific contributions/evaluation.",
+        "Examples include general RF-fingerprinting security-role questions and Set/Capture definitions while important teacher atoms remained uncovered.",
+        "The gap pass added near-duplicate or closely overlapping intents instead of reliably discovering missing high-salience atoms.",
+        "Teacher anti-leak audit rejected two accepted candidate intents; overall leak fraction remained within the frozen <=0.20 hard threshold.",
+        "Nine-paper BM25 page recall preserved the complete coarse routing ceiling, so page routing remains sufficient."
+      ]
+    },
+    "source_aware_control": {
+      "accepted_intents": 10,
+      "diagnosis": [
+        "The repaired one-shot source-aware control recovered all historical hard misses with BM25 and 7/13 teacher atoms, substantially outperforming evidence-gap induction.",
+        "This control still misses enough atoms to remain below the frozen Wave 7A.2 promotion floor, but it demonstrates that explicit scientific salience priors in the one-shot prompt are useful rather than merely cookie-cutter noise."
+      ]
+    }
+  },
+  "scientific_disposition": {
+    "primary_conclusion": "EVIDENCE_ANSWERABILITY_ALONE_IS_NOT_A_GOOD_INTENT_OBJECTIVE",
+    "oracle_query_hypothesis": "STILL_SUPPORTED",
+    "primary_residual": "SCIENTIFIC_SALIENCE_AND_CONTRIBUTION_PRIORITIZATION",
+    "secondary_residuals": [
+      "SEMANTIC_INTENT_DEDUPLICATION",
+      "COVERAGE_OF_HIGH_SALIENCE_ATOMIC_FACTS"
+    ],
+    "page_routing": "SUFFICIENT_FOR_THIS_CONTROL",
+    "retriever_capacity": "NOT_REOPENED",
+    "bm25_status": "REMAINS_FIRST_CLASS_CHEAP_RETRIEVER",
+    "generation_model_change": "NOT_JUSTIFIED",
+    "reranker_training": "NOT_JUSTIFIED",
+    "wave7b_authorized": false,
+    "next_research_target": "SALIENCE_AWARE_CONTRIBUTION_MODELING_BEFORE_OR_DURING_INTENT_GENERATION",
+    "rationale": [
+      "The oracle query diagnostic proved existing retrievers recover the evidence when given precise high-value intents.",
+      "Wave 7A.2 preserved coarse page coverage but evidence-conditioned answerability generated many low-salience background/definition questions and regressed versus the one-shot source-aware control.",
+      "The repaired source-aware BM25 control recovered 7/13 teacher atoms and all three historical hard misses, so structured scientific priors remain useful.",
+      "The next design should distinguish contribution/evaluation/novelty-bearing evidence from merely answerable text before allocating atomic intent budget, while preserving answer-free queries and authoritative provenance."
+    ]
+  },
+  "boundaries": {
+    "production_extract": "STANDARD_CODEX_UNCHANGED",
+    "qwen_verify": "UNCHANGED",
+    "scientific_state_materialized": false,
+    "generation_model_change": false,
+    "reranker_training": false,
+    "wave7b": false
+  }
+}
