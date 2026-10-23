@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "analysis_id": "local-extract-wave3-decision-v1",
+  "owning_task": "research-engine-local-extract-redesign-v1",
+  "authoritative_execution": {
+    "workflow_run_id": 39875592497,
+    "artifact_id": 12468740757,
+    "artifact_zip_sha256": "24c06f31bf1e797735984194e2a48447888d134ddabf67065faf20c81e29233c",
+    "report_sha256": "8596b613b1644234808523ed90d7ac3bae90c5152ba49a633c796d60b437b45f",
+    "candidate_sha": "4059ba55a6bbc52c9028a44a3dbc4c33a53d1bad",
+    "implementation_merge_sha": "06deb296df52c7f1a4593c36dca1f92223d88b78"
+  },
+  "scientific_decision": "PARTIAL",
+  "experimental_hypothesis_decision": "NEGATIVE_DO_NOT_RETAIN",
+  "wave2_comparison": {
+    "job_local_completion_fraction": {
+      "wave2": 1,
+      "wave3": 1
+    },
+    "accepted_claim_count": {
+      "wave2": 70,
+      "wave3": 81
+    },
+    "historical_evidence_page_recall_at_12": {
+      "wave2": 0.7441860465116279,
+      "wave3": 0.7674418604651163
+    },
+    "projected_remote_input_token_reduction": {
+      "wave2": 0.784898460105168,
+      "wave3": 0.7730334763640925
+    },
+    "selected_source_chars_total": {
+      "wave2": 53595,
+      "wave3": 67205
+    },
+    "qwen_prompt_tokens": {
+      "wave2": 48024,
+      "wave3": 50673
+    },
+    "qwen_output_tokens": {
+      "wave2": 3848,
+      "wave3": 4485
+    },
+    "inference_seconds_total": {
+      "wave2": 39.70450589223765,
+      "wave3": 45.948659462010255
+    },
+    "teacher_matched_normalized_f1": {
+      "wave2": 0.365763503150073,
+      "wave3": 0.312897590996063
+    },
+    "teacher_claim_coverage_at_f1_0_5": {
+      "wave2": 0,
+      "wave3": 0
+    }
+  },
+  "hard_safety": {
+    "fabricated_or_unlocatable_quote_count_zero": true,
+    "exact_quote_locatability_one": true,
+    "page_provenance_coverage_one": true,
+    "structural_claim_budget_respected": true,
+    "scientific_state_materialized_false": true,
+    "production_routing_changed_false": true
+  },
+  "teacher_control": {
+    "teacher_claim_count": 6,
+    "qwen_claim_count": 8,
+    "passing_pairs_at_normalized_f1_0_5": 0,
+    "qwen_precision_at_f1_0_5": 0,
+    "teacher_claim_coverage_at_f1_0_5": 0,
+    "wave2_to_wave3_best_match_outcomes": {
+      "improved": 0,
+      "unchanged": 4,
+      "worsened": 2
+    },
+    "wave2_mean_best_source_region_f1_recomputed": 0.27380476969124573,
+    "wave3_mean_best_source_region_f1": 0.2628748180004245
+  },
+  "region_diagnostics": {
+    "candidate_soft_extended_region_count": 119,
+    "candidate_forced_hard_split_count": 17,
+    "selected_soft_extended_region_count": 39,
+    "selected_forced_hard_split_count": 9,
+    "selected_source_char_reduction_fraction": 0.7913549124190473,
+    "interpretation": "Soft terminal extension increased source volume and accepted claim count but did not improve any teacher best-model match. The teacher-control paper retained 8 accepted claims while a previously useful page-2 method region fell out of the top-12 after region reconstruction changed candidate scoring/ranks."
+  },
+  "residual_localization": [
+    {
+      "id": "GUARD_COLLATERAL_REMAINS_SOLVED",
+      "conclusion": "Keep Wave-2 unit isolation and fail-closed guard semantics."
+    },
+    {
+      "id": "SOFT_REGION_COMPLETION_NOT_PRIMARY",
+      "conclusion": "Revert to the Wave-2 exact_source_regions(max_chars=650) construction for the next experiment."
+    },
+    {
+      "id": "PROPOSAL_AND_NORMALIZATION_STILL_FUSED",
+      "conclusion": "The model still chooses which proposition to extract and how to normalize it in one operation. Isolate exact proposition proposal from normalization next."
+    },
+    {
+      "id": "TEACHER_CONTROL_GRANULARITY_LIMIT",
+      "conclusion": "The preserved six-claim teacher subset contains multi-fact claims while the local architecture emits one atomic claim per unit. Keep the legacy scorer and threshold unchanged for continuity, but add proposal-stage source-alignment diagnostics rather than changing the threshold post hoc."
+    }
+  ],
+  "next_experiment": "WAVE4_EXACT_PROPOSITION_PROPOSAL_THEN_NORMALIZATION_V1"
+}
