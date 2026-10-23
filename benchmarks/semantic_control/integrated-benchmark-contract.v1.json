@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "semantic-control-integrated-benchmark-v1",
+  "prototype_scope": "FROZEN_FIXTURES_ONLY",
+  "expected_case_ids": [
+    "P1_PROVENANCE",
+    "P2_CONTRADICTION",
+    "P3_SUPERSESSION",
+    "P4_AUTHORITY_ESCAPE",
+    "P4_MISSING_AUTHORITY",
+    "P5_EXPLAINABILITY",
+    "P6_MULTI_HOP_QUERY",
+    "P7_FAILURE_ISOLATION",
+    "P8_CONTROLLED_UPDATE"
+  ],
+  "expected_hard_gates": [
+    "authorization_escapes_zero",
+    "benchmark_provenance_complete",
+    "contradictions_preserved",
+    "history_preserved_and_replayable",
+    "adapter_rebuild_deterministic",
+    "twin_rebuild_deterministic",
+    "expected_answer_agreement",
+    "projection_failure_isolated",
+    "evidence_requests_are_request_only",
+    "candidate_actions_remain_non_authoritative",
+    "positive_authority_control_allows"
+  ],
+  "required_outcome": {
+    "all_case_results_pass": true,
+    "all_hard_gates_pass": true,
+    "authorization_escape_count": 0,
+    "latency_baseline_status": "NOT_MEASURED_IN_PROTOTYPE_SCOPE",
+    "performance_promotion_claim": false,
+    "production_integration_authorized": false,
+    "permitted_verdicts": [
+      "PROMOTE_TO_INTEGRATION",
+      "REVISE",
+      "REJECT"
+    ]
+  }
+}
