@@ -1,0 +1,177 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "local-extract-wave4-exact-proposal-normalization-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "baselines": {
+    "wave2": {
+      "workflow_run_id": 39869131630,
+      "artifact_id": 12464958088,
+      "report_sha256": "e830160adc794322f30924c89ffc9fc632fc5ccba61f739bb8bcf015e854762f",
+      "decision": "PARTIAL",
+      "job_local_completion_fraction": 1,
+      "accepted_claim_count": 70,
+      "teacher_matched_normalized_f1": 0.365763503150073,
+      "teacher_claim_coverage_at_f1_0_5": 0,
+      "mean_best_teacher_source_region_f1": 0.27380476969124573
+    },
+    "wave3": {
+      "workflow_run_id": 39875592497,
+      "artifact_id": 12468740757,
+      "report_sha256": "8596b613b1644234808523ed90d7ac3bae90c5152ba49a633c796d60b437b45f",
+      "decision": "PARTIAL",
+      "hypothesis_decision": "NEGATIVE_DO_NOT_RETAIN"
+    }
+  },
+  "hypothesis": "Wave 2 still asks one model operation to choose which proposition in a retrieved region matters and to normalize that proposition. Deterministically enumerating exact proposition spans, forcing Qwen to select at most one known proposition ID, and only then asking a separate normalization call to convert that exact span into one atomic claim will improve source-proposal alignment and/or normalized teacher agreement without reopening guard collateral or changing retrieval.",
+  "experimental_control": {
+    "fixed": [
+      "Qwen/Qwen3.5-4B exact promoted model object",
+      "qwen35-vllm-cu129-image-native-sampler-v3 exact promoted runtime",
+      "tensor_parallel_size=2 on the accepted two RTX A4500 devices",
+      "nine-paper / 71-evidence-object preserved corpus",
+      "exact-SHA ephemeral arXiv PDF acquisition",
+      "production-parity pypdf extraction",
+      "Wave-2 exact_source_regions(max_chars=650) region construction",
+      "FACET_INTERLEAVED_BM25_V1 ranking algorithm and facet queries",
+      "top_k_regions=12",
+      "one accepted claim maximum per selected region",
+      "twelve accepted claims maximum per paper",
+      "Wave-2 unit-level fail-closed residual semantics",
+      "exact deterministic duplicate removal",
+      "temperature=0, top_p=1, seed=0",
+      "preserved six-claim teacher subset",
+      "preserved teacher_agreement lexical scorer and F1>=0.5 pass threshold",
+      "no scientific-state materialization",
+      "no production routing change",
+      "accepted page-scoped Qwen VERIFY unchanged"
+    ],
+    "changed": [
+      "Within each selected region, deterministic code enumerates exact terminal proposition spans and assigns immutable proposition IDs with exact PDF page/start/end offsets.",
+      "Qwen proposal stage sees proposition IDs/text for exactly one retrieved region and may select at most one known proposition ID or SKIP; it cannot emit normalized claims or source text.",
+      "Only a guard-validated selected proposition is passed to a separate Qwen normalization call, which may emit one atomic claim or SKIP.",
+      "Accepted raw_source_form/page/offset provenance is copied deterministically from the selected exact proposition, never from model-generated text."
+    ],
+    "explicitly_not_changed": [
+      "region retrieval strategy",
+      "region top-k",
+      "model family or weights",
+      "runtime/GPU topology",
+      "paper-level accepted claim budget",
+      "teacher scorer or threshold",
+      "production EXTRACT",
+      "Qwen VERIFY",
+      "GitRunner controller/provisioner/runtime/reconciler"
+    ]
+  },
+  "exact_proposition_contract": {
+    "proposition_id": "region_id + :sNN using deterministic source order",
+    "boundary_rule": "terminal punctuation [.!?] optionally followed by closing quote/paren/bracket and followed by whitespace/end, with a bounded abbreviation guard for common scientific abbreviations",
+    "minimum_display_chars": 24,
+    "incomplete_trailing_text": "not proposal-eligible unless it ends at an accepted terminal boundary",
+    "provenance": "raw_source_form is the exact authoritative PDF substring and start/end offsets are absolute page-text coordinates",
+    "max_selected_propositions_per_region": 1
+  },
+  "proposal_stage": {
+    "model_role": "ONE_REGION_EXACT_PROPOSITION_SELECTOR",
+    "output_schema": [
+      {
+        "decision": "SKIP"
+      },
+      {
+        "decision": "SELECT",
+        "proposition_id": "<known exact id>"
+      }
+    ],
+    "safety": [
+      "unknown proposition IDs hard-reject only that region unit",
+      "model cannot provide or modify source text",
+      "zero complete propositions yields deterministic SKIP with no proposal model call"
+    ]
+  },
+  "normalization_stage": {
+    "model_role": "ONE_EXACT_PROPOSITION_TO_ZERO_OR_ONE_ATOMIC_CLAIM",
+    "output_schema": [
+      {
+        "decision": "SKIP"
+      },
+      {
+        "decision": "CLAIM",
+        "type": "method|dataset|result|limitation|research_gap|other",
+        "normalized_form": "<one atomic sentence>",
+        "confidence": "0..1"
+      }
+    ],
+    "safety": [
+      "normalizer cannot choose another proposition",
+      "normalizer cannot emit source identity/page/offsets",
+      "hard normalization faults remain unit-local residuals"
+    ]
+  },
+  "benchmark_delta": {
+    "continuity_metrics": [
+      "historical_evidence_page_recall_at_12",
+      "job_local_completion_fraction",
+      "accepted_claim_count",
+      "teacher_subset_precision",
+      "teacher_subset_coverage",
+      "page_agreement_on_passing_matches",
+      "type_agreement_on_passing_matches",
+      "projected_remote_input_token_reduction",
+      "prompt_tokens",
+      "output_tokens",
+      "inference_seconds_total"
+    ],
+    "new_diagnostics": [
+      "proposal_model_calls",
+      "normalization_model_calls",
+      "deterministic_no_complete_proposition_count",
+      "proposal_select_count",
+      "proposal_skip_count",
+      "proposal_hard_reject_count",
+      "normalization_skip_count",
+      "normalization_hard_reject_count",
+      "teacher_best_available_proposition_f1_by_claim",
+      "teacher_best_selected_proposition_f1_by_claim",
+      "teacher_best_normalized_model_f1_by_claim"
+    ],
+    "interpretation": [
+      "If selected-proposition source alignment improves and normalized agreement also improves, retain proposal/normalization separation and next test bounded multiple proposals only if needed.",
+      "If proposal alignment improves but normalized agreement does not, normalization semantics or the legacy teacher granularity/scorer is the next residual.",
+      "If proposal alignment does not improve, do not add normalization complexity; revisit candidate proposal/reranking or a specialized IE component.",
+      "Do not change the preserved teacher F1 threshold after seeing the result."
+    ]
+  },
+  "gates": {
+    "hard_safety_unchanged": [
+      "fabricated/unlocatable quote count = 0",
+      "exact quote locatability = 1.0",
+      "page provenance coverage = 1.0",
+      "structural claim budgets respected",
+      "scientific_state_materialized = false",
+      "production_routing_changed = false"
+    ],
+    "research_positive_unchanged": [
+      "local pass precision >= 0.95",
+      "page agreement >= 0.95",
+      "type agreement >= 0.95",
+      "teacher claim coverage >= 0.80",
+      "job local completion fraction >= 0.50"
+    ],
+    "production_promotion_unchanged": [
+      "all safety gates pass",
+      "local precision >= 0.95",
+      "teacher claim coverage >= 0.90",
+      "page/type agreement >= 0.95",
+      "unsupported claim rate = 0",
+      "job local completion >= 0.80",
+      "projected remote input-token reduction >= 0.50",
+      "no material downstream VERIFY regression"
+    ]
+  },
+  "teacher_control_limitation": "The legacy six-claim normalized teacher subset covers only one paper and several teacher claims contain multiple facts while the local output contract is atomic. Wave 4 therefore preserves that scorer unchanged as a continuity gate and adds proposal-stage source-alignment diagnostics; it does not weaken or replace the teacher threshold.",
+  "execution": {
+    "execution_contract": "model-dual-public-v1",
+    "new_privileged_authority_required": false,
+    "gitrunner_substrate_change_required": false
+  }
+}
