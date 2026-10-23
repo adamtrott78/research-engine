@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "local-extract-wave6-paper-global-proposition-bm25-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "baseline": {
+    "wave5_workflow_run_id": 39880731898,
+    "wave5_artifact_id": 12469624778,
+    "wave5_artifact_zip_sha256": "dc1c3b68c5a04d4a25fc1c6cf2a2847c75c6183aa8dee3f8c7b42255aa8935bf",
+    "wave5_report_sha256": "2f633729c0d1948248e3f30d17e0b1fd8459519a7bf656e5d4feb3886b286b15",
+    "wave5_raw_decision": "REJECT",
+    "wave5_per_paper_provenance_reaudit_fraction": 1,
+    "wave5_selected_proposition_mean_f1": 0.2767904408888015,
+    "wave5_final_normalized_mean_f1": 0.28556888629352395,
+    "wave5_projected_remote_input_token_reduction": 0.8361297489048741,
+    "offline_paper_global_selector_mean_f1": 0.30305743036333815
+  },
+  "hypothesis": "The Wave-5 deterministic selector was mis-specified because BM25 document frequency and IDF were recomputed separately inside each region. Scoring every complete proposition from the paper's 12 selected regions in one BM25 corpus, then retaining the highest-scoring proposition within each parent region, should reproduce the pre-Wave-5 offline diagnostic (~0.303 teacher-source mean F1) while preserving zero proposal-model calls and the unchanged Qwen normalizer.",
+  "experimental_control": {
+    "fixed": [
+      "Qwen/Qwen3.5-4B exact promoted model object",
+      "qwen35-vllm-cu129-image-native-sampler-v3 exact promoted runtime",
+      "tensor_parallel_size=2 on the accepted two RTX A4500 devices",
+      "nine-paper / 71-evidence-object preserved corpus",
+      "exact-SHA ephemeral arXiv PDF acquisition",
+      "production-parity pypdf extraction",
+      "Wave-2 exact_source_regions(max_chars=650) region construction",
+      "FACET_INTERLEAVED_BM25_V1 region ranking algorithm and facet queries",
+      "top_k_regions=12",
+      "Wave-4 deterministic exact proposition enumeration",
+      "one selected proposition maximum per retrieved region",
+      "Wave-4/Wave-5 Qwen normalization prompt",
+      "Wave-4/Wave-5 normalization JSON schema and strict guard",
+      "one accepted claim maximum per region and twelve per paper",
+      "temperature=0, top_p=1, seed=0",
+      "max_output_tokens_per_normalization_call=320",
+      "preserved six-claim teacher subset and unchanged lexical F1>=0.5 gate",
+      "no scientific-state materialization",
+      "no production routing change",
+      "accepted page-scoped Qwen VERIFY unchanged"
+    ],
+    "changed": [
+      "BM25 proposition scoring corpus only: score all complete propositions from the paper's selected regions together, rather than recomputing IDF independently within each region",
+      "after paper-global scoring, retain the highest-ranked proposition within each parent region with deterministic ranking/tie-break order",
+      "fix the Wave-5 hard-safety evaluator lookup so proposition identity is scoped by owning paper before comparing exact source/page provenance"
+    ],
+    "explicitly_not_changed": [
+      "region construction",
+      "region retrieval ranking or top-k",
+      "proposition segmentation",
+      "normalization prompt/model/schema/guard",
+      "teacher scorer or threshold",
+      "model/runtime/GPU topology",
+      "production EXTRACT",
+      "Qwen VERIFY",
+      "GitRunner controller/provisioner/runtime/reconciler"
+    ]
+  },
+  "deterministic_selector": {
+    "id": "PAPER_GLOBAL_BM25_THEN_PER_REGION_TOP_V1",
+    "query": "unchanged per-paper research query: fixture topic + PDF title + paper item_id",
+    "corpus": "all complete exact propositions from the paper's 12 selected regions",
+    "scoring": "existing local_extract_wave1._bm25 formula computed once over the paper proposition corpus",
+    "selection": "walk the globally ranked proposition list and retain the first proposition observed for each parent_region_id; regions with no complete proposition are SKIP",
+    "proposal_model_calls": 0
+  },
+  "provenance_fix": {
+    "scope": "evaluator only",
+    "rule": "exact source/page locatability is checked against proposition IDs inside the same owning paper; proposition_id alone is not globally unique across papers",
+    "scientific_behavior_changed": false
+  },
+  "predeclared_interpretation": [
+    "If selected-proposition teacher-source mean F1 reproduces approximately 0.303 and exact provenance is 1.0, the deterministic selector is considered successfully reproduced.",
+    "If selector alignment improves to the predicted level but final normalized teacher agreement remains materially lower or teacher coverage remains zero, normalization semantics / teacher-control granularity becomes the primary residual.",
+    "If selector alignment fails to reach the paper-global offline diagnostic, reject the deterministic ranking hypothesis and inspect implementation/ranking evidence before changing normalization.",
+    "Do not change the legacy teacher threshold after seeing results."
+  ],
+  "gates": {
+    "hard_safety": [
+      "fabricated/unlocatable quote count = 0",
+      "per-paper exact quote locatability = 1.0",
+      "page provenance coverage = 1.0",
+      "structural claim budgets respected",
+      "scientific_state_materialized = false",
+      "production_routing_changed = false"
+    ],
+    "research_positive": [
+      "local pass precision >= 0.95",
+      "page agreement >= 0.95",
+      "type agreement >= 0.95",
+      "teacher claim coverage >= 0.80",
+      "job local completion fraction >= 0.50"
+    ]
+  },
+  "execution": {
+    "execution_contract": "model-dual-public-v1",
+    "new_privileged_authority_required": false,
+    "gitrunner_substrate_change_required": false
+  }
+}

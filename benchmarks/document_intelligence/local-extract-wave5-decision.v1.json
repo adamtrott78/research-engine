@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "analysis_id": "local-extract-wave5-decision-v1",
+  "owning_task": "research-engine-local-extract-redesign-v1",
+  "authoritative_execution": {
+    "workflow_run_id": 39880731898,
+    "artifact_id": 12469624778,
+    "artifact_zip_sha256": "dc1c3b68c5a04d4a25fc1c6cf2a2847c75c6183aa8dee3f8c7b42255aa8935bf",
+    "report_sha256": "2f633729c0d1948248e3f30d17e0b1fd8459519a7bf656e5d4feb3886b286b15",
+    "candidate_sha": "0f0076fd877752c18c7e3ce178117dc74695e024",
+    "implementation_merge_sha": "54d347c248c7f9a8b9de9242abf01d082feb0bb5",
+    "workflow_conclusion": "success"
+  },
+  "raw_benchmark_decision": "REJECT",
+  "scientific_disposition": "MIS_SPECIFIED_SELECTOR_EXPERIMENT_DO_NOT_PROMOTE",
+  "raw_hard_safety": {
+    "exact_quote_locatability_one": false,
+    "fabricated_or_unlocatable_quote_count_zero": true,
+    "page_provenance_coverage_one": true,
+    "structural_claim_budget_respected": true,
+    "scientific_state_materialized_false": true,
+    "production_routing_changed_false": true
+  },
+  "corrected_provenance_audit": {
+    "accepted_claim_count": 70,
+    "exact_source_and_page_matches_within_owning_paper": 70,
+    "exact_source_and_page_match_fraction": 1,
+    "diagnosis": "The Wave-5 report built one global proposition_id map across all nine papers. proposition_id encodes page/region offsets but not paper identity, so identical IDs from later papers overwrote earlier entries and caused false cross-paper comparisons. Recomputing the same check within each owning paper proves all 70 accepted claims exactly match the authoritative proposition source text and page.",
+    "action": "Fix the hard-safety lookup to scope proposition identity by paper before the next benchmark. Do not interpret the raw false flag as a real provenance regression."
+  },
+  "metrics": {
+    "job_local_completion_fraction": 0.7777777777777778,
+    "accepted_claim_count": 70,
+    "proposal_model_calls": 0,
+    "normalization_model_calls": 106,
+    "normalization_hard_reject_count": 4,
+    "projected_remote_input_token_reduction": 0.8361297489048741,
+    "qwen_prompt_tokens": 36586,
+    "qwen_output_tokens": 3296,
+    "inference_seconds_total": 33.78744524900685,
+    "historical_evidence_page_recall_at_12": 0.7441860465116279,
+    "teacher_available_proposition_mean_f1": 0.31908516604168774,
+    "teacher_selected_proposition_mean_f1": 0.2767904408888015,
+    "teacher_final_normalized_mean_f1": 0.28556888629352395,
+    "teacher_claim_coverage_at_f1_0_5": 0
+  },
+  "wave4_comparison": {
+    "qwen_selected_proposition_mean_f1": 0.21498668482680108,
+    "wave5_selected_proposition_mean_f1": 0.2767904408888015,
+    "wave4_final_normalized_mean_f1": 0.17839877907935986,
+    "wave5_final_normalized_mean_f1": 0.28556888629352395,
+    "wave4_model_calls": 160,
+    "wave5_model_calls": 106,
+    "wave4_projected_remote_input_token_reduction": 0.6980722200822352,
+    "wave5_projected_remote_input_token_reduction": 0.8361297489048741
+  },
+  "selector_specification_diagnosis": {
+    "intended_offline_diagnostic_mean_f1": 0.30305743036333815,
+    "implemented_wave5_mean_f1": 0.2767904408888015,
+    "root_cause": "Wave 5 called the existing BM25 scorer separately for each region, which recomputed document frequency/IDF on only that region's propositions. The motivating offline diagnostic scored all exact propositions from the paper's selected regions in one BM25 corpus, then retained the highest-scoring proposition within each region.",
+    "exact_reproduction": "Recomputing paper-global proposition BM25 on the preserved Wave-4 artifact and then taking the top proposition per region reproduces mean teacher-source F1 0.30305743036333815.",
+    "conclusion": "The pre-Wave-5 deterministic-selector diagnostic was not faithfully tested. A corrected one-variable experiment is justified."
+  },
+  "normalization_residual": {
+    "hard_reject_count": 4,
+    "hard_reject_reason": "CLAIM_SCHEMA",
+    "note": "Keep the normalization prompt/schema/guard fixed for the corrected selector experiment so selector quality remains isolated."
+  },
+  "next_experiment": "WAVE6_PAPER_GLOBAL_PROPOSITION_BM25_THEN_NORMALIZATION_V1"
+}
