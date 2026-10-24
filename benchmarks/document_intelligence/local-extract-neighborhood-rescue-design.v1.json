@@ -242,12 +242,12 @@
         "Interpretation: the observed robustness failure is a local proposition-pruning/context-boundary error; immediate source-neighborhood rescue is sufficient under the known stress."
       ],
       "LOCAL_RESCUE_PARTIAL": [
-        "The rescue completes safely and preserves all seven controls but only one of {e1.a,e6.a} is supported.",
-        "Interpretation: local context helps but does not fully restore the composed residual set; next compare deeper per-intent allocation against a jointly robust reservation policy."
+        "The rescue completes safely and preserves all seven controls, e1.a is restored, but e6.a is no longer supported.",
+        "Interpretation: immediate local rescue repairs the fragile e1.a acquisition path but interferes with the independently validated e6.a preservation outcome; next compare a joint robust reservation/preservation policy against deeper per-intent allocation."
       ],
       "LOCAL_RESCUE_NEGATIVE": [
-        "The rescue completes safely through one eligible neighbor but preserves the seven controls while e1.a remains unsupported.",
-        "Interpretation: immediate adjacency is insufficient despite known deeper unflagged exposure; next test deeper per-intent allocation or retrieval-path survival before adaptive gap planning."
+        "The rescue completes safely and preserves all seven controls, but e1.a remains unsupported regardless of whether e6.a remains supported.",
+        "Interpretation: immediate adjacency is insufficient to repair the known e1.a fragility despite known deeper unflagged exposure; next test deeper per-intent allocation or retrieval-path survival before adaptive gap planning."
       ],
       "LOCAL_RESCUE_NO_ELIGIBLE_NEIGHBOR": [
         "No immediate neighbor of any surviving reservation seed appears in the frozen top12 of any surviving tier1 intent.",
@@ -290,5 +290,24 @@
     "implementation_authorized_before_independent_review": false
   },
   "reviewer_boundary": "Independent reviewer must audit this exact frozen design before implementation. Routine implementation/CI/trigger mechanics do not require reviewer stops unless science changes. Genuine result requires post-result review before next phase.",
-  "next_safe_action": "Run normal CI on this design-only artifact and merge only if clean. Then checkpoint the exact design in workspace-control and obtain independent review before implementing ADJACENT_PROPOSITION_RESCUE_DIAGNOSTIC_V1."
+  "next_safe_action": "Run normal CI on this interpretation-only design correction and merge only if clean. Then update the owner design checkpoint to the corrected exact SHA/blob and re-engage the independent reviewer. Do not implement ADJACENT_PROPOSITION_RESCUE_DIAGNOSTIC_V1 before the corrected design receives NO_BLOCKING_FINDING.",
+  "review_correction": {
+    "id": "neighborhood-rescue-outcome-partition-correction-v1",
+    "reason": "Pre-implementation audit found an overlap: a valid result with 7/7 controls, e1.a absent, and e6.a retained matched both LOCAL_RESCUE_PARTIAL and LOCAL_RESCUE_NEGATIVE.",
+    "correction": [
+      "LOCAL_RESCUE_PARTIAL now means specifically e1.a restored while e6.a is lost, with all seven controls retained.",
+      "LOCAL_RESCUE_NEGATIVE now means e1.a remains unsupported with all seven controls retained, regardless of e6.a status.",
+      "CONFIRMED, NO_ELIGIBLE_NEIGHBOR, COLLISION, INVALID_EXECUTION, candidate generation/ranking, stress identity, depth12, one-slot budget28, teacher use, and all hard boundaries are unchanged."
+    ],
+    "mechanism_changed": false,
+    "metrics_changed": false,
+    "candidate_generation_changed": false,
+    "candidate_ranking_changed": false,
+    "budget_changed": false,
+    "teacher_boundary_changed": false,
+    "stopping_rule_changed": false,
+    "interpretation_partition_changed": true,
+    "implementation_started_before_correction": false,
+    "re_review_required": true
+  }
 }
