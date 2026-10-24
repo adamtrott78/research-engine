@@ -257,20 +257,26 @@
         "Interpretation: structural reservation works but exceeds the preferred small frontier; acquisition is plausible while cost/compression remains a first-order issue."
       ],
       "FACET_RESERVATION_NEGATIVE": [
-        "e1.a remains unsupported through budget32, or a provenance/teacher-blind boundary fails.",
-        "Interpretation: fixed structural facet/role reservation is insufficient; move to a materially more adaptive evidence-set planner rather than more query generation or rejected semantic certificates."
+        "A valid safe replay completes through budget32 with e1.a still unsupported.",
+        "All provenance, teacher-blind, frozen-input, and hard-safety checks pass.",
+        "Interpretation: fixed structural facet/role reservation is scientifically insufficient; move to a materially more adaptive evidence-set planner rather than more query generation or rejected semantic certificates."
       ],
       "REPLAY_INCONSISTENT": [
         "The exact source-aware top24 control, frozen intent identities, or frozen BM25 replay cannot be reproduced.",
         "Interpretation: operational/no scientific verdict; repair only identity/replay mechanics if science is unchanged."
+      ],
+      "INVALID_EXECUTION": [
+        "Any exact-input/replay identity failure, teacher-blind boundary failure, provenance failure, or other hard-safety failure occurs before a valid scientific classification.",
+        "Interpretation: no scientific verdict. Repair only operational/identity mechanics if the frozen science is unchanged; a fresh explicit one-shot authority is required before any recovery execution."
       ]
     },
-    "stopping_rule": "Exactly one valid scientific execution after independent design review. Stop at the frozen classification. No changes to strata, tier order, intent order, depth3, budgets 24/26/28/32, teacher audit treatment, or interpretation after seeing the result.",
+    "stopping_rule": "Exactly one valid scientific execution after independent design review. Stop at FACET_RESERVATION_CONFIRMED, FACET_RESERVATION_PARTIAL, or FACET_RESERVATION_NEGATIVE. INVALID_EXECUTION does not consume a scientific verdict but cannot be silently rerun: repair only unchanged mechanics and obtain fresh explicit one-shot authority. No changes to strata, tier order, intent order, depth3, budgets 24/26/28/32, teacher audit treatment, or interpretation after seeing any result.",
     "pass_authority": {
       "FACET_RESERVATION_CONFIRMED": "Authorize a later bounded design that combines/compares the confirmed acquisition planner with ALIGNMENT_AUGMENT_FEASIBLE or another independently justified compression strategy, plus broader cost/generalization validation. No production promotion.",
       "FACET_RESERVATION_PARTIAL": "Authorize only a cost/compression-focused follow-up design; do not increase reservation budget post hoc.",
       "FACET_RESERVATION_NEGATIVE": "Reject this fixed structural reservation schedule and compare adaptive evidence-set reasoning mechanisms. Do not reopen new query generation unless separate evidence contradicts shallow exposure.",
-      "REPLAY_INCONSISTENT": "No scientific authority."
+      "REPLAY_INCONSISTENT": "No scientific authority.",
+      "INVALID_EXECUTION": "No scientific authority. Only unchanged operational/identity repair may be considered, with fresh explicit recovery authority."
     }
   },
   "hard_boundaries": {
@@ -288,5 +294,11 @@
     "implementation_authorized_before_independent_review": false
   },
   "reviewer_boundary": "Independent reviewer must audit this exact design before implementation. Routine implementation/CI/trigger mechanics do not require another review unless science changes. After the genuine result, independent review is required before selecting the following scientific phase.",
-  "next_safe_action": "Run normal CI on this design-only artifact and merge only if clean. Then checkpoint the exact design in workspace-control and obtain independent design review before implementing SALIENCE_STRATIFIED_RESERVATION_DIAGNOSTIC_V1."
+  "next_safe_action": "Run normal CI on this design-only correction and merge only if clean. Then update the owner design checkpoint to the corrected exact SHA/blob and re-engage the independent reviewer. Do not implement SALIENCE_STRATIFIED_RESERVATION_DIAGNOSTIC_V1 before the corrected design receives NO_BLOCKING_FINDING.",
+  "review_correction": {
+    "reviewer_checkpoint": "facet-reserved-planner-design-review-block-v1",
+    "disposition": "CORRECTED_BEFORE_IMPLEMENTATION",
+    "correction": "Separated scientific FACET_RESERVATION_NEGATIVE from INVALID_EXECUTION. Safety/provenance/replay failures now yield no scientific verdict.",
+    "other_science_changed": false
+  }
 }
