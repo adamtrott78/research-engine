@@ -2,7 +2,7 @@
   "schema_version": 1,
   "design_id": "local-extract-composed-acquisition-preservation-v1",
   "task_id": "research-engine-local-extract-redesign-v1",
-  "status": "DESIGN_ONLY_REVIEW_REQUIRED_NO_IMPLEMENTATION_AUTHORIZED",
+  "status": "DESIGN_CORRECTED_REVIEW_REQUIRED_NO_IMPLEMENTATION_AUTHORIZED",
   "selected_architecture": {
     "id": "COMPOSED_ACQUISITION_PRESERVATION_V1",
     "mechanism_families": [
@@ -270,15 +270,20 @@
       "INVALID_EXECUTION": [
         "Any exact report/artifact identity, swap-precondition, proposition provenance, fixed-budget, or teacher-blind hard-safety check fails.",
         "Interpretation: no scientific verdict; repair only unchanged replay/identity mechanics and require fresh explicit one-shot authority before any recovery execution."
+      ],
+      "COMPOSITION_NEGATIVE": [
+        "Exact safe composition retains all 7 frozen control atoms but supports neither e1.a nor e6.a.",
+        "Interpretation: the independently positive residual gains do not transport into the composed evidence set even though baseline preservation survives; reject naive serial composition and move to a jointly optimized evidence-set mechanism."
       ]
     },
-    "stopping_rule": "Exactly one valid scientific execution after independent design review. Stop at COMPOSED_COMPLEMENTARITY_ROBUST, COMPOSED_COMPLEMENTARITY_FRAGILE, COMPOSITION_PARTIAL, or COMPOSITION_COLLISION. INVALID_EXECUTION is operational/no-verdict. No changes to the exact planner28 set, alignment swap, budget28, teacher audit, sensitivity, metrics, or interpretation after seeing a result.",
+    "stopping_rule": "Exactly one valid scientific execution after independent design review. Stop at COMPOSED_COMPLEMENTARITY_ROBUST, COMPOSED_COMPLEMENTARITY_FRAGILE, COMPOSITION_PARTIAL, COMPOSITION_NEGATIVE, or COMPOSITION_COLLISION. INVALID_EXECUTION is operational/no-verdict. No changes to the exact planner28 set, alignment swap, budget28, teacher audit, sensitivity, metrics, or interpretation after seeing a result.",
     "pass_authority": {
       "COMPOSED_COMPLEMENTARITY_ROBUST": "Authorize a later broader generalization/cost study of the composed acquisition+preservation architecture across the nine-paper corpus. No production promotion.",
       "COMPOSED_COMPLEMENTARITY_FRAGILE": "Authorize only a robustness-aware acquisition design that tests intent-origin/query perturbation stability while preserving the confirmed alignment mechanism. Do not generalize the exact planner schedule as robust.",
       "COMPOSITION_PARTIAL": "Reject naive serial composition. Next architecture search should compare joint structural evidence-set optimization against adaptive information-control planning.",
       "COMPOSITION_COLLISION": "Reject the serial composition operator; preserve the individual positive results but require a new joint preservation/acquisition design.",
-      "INVALID_EXECUTION": "No scientific authority."
+      "INVALID_EXECUTION": "No scientific authority.",
+      "COMPOSITION_NEGATIVE": "Reject naive serial composition. Preserve the individual positive results, but next architecture search must compare jointly optimized structural evidence-set selection against adaptive information-control planning."
     }
   },
   "hard_boundaries": {
@@ -299,5 +304,19 @@
     "implementation_authorized_before_independent_review": false
   },
   "reviewer_boundary": "Independent reviewer must audit this exact frozen design before implementation. Routine implementation/CI/packaging/trigger mechanics do not require reviewer stops unless they alter the frozen experiment. A genuine result requires post-result review before any next scientific phase.",
-  "next_safe_action": "Run normal CI on this design-only artifact and merge only if clean. Then checkpoint the exact design in workspace-control and obtain independent review before implementing PLANNER_ALIGNMENT_COMPOSITION_DIAGNOSTIC_V1."
+  "next_safe_action": "Run normal CI on this interpretation-only correction and merge only if clean. Then update the owner design checkpoint to the corrected exact SHA/blob and re-engage the independent reviewer. Do not implement PLANNER_ALIGNMENT_COMPOSITION_DIAGNOSTIC_V1 before the corrected design receives NO_BLOCKING_FINDING.",
+  "review_correction": {
+    "id": "COMPOSITION_VERDICT_EXHAUSTIVENESS_CORRECTION_V1",
+    "reason": "Pre-implementation audit found that the original frozen interpretation omitted the valid safe outcome where all seven frozen controls survive but neither residual atom survives composition.",
+    "selector_changed": false,
+    "composition_operator_changed": false,
+    "frozen_inputs_changed": false,
+    "budget_changed": false,
+    "teacher_boundary_changed": false,
+    "metrics_changed": false,
+    "stopping_rule_changed": true,
+    "interpretation_table_changed": true,
+    "other_science_changed": false,
+    "implementation_started_before_correction": false
+  }
 }
