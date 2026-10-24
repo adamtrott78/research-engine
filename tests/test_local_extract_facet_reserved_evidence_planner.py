@@ -4,6 +4,10 @@ from research_engine.local_extract_facet_reserved_evidence_planner import (
     _classification,
     _reservation_stream,
 )
+from research_engine.local_extract_post_wave7a3_coverage import (
+    CONTROL_ID,
+    RESIDUAL_ID,
+)
 
 
 def _candidate(pid: str, rank: int) -> dict:
@@ -55,12 +59,12 @@ def test_reservation_stream_alternates_source_then_author() -> None:
     tiers = [{
         "tier": 1,
         "source": [
-            _intent("source", 0, ["s0a", "s0b", "s0c"], facet="method"),
-            _intent("source", 1, ["s1a", "s1b", "s1c"], facet="method"),
+            _intent(CONTROL_ID, 0, ["s0a", "s0b", "s0c"], facet="method"),
+            _intent(CONTROL_ID, 1, ["s1a", "s1b", "s1c"], facet="method"),
         ],
         "author": [
-            _intent("author", 2, ["a2a", "a2b", "a2c"], role="contribution"),
-            _intent("author", 3, ["a3a", "a3b", "a3c"], role="contribution"),
+            _intent(RESIDUAL_ID, 2, ["a2a", "a2b", "a2c"], role="contribution"),
+            _intent(RESIDUAL_ID, 3, ["a3a", "a3b", "a3c"], role="contribution"),
         ],
     }]
     selected, events = _reservation_stream(
@@ -80,8 +84,8 @@ def test_reservation_stream_revisits_only_after_each_group_once() -> None:
     tiers = [{
         "tier": 1,
         "source": [
-            _intent("source", 0, ["s0a", "s0b", "s0c"], facet="method"),
-            _intent("source", 1, ["s1a", "s1b", "s1c"], facet="method"),
+            _intent(CONTROL_ID, 0, ["s0a", "s0b", "s0c"], facet="method"),
+            _intent(CONTROL_ID, 1, ["s1a", "s1b", "s1c"], facet="method"),
         ],
         "author": [],
     }]
