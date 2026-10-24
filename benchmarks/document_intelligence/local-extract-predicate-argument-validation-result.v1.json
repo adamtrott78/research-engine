@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "decision_id": "local-extract-predicate-argument-certificate-validation-result-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "design_merge_sha": "259d8c9381398b169de9a201517129e226e3ca94",
+  "isolated_design_head_sha": "bcc6cb43bf1d617124ef32da361a3d0133986207",
+  "validation_implementation_merge_sha": "5eddc47dac17cd28216b64c890fd99a32ad2649d",
+  "isolated_implementation_head_sha": "8913b49218ee1519b2921bc1ff29675d06ef4d06",
+  "trigger": {
+    "pr": 221,
+    "head_sha": "d230f28837365f3115efb28d35855b15e8bf0c92",
+    "comment_id": 6379113515,
+    "trigger_count": 1
+  },
+  "scientific_run": {
+    "run_id": 40057016505,
+    "job_id": 120762117286,
+    "conclusion": "success",
+    "artifact_id": 12546156155,
+    "artifact_zip_sha256": "75c7d6117010b6cc15e145472c7c17ae71c6aed1059d9a979390452782fcebf3",
+    "report_sha256": "a19675655cd756f2e3146a6d6e5d9e76ea33fe993dbb4749ff9057eaf5dc523e",
+    "scientific_gate_consumed": true
+  },
+  "parser": {
+    "package": "spacy",
+    "package_version": "3.8.2",
+    "model": "en_core_web_sm",
+    "model_version": "3.8.0",
+    "model_wheel_sha256": "1932429db727d4bff3deed6b34cfc05df17794f4a52eeb26cf8928f7c1a0fb85"
+  },
+  "external_data": {
+    "spark": {
+      "repository_commit": "71465f36c83cfef589facadcb014e70c0bad1b3b",
+      "git_blob_sha": "eb0b82a6f53b0a7d2a6288f0dff4ed2e72abf4ad",
+      "file_sha256": "32f97ed2de9294a53e086af6290412da6d25471f39770964666d53f3cf1cfb8d"
+    },
+    "fobie": {
+      "repository_commit": "b49683fa2dced187d305abadcc36c55e2fb16c44",
+      "dev_git_blob_sha": "cc82568b662df6e7536b1a0d1d18e06f7efca232",
+      "test_git_blob_sha": "91140779df8200df2a9517b62556b1665e7b1390",
+      "dev_file_sha256": "6a7cfc900f5b0a75f9de985729ba6139acc8a9ac142ee694d54a14ae6dfd181a",
+      "test_file_sha256": "e399920dd38008e7e9de761499768a27e63dde1be64d973f17a319ebd844e261"
+    }
+  },
+  "predicate_argument_certificate_decision": "PREDICATE_ARGUMENT_CERTIFICATE_REJECTED",
+  "rationale": "No safe SPARK calibration threshold exists; independent FOBIE held-out relation fidelity is also far below the frozen gate.",
+  "spark": {
+    "calibration_topic_count": 49,
+    "heldout_topic_count": 49,
+    "calibration_positive_count": 589,
+    "calibration_negative_count": 2945,
+    "heldout_positive_count": 883,
+    "heldout_negative_count": 4415,
+    "selected_threshold": null,
+    "calibration_metrics": null,
+    "heldout_metrics": {
+      "threshold": null,
+      "tp": 0,
+      "fp": 0,
+      "tn": 4415,
+      "fn": 883,
+      "precision": 0,
+      "recall": 0,
+      "false_positive_rate": 0
+    },
+    "calibration_extraction_diagnostics": {
+      "unique_text_count": 986,
+      "empty_unit_text_count": 40,
+      "text_with_unit_fraction": 0.9594320486815415,
+      "mean_units_per_text": 2.874239350912779,
+      "max_units_per_text": 12
+    },
+    "heldout_extraction_diagnostics": {
+      "unique_text_count": 1156,
+      "empty_unit_text_count": 34,
+      "text_with_unit_fraction": 0.9705882352941176,
+      "mean_units_per_text": 2.9472318339100347,
+      "max_units_per_text": 12
+    }
+  },
+  "fobie": {
+    "dev": {
+      "sentence_count": 150,
+      "tradeoff_relation_count": 155,
+      "recovered_tradeoff_relation_count": 8,
+      "full_relation_recall": 0.05161290322580645,
+      "sentence_with_at_least_one_unit_fraction": 1,
+      "mean_units_per_sentence": 5.906666666666666,
+      "total_unit_count": 886
+    },
+    "test": {
+      "sentence_count": 150,
+      "tradeoff_relation_count": 153,
+      "recovered_tradeoff_relation_count": 4,
+      "full_relation_recall": 0.026143790849673203,
+      "sentence_with_at_least_one_unit_fraction": 1,
+      "mean_units_per_sentence": 5.766666666666667,
+      "total_unit_count": 865
+    }
+  },
+  "hard_safety": {
+    "extract_teacher_accessed": false,
+    "extract_scientific_state_materialized": false,
+    "predicate_argument_certificate_used_in_extract": false,
+    "production_routing_changed": false,
+    "model_or_parser_training_executed": false,
+    "wave7b_started": false,
+    "semantic_control_or_ontology_in_extract": false,
+    "rdf_or_ontology_output_emitted": false
+  },
+  "scientific_disposition": {
+    "primary": "DEPENDENCY_PREDICATE_ARGUMENT_CERTIFICATE_REJECTED",
+    "findings": [
+      "The bounded dependency-derived representation fails the predeclared SPARK redundancy-safety calibration: no threshold in the frozen grid reaches precision>=0.95 and recall>=0.05.",
+      "The representation also fails scientific relation fidelity independently: FOBIE held-out full-relation recall is 4/153 (2.61%), far below the frozen 50% gate.",
+      "The FOBIE failure is not caused by an empty or trivially sparse representation: every held-out sentence yields at least one unit and mean output is 5.77 units per sentence, within the frozen <=8 bound.",
+      "Dev and test relation fidelity are both poor (5.16% and 2.61%), so the failure is directionally consistent rather than an isolated held-out collapse.",
+      "The accepted lexical DYNAMIC_SAME_PAGE_ALIGNMENT_SWAP_V1 / ALIGNMENT_AUGMENT_FEASIBLE checkpoint remains the strongest validated preservation result.",
+      "The learned mutual-entailment and dependency predicate/argument generalizations are now both rejected exclusion evidence."
+    ],
+    "next_architecture_boundary": "OPEN_GRAPH_OR_ALTERNATIVE_EVIDENCE_UNIT_DESIGN",
+    "amr_or_graph_research_authorized": true,
+    "predicate_argument_rerun_authorized": false,
+    "predicate_argument_threshold_tuning_authorized": false,
+    "extract_predicate_argument_experiment_authorized": false,
+    "production_promotion_authorized": false,
+    "wave7b_authorized": false
+  },
+  "independent_review_boundary": {
+    "review_task": "workspace-local-extract-independent-review-v1",
+    "action": "At this durable result checkpoint and before selecting the next scientific phase, re-read the review capsule and consume only an exact-applicable review if one exists; do not block indefinitely if none exists.",
+    "authority_over_extract": false
+  },
+  "coordination_boundary": {
+    "sibling_task": "workspace-semantic-control-hardening-v1",
+    "authority_over_extract": false,
+    "extract_integration_signal_ready": false,
+    "reason": "No new accepted EXTRACT architecture/output checkpoint was produced; this external semantic-unit generalization was rejected."
+  }
+}
