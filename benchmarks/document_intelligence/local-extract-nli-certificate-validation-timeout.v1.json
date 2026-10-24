@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "decision_id": "local-extract-nli-certificate-validation-timeout-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "scientific_decision": null,
+  "execution_result": "WORKFLOW_TIMEOUT_NO_REPORT",
+  "scientific_gate_consumed": false,
+  "implementation": {
+    "durable_merge_sha": "f0699337f7ee5111d3945a0068a927c272b36f75",
+    "isolated_head_sha": "f9790f4d614f022a127b5b87e33955f613159963",
+    "workflow_blob": "71ec3afc69539243a9d71e1bdbca980a68ce78de",
+    "module_blob": "57b31c8ff4423acbde0912ef08033929cdeec06c"
+  },
+  "trigger": {
+    "pr": 209,
+    "head_sha": "ba41ffe095bda7447562b451095fb418d4536de9",
+    "comment_id": 6377491341,
+    "trigger_count": 1
+  },
+  "workflow": {
+    "run_id": 40044921709,
+    "job_id": 120724338089,
+    "timeout_minutes": 45,
+    "conclusion": "cancelled",
+    "exact_head_gate": "PASS",
+    "exact_checkout": "PASS",
+    "pinned_dependency_install": "PASS",
+    "pinned_external_asset_download": "PASS",
+    "frozen_scoring_step": "CANCELLED_BY_TIMEOUT",
+    "report_upload": "FAIL_NO_FILE",
+    "artifact_count": 0,
+    "cancellation_timestamp_utc": "2026-10-24T01:11:02Z"
+  },
+  "scientific_state": {
+    "nli_certificate_decision": null,
+    "threshold_selected": null,
+    "spark_metrics": null,
+    "scinli_metrics": null,
+    "report_sha256": null,
+    "artifact_sha256": null,
+    "extract_teacher_accessed": false,
+    "learned_certificate_used_in_extract": false,
+    "production_routing_changed": false,
+    "model_training_executed": false,
+    "semantic_control_or_ontology_in_extract": false,
+    "rdf_or_ontology_output_emitted": false
+  },
+  "disposition": {
+    "primary": "TECHNICAL_TIMEOUT_BEFORE_SCIENTIFIC_RESULT",
+    "replacement_run_authorized": true,
+    "replacement_run_limit": 1,
+    "recovery_scope": "EXECUTION_ENVELOPE_ONLY",
+    "allowed_change": [
+      "Increase workflow timeout-minutes so the exact frozen scorer can finish."
+    ],
+    "forbidden_changes": [
+      "model repository/revision/hash",
+      "SPARK/SciNLI identities or split construction",
+      "threshold grid/calibration rule",
+      "held-out gates",
+      "mutual-entailment score definition",
+      "batch size",
+      "max sequence length",
+      "EXTRACT teacher access",
+      "learned-certificate use inside EXTRACT",
+      "production EXTRACT/VERIFY",
+      "Wave 7B",
+      "semantic-control/ontology/RDF output"
+    ],
+    "next_safe_action": "Close inert trigger PR #209 unmerged after this checkpoint is durable. Freeze and validate a workflow-only timeout extension from isolated implementation head f9790f4d614f022a127b5b87e33955f613159963, checkpoint its exact identity, then issue exactly one replacement external-only NLI validation trigger."
+  }
+}
