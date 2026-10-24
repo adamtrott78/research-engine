@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "contract_id": "semantic-control-hardening-contract-v1",
+  "status": "FROZEN_BEFORE_HARDENING_IMPLEMENTATION",
+  "parent_checkpoint": {
+    "repository": "adamtrott78/research-engine",
+    "commit_sha": "16150517b311b42331ce26978fbb225a760c39e2",
+    "result_path": "benchmarks/semantic_control_integration/pre-extract-integration-result.v1.json",
+    "result_blob_sha": "b3867a928e91a5f6fade2e9bd2bff93707a81669",
+    "disposition": "PRE_EXTRACT_INTEGRATION_PASS"
+  },
+  "source_contracts": {
+    "semantic_control_contracts": {
+      "path": "benchmarks/semantic_control/contracts.v1.json",
+      "git_blob_sha": "92768c904b4aa04ac5b304b41ff36719496befd7"
+    },
+    "decision_engine": {
+      "path": "prototypes/semantic_control/decision.py",
+      "git_blob_sha": "5b3bee80125dc50f0298c2507b7760483d8ab787"
+    },
+    "semantic_twin": {
+      "path": "prototypes/semantic_control/twin.py",
+      "git_blob_sha": "aeef72a963f1857de863cbc69c53477f85084495"
+    },
+    "evidence_engine": {
+      "path": "prototypes/semantic_control/evidence.py",
+      "git_blob_sha": "9211d9aec321912e92f561b5f327b5b36193afd3"
+    },
+    "workspace_adapter": {
+      "path": "prototypes/semantic_control_integration/workspace_control_adapter.py",
+      "git_blob_sha": "de41b6b6f207155c3c2739e5f8c2e6d020960c47"
+    },
+    "research_adapter": {
+      "path": "prototypes/semantic_control_integration/research_engine_adapter.py",
+      "git_blob_sha": "234f4dfc5cda8bd1b1908fafb0ef369fc1bb62af"
+    }
+  },
+  "invariants": [
+    "Historical replay uses pinned historical knowledge/policy/candidate/precondition identities and never substitutes current authority.",
+    "Current-state divergence must not alter the reproduced historical decision.",
+    "Supersession preserves prior records and temporal replay selects state by validity interval rather than destructive overwrite.",
+    "Contradictions coexist unless an explicit resolution artifact is separately introduced.",
+    "Unknown is not false.",
+    "Any authority-sensitive version skew or stale required authority yields DENY or ABSTAIN, never ALLOW.",
+    "Receipt references are descriptive execution evidence and cannot retroactively authorize a candidate.",
+    "Ontology slices are bounded deterministic views and cannot widen authority.",
+    "EvidenceRequirement remains REQUEST_ONLY.",
+    "Synthetic scale/adversary fixtures are test data only and never scientific or normative authority.",
+    "FutureAcceptedExtractOutputDescriptorV1 references a future external accepted contract without defining its payload schema.",
+    "No hardening result authorizes production mutation or EXTRACT changes."
+  ],
+  "final_verdict_values": [
+    "HARDENING_PASS",
+    "REVISE",
+    "REJECT"
+  ]
+}

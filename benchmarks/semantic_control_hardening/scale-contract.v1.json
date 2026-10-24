@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "semantic-control-hardening-scale-v1",
+  "fixture_kind": "DETERMINISTIC_SYNTHETIC_NON_SCIENTIFIC",
+  "generator": {
+    "seed": 20261023,
+    "sizes": [
+      1000,
+      10000,
+      100000
+    ],
+    "layer_distribution": {
+      "EPISTEMIC": 0.7,
+      "NORMATIVE": 0.15,
+      "EXECUTION": 0.15
+    },
+    "contradiction_pair_fraction": 0.02,
+    "supersession_chain_fraction": 0.03,
+    "stale_fraction": 0.05,
+    "authority_candidate_fraction": 0.01,
+    "provenance_refs_per_observation": 2,
+    "canonical_sort_key": [
+      "observation_id"
+    ]
+  },
+  "measured_operations": [
+    "canonical_manifest_rebuild",
+    "bounded_ontology_slice",
+    "provenance_traversal",
+    "temporal_replay",
+    "decision_lookup"
+  ],
+  "repetitions": {
+    "1000": 50,
+    "10000": 20,
+    "100000": 5
+  },
+  "correctness_gates": [
+    "same seed and size produce identical manifest hash",
+    "bounded slice never exceeds requested maximum",
+    "all provenance traversals terminate on exact generated source identities",
+    "temporal replay returns the generated validity-window answer",
+    "decision lookup produces zero authorization escapes"
+  ],
+  "performance_policy": {
+    "pass_fail_latency_threshold": null,
+    "performance_promotion_claim_allowed": false,
+    "report_statistics": [
+      "min",
+      "mean",
+      "p50",
+      "p95",
+      "max"
+    ],
+    "interpretation": "Empirical scaling only; thresholds require a later evidence-driven contract."
+  }
+}
