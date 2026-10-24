@@ -1,0 +1,253 @@
+{
+  "schema_version": 1,
+  "design_id": "local-extract-nondestructive-evidence-frontier-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "status": "DESIGN_ONLY_REVIEW_REQUIRED_NO_IMPLEMENTATION_AUTHORIZED",
+  "scientific_question": "Is the strongest remaining EXTRACT residual primarily a destructive selection/global-budget collision between complementary teacher-blind evidence-intent branches, rather than a need for another semantic-similarity certificate or a new ranker/model family?",
+  "problem_model": {
+    "established": [
+      "Coarse page routing is not the dominant residual on the preserved teacher control: the exact selected-page proposition pool contains substantially stronger evidence than the currently selected propositions.",
+      "Under frozen answer-free atom-specific evidence intents, the existing ranking stack is sufficient on the preserved teacher control: BM25 supports 11/13 atoms at top-12 and BGE-M3 dense/ColBERT/hybrid plus Qwen3-Reranker support 13/13.",
+      "Automatic source-aware BM25 intent generation provides the strongest stable control at 7/13 supported atoms.",
+      "Automatic author-anchored BM25 obligations recover complementary residual atoms e1.a and e6.a but displace four control-supported atoms, ending at 5/13.",
+      "DYNAMIC_SAME_PAGE_ALIGNMENT_SWAP_V1 preserves all 7/7 control-supported atoms and safely recovers e6.a, reaching ALIGNMENT_AUGMENT_FEASIBLE at 8/13.",
+      "Learned NLI thresholding, dependency predicate/argument units, and AMR graph+Smatch all failed their frozen external redundancy-certificate gates and are negative evidence against reopening the generic pairwise-score -> threshold -> safe-redundancy premise without genuinely new evidence."
+    ],
+    "residual_hypotheses": [
+      {
+        "id": "H1_BRANCH_COMPLEMENTARITY_BUDGET_COLLISION",
+        "statement": "The source-aware and author-anchored branches already retrieve complementary useful evidence, but forcing them into a fixed 24-item globally competitive set or replacement mechanism causes useful residual evidence to displace established control coverage.",
+        "predicted_observation": "A small non-destructive append-only frontier from the frozen author-anchored ordering adds e1.a/e6.a while the immutable source-aware top-24 retains all seven frozen control atoms."
+      },
+      {
+        "id": "H2_INTENT_GENERATION_INCOMPLETENESS",
+        "statement": "The automatically generated branches remain too incomplete or poorly ordered; the missing residual evidence is not present early enough in a small additive frontier.",
+        "predicted_observation": "Even an append-only frontier through the predeclared diagnostic ceiling fails to recover both observed residual atoms."
+      },
+      {
+        "id": "H3_COMPOSITIONAL_EVIDENCE_REQUIREMENT",
+        "statement": "Some remaining unsupported atoms require multiple propositions/evidence pieces jointly rather than a better single-proposition selection.",
+        "predicted_observation": "Single-proposition additive coverage remains weak despite evidence availability; prior bundle diagnostics were only modestly positive, so this remains secondary until H1 is tested."
+      },
+      {
+        "id": "H4_EVIDENCE_RECOGNITION_OR_EVALUATION_GAP",
+        "statement": "Some selected propositions may semantically support target atoms while the existing frozen support evaluator fails to recognize them.",
+        "predicted_observation": "Future independent semantic/annotation audit finds support not reflected by the frozen teacher-support metric; this diagnostic does not alter that metric."
+      },
+      {
+        "id": "H5_RETRIEVAL_COVERAGE_MISS",
+        "statement": "The necessary proposition is outside the frozen automatic candidate order despite page-level exposure.",
+        "predicted_observation": "The residual remains absent through the additive frontier even though oracle answer-free intents can retrieve it."
+      }
+    ]
+  },
+  "preserved_positive_evidence": {
+    "checkpoint": "ALIGNMENT_AUGMENT_FEASIBLE",
+    "result_file": "benchmarks/document_intelligence/local-extract-proposition-alignment-preservation-result.v1.json",
+    "supported_atoms": 8,
+    "frozen_control_atoms_retained": 7,
+    "observed_residual_atoms_recovered": [
+      "e6.a"
+    ],
+    "role": "Alignment remains a validated sparse preservation guard/reference. This design does not discard it; it tests whether destructive replacement is necessary at all before attempting another compression/certificate mechanism."
+  },
+  "rejected_mechanisms": [
+    "NLI_CERTIFICATE_REJECTED",
+    "PREDICATE_ARGUMENT_CERTIFICATE_REJECTED",
+    "AMR_GRAPH_CERTIFICATE_REJECTED"
+  ],
+  "architecture_family_comparison": [
+    {
+      "id": "NONDESTRUCTIVE_MULTI_INTENT_EVIDENCE_FRONTIER",
+      "mechanisms": [
+        "retrieval",
+        "coverage_planning",
+        "append_only_evidence_union"
+      ],
+      "role": "SELECTED_FIRST_DIAGNOSTIC",
+      "rationale": "Directly tests branch complementarity and budget collision using only already-frozen teacher-blind branches. It requires no new generation, no new model, no semantic pairwise threshold, and preserves the validated source-aware core by construction."
+    },
+    {
+      "id": "SOURCE_DERIVED_SUBQUESTION_DECOMPOSITION",
+      "mechanisms": [
+        "decomposition",
+        "retrieval",
+        "merged_candidate_pool",
+        "reranking"
+      ],
+      "role": "DEFERRED_IF_H1_NOT_CONFIRMED",
+      "rationale": "External work shows decomposed subquestions can improve complementary evidence retrieval, but prior EXTRACT evidence already identifies automatic intent generation as a bottleneck; generating a new decomposition policy before testing the existing complementary branches would confound the smallest falsifiable premise."
+    },
+    {
+      "id": "ITERATIVE_GAP_DIRECTED_RETRIEVAL",
+      "mechanisms": [
+        "novelty_or_gap_detection",
+        "iterative_retrieval",
+        "verification_or_stopping"
+      ],
+      "role": "DEFERRED_IF_STATIC_FRONTIER_INSUFFICIENT",
+      "rationale": "FIRE, DIVER, and multi-hop evidence-pursuit systems support iterative search when fixed retrieval is incomplete, but this is materially more complex and requires an independently valid gap/stopping signal."
+    },
+    {
+      "id": "EVIDENCE_SET_OR_MINIMAL_GROUP_REASONING",
+      "mechanisms": [
+        "evidence_set_reasoning",
+        "coverage_or_set_cover",
+        "compositional_support"
+      ],
+      "role": "DEFERRED",
+      "rationale": "Minimal-evidence-group work supports set-level reasoning, but the published formulation relies on entailment estimates. The frozen EXTRACT NLI certificate failed, so importing an entailment-based set-cover judge now would reopen a rejected premise without new evidence."
+    },
+    {
+      "id": "PAIRWISE_SEMANTIC_REDUNDANCY_CERTIFICATE",
+      "mechanisms": [
+        "pairwise_score",
+        "threshold",
+        "replacement"
+      ],
+      "role": "INELIGIBLE_WITHOUT_NEW_PREMISE_EVIDENCE",
+      "rationale": "Technologically distinct NLI and AMR implementations both failed the broader pairwise-score/threshold safe-redundancy premise; repetition or cosmetic model/threshold changes are not new evidence."
+    },
+    {
+      "id": "NEW_OR_LARGER_RANKER_MODEL",
+      "mechanisms": [
+        "retrieval_model_swap_or_training"
+      ],
+      "role": "DEFERRED",
+      "rationale": "The answer-free intent oracle already demonstrates sufficient ranker capacity on the preserved teacher control; model-family change is not the smallest explanation for current failure."
+    }
+  ],
+  "external_research_evidence": [
+    {
+      "source": "Ammann, Golde, Akbik. Question Decomposition for Retrieval-Augmented Generation. ACL SRW 2025.",
+      "url": "https://aclanthology.org/2025.acl-srw.32/",
+      "lesson": "Decompose into subquestions, retrieve per subquestion, then merge/rerank the candidate pool; reported gains support complementary-query coverage as a distinct mechanism from pairwise redundancy scoring."
+    },
+    {
+      "source": "Chen et al. Complex Claim Verification with Evidence Retrieved in the Wild. NAACL 2024.",
+      "url": "https://aclanthology.org/2024.naacl-long.196/",
+      "lesson": "Complex verification benefits from explicit decomposition plus fine-grained evidence retrieval and aggregation, supporting separation of coverage acquisition from final judgment."
+    },
+    {
+      "source": "Xie et al. Do RAG Systems Cover What Matters? NAACL 2025.",
+      "url": "https://aclanthology.org/2025.naacl-long.301/",
+      "lesson": "Sub-question coverage exposes missing facets that aggregate relevance can hide; coverage planning is therefore a plausible mechanism family distinct from semantic redundancy scoring."
+    },
+    {
+      "source": "Xie et al. FIRE: Fact-checking with Iterative Retrieval and Verification. Findings NAACL 2025.",
+      "url": "https://aclanthology.org/2025.findings-naacl.158/",
+      "lesson": "Iterative retrieval can use current verification state to decide whether more evidence is needed; this supports a later gap-directed family if a static frozen frontier proves insufficient."
+    },
+    {
+      "source": "Zhang, Kabir, Boyd-Graber. DIVER. Findings EMNLP 2026.",
+      "url": "https://aclanthology.org/2026.findings-emnlp.855/",
+      "lesson": "Incremental claim extraction and evidence refinement provide recent evidence for iterative coverage/stopping architectures rather than single-shot similarity thresholds."
+    },
+    {
+      "source": "Li et al. Minimal Evidence Group Identification for Claim Verification. TrustNLP 2025.",
+      "url": "https://aclanthology.org/2025.trustnlp-main.8/",
+      "lesson": "Some claims require evidence groups rather than single evidence pieces; useful for the compositional hypothesis, but its entailment dependency prevents direct adoption after EXTRACT's NLI rejection."
+    },
+    {
+      "source": "Hu, Long, Wang. Decomposition Dilemmas. NAACL 2025.",
+      "url": "https://aclanthology.org/2025.naacl-long.320/",
+      "lesson": "Decomposition can introduce noise and is not universally beneficial, so EXTRACT should first test the smallest existing-branch coverage premise rather than assume a new decomposition policy will help."
+    }
+  ],
+  "selected_discriminating_experiment": {
+    "id": "NONDESTRUCTIVE_EVIDENCE_FRONTIER_DIAGNOSTIC_V1",
+    "purpose": "Determine whether a small append-only union of already-generated complementary evidence-intent branches can recover the two observed residual atoms without sacrificing the validated source-aware core.",
+    "implementation_scope": "diagnostic_only",
+    "new_generation_calls": 0,
+    "new_model_downloads": 0,
+    "new_model_training": false,
+    "scientific_state_materialized": false,
+    "production_routing_changed": false,
+    "inputs": [
+      "Frozen QWEN35_SOURCE_AWARE_INTENTS_V1 BM25_DIRECT ordering from valid Wave 7A.3/control lineage.",
+      "Frozen QWEN35_AUTHOR_ANCHORED_OBLIGATIONS_V1 BM25_DIRECT ordering from valid Wave 7A.3 run 40027366528 / artifact 12533721500.",
+      "Same nine-paper authoritative PDF/proposition substrate and frozen teacher-support evaluator.",
+      "ALIGNMENT_AUGMENT_FEASIBLE result as a preservation reference/control only; no alignment score participates in candidate selection."
+    ],
+    "selector": {
+      "id": "IMMUTABLE_CORE_APPEND_FRONTIER_V1",
+      "immutable_core": "Exact frozen source-aware BM25 RRF top-24 propositions per paper.",
+      "append_stream": "Exact frozen author-anchored BM25 RRF order with propositions already present in the immutable core removed; preserve original order.",
+      "operation": "Append only. Never delete, replace, rerank, or alter the 24-item source-aware core.",
+      "diagnostic_budgets": [
+        24,
+        26,
+        28,
+        32
+      ],
+      "primary_small_frontier_ceiling": 28,
+      "maximum_diagnostic_ceiling": 32,
+      "deduplicate_by": "paper_id + proposition_id",
+      "teacher_blind": true,
+      "no_pairwise_similarity_score": true,
+      "no_threshold_calibration": true,
+      "no_post_result_budget_selection": true
+    },
+    "frozen_controls": [
+      "FROZEN_SOURCE_AWARE_BM25_RRF_V1 top-24: 7/13 supported atoms.",
+      "FROZEN_AUTHOR_ANCHORED_BM25_RRF_V1 top-24: 5/13, including residual e1.a and e6.a but only 3/7 frozen controls.",
+      "DYNAMIC_SAME_PAGE_ALIGNMENT_SWAP_V1: ALIGNMENT_AUGMENT_FEASIBLE, 8/13, all 7/7 controls retained, e6.a recovered.",
+      "CONTROL20_RESIDUAL4_QUOTA_V1 remains diagnostic-only/non-promotable and is not used to select or calibrate this append-only mechanism."
+    ],
+    "metrics": {
+      "teacher_evaluation_only": [
+        "supported_atoms_at_each_predeclared_budget",
+        "frozen_control_atoms_retained",
+        "observed_residual_atoms_recovered from {e1.a,e6.a}"
+      ],
+      "nine_paper_cost_and_provenance": [
+        "selected_proposition_count",
+        "unique_source_page_count",
+        "historical_evidence_bearing_page_recall",
+        "total_raw_source_chars",
+        "incremental_raw_source_chars_vs_top24",
+        "all_propositions_exactly_locatable_to_authoritative PDF page/proposition identity"
+      ]
+    },
+    "frozen_interpretation": {
+      "ADDITIVE_FRONTIER_CONFIRMED": [
+        "At budget <=28, all 7/7 frozen source-aware control-supported atoms remain supported.",
+        "Both observed complementary residual atoms e1.a and e6.a are supported.",
+        "Total support is therefore >=9/13.",
+        "No provenance/teacher-blind boundary fails."
+      ],
+      "ADDITIVE_FRONTIER_PARTIAL": [
+        "CONFIRMED is not met, but by budget <=28 at least one of e1.a/e6.a is recovered with all 7/7 controls retained; OR both are recovered only at budget 32.",
+        "Interpretation: budget collision contributes but does not fully explain the residual at the preferred small frontier."
+      ],
+      "ADDITIVE_FRONTIER_NEGATIVE": [
+        "Neither CONFIRMED nor PARTIAL is met by the frozen maximum diagnostic ceiling of 32, or a provenance/teacher-blind boundary fails.",
+        "Interpretation: reject small static append-only branch union as the primary remaining mechanism."
+      ]
+    },
+    "decision_table": {
+      "ADDITIVE_FRONTIER_CONFIRMED": "Authorize design of a bounded non-destructive multi-intent evidence-set architecture. The next design must address cost/compression explicitly and should retain ALIGNMENT_AUGMENT_FEASIBLE as a possible compression guard/reference; no production promotion is authorized.",
+      "ADDITIVE_FRONTIER_PARTIAL": "Do not tune the frontier budget. Conclude that static budget collision is only a contributor; next architecture search should compare source-derived subquestion decomposition against iterative gap-directed retrieval.",
+      "ADDITIVE_FRONTIER_NEGATIVE": "Reject static append-only branch union. Move directly to a materially different query/decomposition or iterative gap-pursuit mechanism; do not reopen NLI/predicate-argument/AMR redundancy certificates.",
+      "OPERATIONAL_FAILURE_BEFORE_SCIENCE": "No scientific verdict. Repair only the operational defect if science is unchanged, then require explicit one-shot recovery authority."
+    },
+    "stopping_rule": "Exactly one scientific execution after independent design review. Stop immediately at the frozen verdict. No budget edits, branch-order edits, teacher-informed candidate changes, threshold/model/parser/prompt changes, or second scientific run after a valid result.",
+    "pass_authority": "A CONFIRMED result authorizes only the next bounded architecture/design phase for non-destructive multi-intent evidence-set retrieval and cost/compression study. It does not authorize production EXTRACT changes, Wave 7B, semantic-control output, or removal of Codex fallback/VERIFY."
+  },
+  "hard_boundaries": {
+    "teacher_labels_used_for_selection": false,
+    "teacher_labels_used_only_for_frozen_evaluation": true,
+    "production_standard_codex_extract_changed": false,
+    "accepted_qwen_verify_changed": false,
+    "wave7b_started": false,
+    "semantic_control_or_ontology_output": false,
+    "rdf_output": false,
+    "nli_rescue": false,
+    "predicate_argument_rescue": false,
+    "amr_rescue": false,
+    "new_model_or_prompt_family": false,
+    "implementation_authorized_before_independent_review": false
+  },
+  "reviewer_boundary": "Independent reviewer must audit this frozen design before implementation. Routine implementation/CI/packaging/routing/trigger mechanics do not require reviewer stops unless they materially change the frozen experiment. After the genuine result, reviewer must be consulted again before next scientific phase selection.",
+  "next_safe_action": "Run normal CI on this design-only artifact and merge only if clean. Then persist the design checkpoint in workspace-control and obtain an independent-review checkpoint for this exact design SHA. Do not implement NONDESTRUCTIVE_EVIDENCE_FRONTIER_DIAGNOSTIC_V1 before that review is durable."
+}
