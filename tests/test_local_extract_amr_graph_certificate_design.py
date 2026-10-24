@@ -28,6 +28,12 @@ def test_parser_identity_and_bio_gate_are_frozen() -> None:
     assert model["release_asset_size_bytes"] == 1506463657
     assert model["published_md5"] == "5633e5e6f8a4f4398ce64abab71c473a"
     assert model["base_model"] == "facebook/bart-large"
+    assert model["tokenizer"] == {
+        "repository": "facebook/bart-large",
+        "revision": "22fa33834dccc11df99c4fc5fcc96c67f806dfdb",
+        "license": "Apache-2.0",
+        "acquisition": "Download tokenizer files from this exact Hugging Face revision into an ephemeral local directory and pass that directory as tok_name_or_path to amrlib. Network resolution from moving main is forbidden.",
+    }
     assert model["inference"] == {
         "device": "cuda:0",
         "batch_size": 8,

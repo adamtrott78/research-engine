@@ -115,7 +115,13 @@
         "add_metadata": false,
         "deterministic_seed": 1729
       },
-      "identity_rule": "Workflow must verify release asset size and published MD5 before extraction, compute SHA256 of the downloaded tarball, and persist that SHA256 in the report."
+      "identity_rule": "Workflow must verify parser release asset size and published MD5 before extraction, compute SHA256 of the downloaded parser tarball, acquire the facebook/bart-large tokenizer only from revision 22fa33834dccc11df99c4fc5fcc96c67f806dfdb into a local directory, pass that local path as tok_name_or_path, and persist parser tarball SHA256 plus tokenizer manifest SHA256 in the report.",
+      "tokenizer": {
+        "repository": "facebook/bart-large",
+        "revision": "22fa33834dccc11df99c4fc5fcc96c67f806dfdb",
+        "license": "Apache-2.0",
+        "acquisition": "Download tokenizer files from this exact Hugging Face revision into an ephemeral local directory and pass that directory as tok_name_or_path to amrlib. Network resolution from moving main is forbidden."
+      }
     },
     "external_validation_sets": [
       {
@@ -189,8 +195,8 @@
       "note": "No EXTRACT teacher label, teacher atom, or EXTRACT benchmark may participate in parser selection, threshold selection, or verdict."
     },
     "decision_boundary": {
-      "if_validated": "Checkpoint exact parser tarball SHA256, pinned Bio-AMR mirror commit/blob/file SHA256, SPARK file SHA256, amrlib/smatch identities, selected threshold, run/artifact/report identities, then open a separate EXTRACT design for substituting graph similarity into the accepted dynamic-swap/page-preservation/top-24 architecture.",
-      "if_partial_or_rejected": "Do not tune parser model, beam count, Smatch deterministic reseed rule, threshold grid, or Bio-AMR/SPARK gates using EXTRACT results. Reassess claim/question decomposition, UCCA, or another materially different teacher-blind evidence representation.",
+      "if_validated": "Checkpoint exact parser tarball SHA256, pinned tokenizer revision/manifest SHA256, pinned Bio-AMR mirror commit/blob/file SHA256, SPARK file SHA256, amrlib/smatch identities, selected threshold, run/artifact/report identities, then open a separate EXTRACT design for substituting graph similarity into the accepted dynamic-swap/page-preservation/top-24 architecture.",
+      "if_partial_or_rejected": "Do not tune parser model, tokenizer revision, beam count, Smatch deterministic reseed rule, threshold grid, or Bio-AMR/SPARK gates using EXTRACT results. Reassess claim/question decomposition, UCCA, or another materially different teacher-blind evidence representation.",
       "never": "Do not start Wave 7B, change production EXTRACT/VERIFY, retrain/fine-tune the AMR parser, use EXTRACT teacher labels, emit RDF/ontology output, or change EXTRACT output for semantic-control."
     }
   },
@@ -232,5 +238,5 @@
     "semantic_control_or_ontology_in_extract": false,
     "rdf_or_ontology_output": false
   },
-  "next_safe_action": "CI-lock this design. Before implementation, re-read the independent-review capsule for any checkpoint explicitly tied to the exact durable design SHA. If none exists, implement only the external AMR_GRAPH_REDUNDANCY_CERTIFICATE_VALIDATION_V1 harness/workflow and run no EXTRACT teacher benchmark."
+  "next_safe_action": "CI-lock this tokenizer-pinned design hotfix. Before implementation, re-read the independent-review capsule for any checkpoint explicitly tied to the exact durable hotfix SHA. If none exists, implement only the external AMR_GRAPH_REDUNDANCY_CERTIFICATE_VALIDATION_V1 harness/workflow and run no EXTRACT teacher benchmark."
 }
