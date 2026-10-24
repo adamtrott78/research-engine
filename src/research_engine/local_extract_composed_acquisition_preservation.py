@@ -290,7 +290,12 @@ def evaluate_composed_acquisition_preservation(
         "semantic_control_or_ontology_output_false": True,
         "rejected_mechanism_rescue_false": True,
     }
-    safe = all(bool(value) for value in hard_safety.values())
+    safe = bool(
+        report_identity_pass
+        and len(selected) == FROZEN_BUDGET
+        and len(composed) == FROZEN_BUDGET
+        and all_locatable
+    )
 
     decision = _classify(
         primary=primary,
