@@ -1,0 +1,207 @@
+{
+  "all_correct": true,
+  "benchmark_id": "semantic-control-hardening-scale-v1",
+  "fixture_kind": "DETERMINISTIC_SYNTHETIC_NON_SCIENTIFIC",
+  "generator": {
+    "authority_candidate_fraction": 0.01,
+    "canonical_sort_key": [
+      "observation_id"
+    ],
+    "contradiction_pair_fraction": 0.02,
+    "layer_distribution": {
+      "EPISTEMIC": 0.7,
+      "EXECUTION": 0.15,
+      "NORMATIVE": 0.15
+    },
+    "provenance_refs_per_observation": 2,
+    "seed": 20261023,
+    "sizes": [
+      1000,
+      10000,
+      100000
+    ],
+    "stale_fraction": 0.05,
+    "supersession_chain_fraction": 0.03
+  },
+  "pass_fail_latency_threshold": null,
+  "performance_promotion_claim": false,
+  "production_mutation": false,
+  "results": [
+    {
+      "authorization_escape_count": 0,
+      "decision_lookup": {
+        "workload:allowed": "ALLOW",
+        "workload:missing": "ABSTAIN",
+        "workload:protected": "DENY"
+      },
+      "deterministic_rebuild": true,
+      "latency_ns": {
+        "bounded_ontology_slice": {
+          "max": 28527317,
+          "mean": 4571059,
+          "min": 3999897,
+          "p50": 4060390,
+          "p95": 4299828
+        },
+        "canonical_manifest_rebuild": {
+          "max": 9543183,
+          "mean": 8964768,
+          "min": 8818357,
+          "p50": 8917282,
+          "p95": 9216982
+        },
+        "decision_lookup": {
+          "max": 213309,
+          "mean": 182500,
+          "min": 175459,
+          "p50": 180347,
+          "p95": 191368
+        },
+        "provenance_traversal": {
+          "max": 698377,
+          "mean": 407764,
+          "min": 387435,
+          "p50": 393827,
+          "p95": 494095
+        },
+        "temporal_replay": {
+          "max": 241692,
+          "mean": 174149,
+          "min": 162334,
+          "p50": 168135,
+          "p95": 195856
+        }
+      },
+      "provenance_exact_generated_sources": true,
+      "provenance_reference_count": 2000,
+      "provenance_unique_source_count": 257,
+      "repetitions": 50,
+      "semantic_manifest_sha256": "e21cf045e20bf93119c55ebc89c3bceb3852d099b81cc14419889c09f0565e7a",
+      "size": 1000,
+      "slice_bounded": true,
+      "slice_observation_count": 12,
+      "temporal_replay": {
+        "2026-01-15": "old",
+        "2026-02-15": "new"
+      }
+    },
+    {
+      "authorization_escape_count": 0,
+      "decision_lookup": {
+        "workload:allowed": "ALLOW",
+        "workload:missing": "ABSTAIN",
+        "workload:protected": "DENY"
+      },
+      "deterministic_rebuild": true,
+      "latency_ns": {
+        "bounded_ontology_slice": {
+          "max": 87204120,
+          "mean": 50158899,
+          "min": 42624706,
+          "p50": 43869345,
+          "p95": 85597603
+        },
+        "canonical_manifest_rebuild": {
+          "max": 139189167,
+          "mean": 100201476,
+          "min": 95702207,
+          "p50": 96707980,
+          "p95": 119683155
+        },
+        "decision_lookup": {
+          "max": 1960980,
+          "mean": 1882279,
+          "min": 1849482,
+          "p50": 1871463,
+          "p95": 1929742
+        },
+        "provenance_traversal": {
+          "max": 9862431,
+          "mean": 6132385,
+          "min": 4182058,
+          "p50": 5756455,
+          "p95": 7905518
+        },
+        "temporal_replay": {
+          "max": 2840647,
+          "mean": 1394380,
+          "min": 1276921,
+          "p50": 1316304,
+          "p95": 1359655
+        }
+      },
+      "provenance_exact_generated_sources": true,
+      "provenance_reference_count": 20000,
+      "provenance_unique_source_count": 257,
+      "repetitions": 20,
+      "semantic_manifest_sha256": "18b63de0bed83501c15d1099b6e5d74d8ccf9496b31b13ad33419c8080b1abda",
+      "size": 10000,
+      "slice_bounded": true,
+      "slice_observation_count": 12,
+      "temporal_replay": {
+        "2026-01-15": "old",
+        "2026-02-15": "new"
+      }
+    },
+    {
+      "authorization_escape_count": 0,
+      "decision_lookup": {
+        "workload:allowed": "ALLOW",
+        "workload:missing": "ABSTAIN",
+        "workload:protected": "DENY"
+      },
+      "deterministic_rebuild": true,
+      "latency_ns": {
+        "bounded_ontology_slice": {
+          "max": 694710321,
+          "mean": 582893112,
+          "min": 451060223,
+          "p50": 649963236,
+          "p95": 694710321
+        },
+        "canonical_manifest_rebuild": {
+          "max": 1019428593,
+          "mean": 958805682,
+          "min": 937213934,
+          "p50": 945821274,
+          "p95": 1019428593
+        },
+        "decision_lookup": {
+          "max": 74781404,
+          "mean": 72577454,
+          "min": 71424001,
+          "p50": 71931721,
+          "p95": 74781404
+        },
+        "provenance_traversal": {
+          "max": 104049638,
+          "mean": 103240462,
+          "min": 102889285,
+          "p50": 103066236,
+          "p95": 104049638
+        },
+        "temporal_replay": {
+          "max": 49841792,
+          "mean": 48772844,
+          "min": 48028099,
+          "p50": 48755270,
+          "p95": 49841792
+        }
+      },
+      "provenance_exact_generated_sources": true,
+      "provenance_reference_count": 200000,
+      "provenance_unique_source_count": 257,
+      "repetitions": 5,
+      "semantic_manifest_sha256": "aa14d1a50a5f879f4a72878a66fd452b02bcd36d93f8a05ee7d006ca277f1ef0",
+      "size": 100000,
+      "slice_bounded": true,
+      "slice_observation_count": 12,
+      "temporal_replay": {
+        "2026-01-15": "old",
+        "2026-02-15": "new"
+      }
+    }
+  ],
+  "schema_version": 1,
+  "scientific_evidence": false
+}

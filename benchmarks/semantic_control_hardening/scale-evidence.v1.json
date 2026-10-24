@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "evidence_id": "semantic-control-hardening-scale-run-40047074263",
+  "pr_number": 212,
+  "pr_head_sha": "6f6ca884275e436a13bff655334fd7892dfad06b",
+  "ci_run_id": 40047074263,
+  "ci_job_id": 120731149942,
+  "result_marker": "SEMANTIC_CONTROL_HARDENING_SCALE_V1",
+  "all_correct": true,
+  "production_mutation": false,
+  "scientific_evidence": false
+}
