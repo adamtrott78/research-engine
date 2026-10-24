@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "contract_id": "future-accepted-extract-output-descriptor-v1",
+  "state": "OPAQUE_UNBOUND",
+  "purpose": "Consumer-side registration descriptor for a future independently accepted EXTRACT output contract.",
+  "descriptor_required_fields": [
+    "schema_version",
+    "descriptor_id",
+    "external_owner_task_id",
+    "external_repository",
+    "external_commit_sha",
+    "external_contract_artifact",
+    "scientific_disposition",
+    "acceptance_evidence",
+    "payload_schema_opaque",
+    "adapter_target_contract",
+    "binding_state"
+  ],
+  "external_contract_artifact_required_fields": [
+    "path",
+    "git_blob_sha",
+    "schema_id"
+  ],
+  "invariants": [
+    "payload_schema_opaque must be true until the owning EXTRACT task supplies an accepted contract",
+    "descriptor contains no EXTRACT payload fields",
+    "descriptor contains no prompts, retrieval strategy, model choice, or generation mechanism",
+    "scientific_disposition must explicitly indicate acceptance before binding_state may become BOUND",
+    "adapter_target_contract is SemanticObservationV1",
+    "registration cannot mutate or steer EXTRACT",
+    "synthetic descriptor tests never imply an accepted real EXTRACT contract"
+  ],
+  "forbidden_descriptor_fields": [
+    "payload_fields",
+    "prompt",
+    "retrieval_method",
+    "model",
+    "qwen",
+    "codex",
+    "ontology_required_output",
+    "rdf_required_output"
+  ],
+  "synthetic_test_descriptors": [
+    {
+      "descriptor_id": "synthetic:unaccepted",
+      "external_owner_task_id": "synthetic-extract-task",
+      "external_repository": "example/research-engine",
+      "external_commit_sha": "1111111111111111111111111111111111111111",
+      "external_contract_artifact": {
+        "path": "future/contract.json",
+        "git_blob_sha": "2222222222222222222222222222222222222222",
+        "schema_id": "OpaqueFutureSchemaV1"
+      },
+      "scientific_disposition": "DESIGN_ONLY",
+      "acceptance_evidence": [],
+      "payload_schema_opaque": true,
+      "adapter_target_contract": "SemanticObservationV1",
+      "binding_state": "UNBOUND",
+      "expected_registration": "REJECT_BINDING"
+    },
+    {
+      "descriptor_id": "synthetic:accepted",
+      "external_owner_task_id": "synthetic-extract-task",
+      "external_repository": "example/research-engine",
+      "external_commit_sha": "3333333333333333333333333333333333333333",
+      "external_contract_artifact": {
+        "path": "future/accepted-contract.json",
+        "git_blob_sha": "4444444444444444444444444444444444444444",
+        "schema_id": "OpaqueAcceptedSchemaV1"
+      },
+      "scientific_disposition": "ACCEPTED_OUTPUT_CONTRACT",
+      "acceptance_evidence": [
+        "synthetic:acceptance-gate-pass"
+      ],
+      "payload_schema_opaque": true,
+      "adapter_target_contract": "SemanticObservationV1",
+      "binding_state": "UNBOUND",
+      "expected_registration": "REGISTER_DESCRIPTOR_ONLY"
+    }
+  ]
+}

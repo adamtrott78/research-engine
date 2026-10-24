@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "fixture_kind": "MIXED_PINNED_AND_SYNTHETIC_HARDENING_FIXTURE",
+  "authoritative_source_identity": {
+    "workspace_control_commit": "91459f5f6afa0d71394d63155c2fe8dfdc65a4b7",
+    "workload_policy_blob_sha": "71bd0bb9c63436964462b1f9b889686ac328ee1d",
+    "integration_snapshot_path": "benchmarks/semantic_control_integration/workspace-control-snapshot-inputs.v1.json"
+  },
+  "replay_cases": [
+    {
+      "case_id": "R1_GPU_SMALL_HISTORICAL_ALLOW",
+      "historical": {
+        "semantic_manifest_id": "history:epoch3:gpu-small",
+        "knowledge_checkpoint_ids": [
+          "workspace-control@91459f5f6afa0d71394d63155c2fe8dfdc65a4b7"
+        ],
+        "policy": {
+          "policy_id": "lambda-ci-workload-policy-v1",
+          "policy_epoch": 3,
+          "workload_class": "gpu-small",
+          "decision": "EXISTING_P5_CAPABILITY"
+        },
+        "candidate": {
+          "candidate_action_id": "history:gpu-small",
+          "action_type": "RUN_WORKLOAD",
+          "workload_class": "gpu-small"
+        },
+        "preconditions": [
+          {
+            "precondition_id": "p:scope",
+            "result": "PASS"
+          }
+        ],
+        "expected_decision": "ALLOW"
+      },
+      "divergent_current_state": {
+        "policy_epoch": 4,
+        "workload_class": "gpu-small",
+        "decision": "DENY",
+        "fixture_provenance": "SYNTHETIC_ADVERSARY_ONLY"
+      },
+      "replay_expected": "ALLOW"
+    },
+    {
+      "case_id": "R2_GPU_HEAVY_HISTORICAL_DENY",
+      "historical": {
+        "semantic_manifest_id": "history:epoch3:gpu-heavy",
+        "knowledge_checkpoint_ids": [
+          "workspace-control@91459f5f6afa0d71394d63155c2fe8dfdc65a4b7"
+        ],
+        "policy": {
+          "policy_id": "lambda-ci-workload-policy-v1",
+          "policy_epoch": 3,
+          "workload_class": "gpu-heavy",
+          "decision": "DENY"
+        },
+        "candidate": {
+          "candidate_action_id": "history:gpu-heavy",
+          "action_type": "RUN_WORKLOAD",
+          "workload_class": "gpu-heavy"
+        },
+        "preconditions": [
+          {
+            "precondition_id": "p:scope",
+            "result": "PASS"
+          }
+        ],
+        "expected_decision": "DENY"
+      },
+      "divergent_current_state": {
+        "policy_epoch": 4,
+        "workload_class": "gpu-heavy",
+        "decision": "ALLOW",
+        "fixture_provenance": "SYNTHETIC_ADVERSARY_ONLY"
+      },
+      "replay_expected": "DENY"
+    },
+    {
+      "case_id": "R3_MISSING_HISTORICAL_AUTHORITY_ABSTAINS",
+      "historical": {
+        "semantic_manifest_id": "history:missing-authority",
+        "knowledge_checkpoint_ids": [
+          "synthetic:missing-authority"
+        ],
+        "policy": null,
+        "candidate": {
+          "candidate_action_id": "history:missing-authority",
+          "action_type": "RUN_WORKLOAD",
+          "workload_class": "gpu-small"
+        },
+        "preconditions": [
+          {
+            "precondition_id": "p:scope",
+            "result": "PASS"
+          }
+        ],
+        "expected_decision": "ABSTAIN"
+      },
+      "divergent_current_state": {
+        "policy_epoch": 99,
+        "workload_class": "gpu-small",
+        "decision": "ALLOW",
+        "fixture_provenance": "SYNTHETIC_ADVERSARY_ONLY"
+      },
+      "replay_expected": "ABSTAIN"
+    }
+  ]
+}

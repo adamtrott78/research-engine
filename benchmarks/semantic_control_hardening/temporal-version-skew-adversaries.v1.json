@@ -1,0 +1,151 @@
+{
+  "schema_version": 1,
+  "fixture_kind": "SYNTHETIC_ADVERSARY_ONLY",
+  "temporal_cases": [
+    {
+      "case_id": "T1_SUPERSESSION_REPLAY",
+      "subject_id": "claim:versioned",
+      "predicate": "hasValue",
+      "versions": [
+        {
+          "observation_id": "t1:old",
+          "value": "old",
+          "valid_from": "2026-01-01T00:00:00Z",
+          "valid_to": "2026-02-01T00:00:00Z",
+          "assertion_state": "SUPERSEDED"
+        },
+        {
+          "observation_id": "t1:new",
+          "value": "new",
+          "valid_from": "2026-02-01T00:00:00Z",
+          "valid_to": null,
+          "assertion_state": "ACTIVE",
+          "supersedes": [
+            "t1:old"
+          ]
+        }
+      ],
+      "expected": {
+        "2026-01-15T00:00:00Z": [
+          "old"
+        ],
+        "2026-02-15T00:00:00Z": [
+          "new"
+        ]
+      }
+    },
+    {
+      "case_id": "T2_CONTRADICTION_PRESERVED",
+      "observations": [
+        {
+          "observation_id": "t2:true",
+          "value": true,
+          "contradicts": [
+            "t2:false"
+          ]
+        },
+        {
+          "observation_id": "t2:false",
+          "value": false,
+          "contradicts": [
+            "t2:true"
+          ]
+        }
+      ],
+      "expected_active_observation_ids": [
+        "t2:false",
+        "t2:true"
+      ],
+      "global_truth_resolution": "NONE"
+    },
+    {
+      "case_id": "T3_UNKNOWN_IS_NOT_FALSE",
+      "observation": {
+        "observation_id": "t3:unknown",
+        "assertion_state": "UNKNOWN",
+        "value": null
+      },
+      "expected_semantics": "UNKNOWN"
+    }
+  ],
+  "version_skew_cases": [
+    {
+      "case_id": "V1_STALE_ALLOW_CURRENT_DENY",
+      "candidate_workload_class": "gpu-heavy",
+      "projected_policy": {
+        "epoch": 2,
+        "decision": "ALLOW"
+      },
+      "required_authority": {
+        "epoch": 3,
+        "decision": "DENY"
+      },
+      "expected_decision": "DENY",
+      "expected_reason_code": "STALE_AUTHORITY_CONTEXT"
+    },
+    {
+      "case_id": "V2_POLICY_EPOCH_MISMATCH_WITHOUT_CURRENT_RECORD",
+      "candidate_workload_class": "gpu-small",
+      "projected_policy": {
+        "epoch": 2,
+        "decision": "ALLOW"
+      },
+      "required_policy_epoch": 3,
+      "current_policy_record": null,
+      "expected_decision": "ABSTAIN",
+      "expected_reason_code": "REQUIRED_AUTHORITY_UNAVAILABLE"
+    },
+    {
+      "case_id": "V3_TASK_CHECKPOINT_DRIFT",
+      "projected_task_checkpoint": "task@old",
+      "required_task_checkpoint": "task@new",
+      "expected_decision": "ABSTAIN",
+      "expected_reason_code": "TASK_STATE_STALE"
+    },
+    {
+      "case_id": "V4_RECEIPT_BINDING_MISMATCH",
+      "evaluation_id": "eval:expected",
+      "receipt": {
+        "evaluation_id": "eval:different",
+        "candidate_action_id": "action:expected"
+      },
+      "expected_receipt_status": "INVALID_BINDING",
+      "authority_effect": "NONE"
+    },
+    {
+      "case_id": "V5_SOURCE_BLOB_DRIFT",
+      "expected_blob_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "observed_blob_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "expected_decision": "ABSTAIN",
+      "expected_reason_code": "SOURCE_IDENTITY_DRIFT"
+    },
+    {
+      "case_id": "V6_REPOSITORY_DISAGREEMENT",
+      "source_a": {
+        "repository": "research-engine",
+        "checkpoint": "A",
+        "value": "READY"
+      },
+      "source_b": {
+        "repository": "workspace-control",
+        "checkpoint": "B",
+        "value": "NOT_READY"
+      },
+      "expected_decision": "ABSTAIN",
+      "expected_reason_code": "CROSS_SOURCE_DISAGREEMENT"
+    },
+    {
+      "case_id": "V7_FAKE_EPISTEMIC_ALLOW",
+      "observation_layer": "EPISTEMIC",
+      "claimed_policy_decision": "ALLOW",
+      "expected_decision": "ABSTAIN",
+      "expected_reason_code": "NON_AUTHORITATIVE_PERMISSION_CLAIM"
+    },
+    {
+      "case_id": "V8_CORRUPT_PROJECTION_DUPLICATE_ID",
+      "corruption": "DUPLICATE_OBSERVATION_ID_WITH_DIFFERENT_VALUE",
+      "expected_projection_status": "FAIL_CLOSED",
+      "authority_effect": "NONE"
+    }
+  ]
+}

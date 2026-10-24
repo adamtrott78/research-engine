@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "fixture_kind": "SYNTHETIC_EXPECTED_ANSWER_CASES",
+  "ontology_slice_cases": [
+    {
+      "case_id": "S1_WORKLOAD_AUTHORITY_DECISION",
+      "context": {
+        "purpose": "evaluate_workload_authority",
+        "workload_class": "gpu-heavy"
+      },
+      "max_observations": 12,
+      "required_entity_types": [
+        "AuthorityPolicy",
+        "WorkloadClass",
+        "ProjectRoute",
+        "ExecutionContract",
+        "CandidateAction",
+        "DecisionEvaluation"
+      ],
+      "required_predicates": [
+        "authorityPrinciple",
+        "policyDecision",
+        "bindsExecutionContract",
+        "stateEffectClass"
+      ],
+      "forbidden_entity_types": [
+        "ScientificExperiment"
+      ],
+      "authority_widening_allowed": false
+    },
+    {
+      "case_id": "S2_SCIENTIFIC_CONTRADICTION",
+      "context": {
+        "purpose": "resolve_evidence_need",
+        "target_id": "claim:contradicted"
+      },
+      "max_observations": 12,
+      "required_entity_types": [
+        "Claim",
+        "EvidenceRequirement",
+        "Method"
+      ],
+      "required_predicates": [
+        "contradicts",
+        "requiresEvidence"
+      ],
+      "authority_widening_allowed": false
+    },
+    {
+      "case_id": "S3_HISTORICAL_REPLAY",
+      "context": {
+        "purpose": "replay_decision",
+        "evaluation_id": "eval:historical"
+      },
+      "max_observations": 16,
+      "required_entity_types": [
+        "CandidateAction",
+        "DecisionEvaluation",
+        "AuthorityPolicy",
+        "KnowledgeCheckpoint"
+      ],
+      "required_predicates": [
+        "policyDecision",
+        "hasDecision",
+        "boundToCheckpoint"
+      ],
+      "authority_widening_allowed": false
+    }
+  ],
+  "evidence_requirement_cases": [
+    {
+      "case_id": "E1_CONTRADICTION",
+      "trigger": {
+        "contradictions": [
+          "claim:a",
+          "claim:b"
+        ]
+      },
+      "expected_reason_types": [
+        "CONTRADICTION"
+      ],
+      "expected_execution_effect": "REQUEST_ONLY"
+    },
+    {
+      "case_id": "E2_MISSING_FACET",
+      "trigger": {
+        "missing_facets": [
+          "hardware_shift_evaluation"
+        ]
+      },
+      "expected_reason_types": [
+        "MISSING_FACET"
+      ],
+      "expected_execution_effect": "REQUEST_ONLY"
+    },
+    {
+      "case_id": "E3_SOURCE_LEVEL",
+      "trigger": {
+        "source_level": "ABSTRACT",
+        "required_source_level": "FULLTEXT"
+      },
+      "expected_reason_types": [
+        "SOURCE_LEVEL_INSUFFICIENT"
+      ],
+      "expected_execution_effect": "REQUEST_ONLY"
+    },
+    {
+      "case_id": "E4_VERIFICATION",
+      "trigger": {
+        "verification_state": "UNVERIFIED"
+      },
+      "expected_reason_types": [
+        "VERIFICATION_INSUFFICIENT"
+      ],
+      "expected_execution_effect": "REQUEST_ONLY"
+    },
+    {
+      "case_id": "E5_STALE",
+      "trigger": {
+        "valid_to": "2026-01-01T00:00:00Z",
+        "as_of": "2026-10-23T00:00:00Z"
+      },
+      "expected_reason_types": [
+        "STALE"
+      ],
+      "expected_execution_effect": "REQUEST_ONLY"
+    },
+    {
+      "case_id": "E6_BENCHMARK_CALIBRATED",
+      "trigger": {
+        "benchmark_sufficient": false
+      },
+      "expected_reason_types": [
+        "BENCHMARK_CALIBRATED_INSUFFICIENCY"
+      ],
+      "expected_execution_effect": "REQUEST_ONLY"
+    },
+    {
+      "case_id": "E7_MODEL_CONFIDENCE_ONLY",
+      "trigger": {
+        "model_confidence": 0.0001
+      },
+      "expected_requirements": [],
+      "rationale": "Raw model self-confidence alone is non-authoritative and insufficient."
+    }
+  ]
+}
