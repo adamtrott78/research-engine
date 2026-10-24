@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "operation": "PLANNER_ALIGNMENT_COMPOSITION_DIAGNOSTIC_V1_TRIGGER",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "implementation_sha": "07e2180975ca1bda4e7ac58cbec198e05cf5b733",
+  "scientific_trigger_issued": false,
+  "constraints": [
+    "Inert exact-SHA anchor only.",
+    "Remain unmerged through the durable scientific result checkpoint.",
+    "Exactly one /local-extract-composed-acquisition-preservation <exact-head-sha> trigger may be issued after workspace-control authority is durable.",
+    "No change to planner28 identity, exact alignment swap, fixed budget28, flagged-origin sensitivity, teacher boundary, exhaustive verdict table, or production state."
+  ]
+}
