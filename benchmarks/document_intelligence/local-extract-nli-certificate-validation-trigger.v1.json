@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "purpose": "INERT_TRIGGER_ONLY",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "validation_id": "SCIENTIFIC_NLI_REDUNDANCY_CERTIFICATE_VALIDATION_V1",
+  "isolated_implementation_sha": "f9790f4d614f022a127b5b87e33955f613159963",
+  "durable_implementation_merge_sha": "f0699337f7ee5111d3945a0068a927c272b36f75",
+  "external_validation_only": true,
+  "extract_teacher_access": false,
+  "learned_certificate_used_in_extract": false,
+  "scientific_semantics_changed": false,
+  "merge_forbidden": true
+}
