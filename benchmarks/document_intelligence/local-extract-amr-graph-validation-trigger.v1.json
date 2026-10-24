@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "operation": "AMR_GRAPH_REDUNDANCY_CERTIFICATE_VALIDATION_V1_TRIGGER",
+  "implementation_checkpoint": "329e7e5a31553551e39d4384a09f2c406c4a3e2f",
+  "scientific_trigger_issued": false,
+  "purpose": "Inert same-repository PR anchor for one exact-SHA external-only AMR graph certificate validation trigger.",
+  "constraints": [
+    "Do not merge this trigger PR.",
+    "Do not issue more than one scientific trigger.",
+    "Do not access EXTRACT teacher inputs.",
+    "Do not change production EXTRACT or VERIFY."
+  ]
+}
