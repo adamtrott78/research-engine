@@ -1,0 +1,294 @@
+{
+  "schema_version": 1,
+  "design_id": "local-extract-neighborhood-rescue-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "status": "DESIGN_ONLY_REVIEW_REQUIRED_NO_IMPLEMENTATION_AUTHORIZED",
+  "selected_architecture": {
+    "id": "LOCAL_NEIGHBORHOOD_RESCUE_V1",
+    "mechanism_families": [
+      "retrieval",
+      "local_context_expansion",
+      "robustness_repair",
+      "evidence_set_composition"
+    ],
+    "summary": "Under the exact observed fragile-query-path stress, use surviving teacher-blind reservations as local source anchors, generate only immediate same-page proposition neighbors, rank those neighbors by surviving frozen retrieval-path evidence, restore the vacated slot, and preserve the already validated alignment swap."
+  },
+  "scientific_question": "Is the remaining e1.a fragility caused by proposition-level pruning that can be repaired by deterministic local source-neighborhood expansion around already-selected unflagged evidence, or does it require deeper/global evidence allocation or a genuinely adaptive retrieval mechanism?",
+  "problem_model": {
+    "established": [
+      "COMPOSED_COMPLEMENTARITY_FRAGILE reaches 9/13 at exact budget28 with e1.a, e6.a, and all seven frozen controls; therefore acquisition and alignment preservation are mechanically compatible.",
+      "The frozen flagged-origin sensitivity removes page:p2:s33 and leaves 8/13 with e6.a plus all seven controls; only e1.a is lost.",
+      "Only source-aware method intent 0 is flagged by the frozen teacher anti-leak audit.",
+      "The surviving unflagged author-contribution intent 3 already exposes the first e1.a anchor at BM25 rank1 and the second e1.a anchor at rank10; complete e1.a evidence is therefore present in frozen automatic retrieval without generating a new query.",
+      "The surviving budget28 author reservation page:p2:s32 and the fragile missing proposition page:p2:s33 are adjacent propositions on the same authoritative PDF page.",
+      "NLI_CERTIFICATE_REJECTED, PREDICATE_ARGUMENT_CERTIFICATE_REJECTED, and AMR_GRAPH_CERTIFICATE_REJECTED remain negative evidence against pairwise semantic redundancy certificates."
+    ],
+    "residual_hypotheses": [
+      {
+        "id": "H1_LOCAL_PRUNING_GAP",
+        "statement": "The robustness failure is primarily a proposition-level pruning/context-boundary error: a surviving high-confidence reservation lands next to the missing evidence, and a bounded local-neighborhood rescue can recover it without a new query.",
+        "predicted_observation": "After the exact flagged-path stress removes page:p2:s33, a teacher-blind immediate-neighbor rescue restores a candidate that yields e1.a while the frozen alignment mechanism keeps e6.a and all seven controls at fixed budget28."
+      },
+      {
+        "id": "H2_DEPTH_ALLOCATION_GAP",
+        "statement": "The evidence is retrievable by an unflagged frozen query but immediate local context is insufficient or not selected; the real residual is how much depth or evidence budget to allocate within an intent.",
+        "predicted_observation": "The frozen rescue candidate pool contains no candidate that restores e1.a, despite the known unflagged rank10 exposure."
+      },
+      {
+        "id": "H3_ADAPTIVE_GAP_PLANNING_REQUIRED",
+        "statement": "A static local expansion rule cannot reliably identify the missing evidence; the next mechanism must explicitly detect missing facets/information and adapt retrieval or evidence allocation.",
+        "predicted_observation": "Local-neighborhood rescue fails while deeper frozen evidence remains known to exist, motivating a gap-directed planner rather than new query generation by default."
+      },
+      {
+        "id": "H4_NEW_QUERY_GENERATION_DEFERRED",
+        "statement": "New query generation is not yet justified because the missing evidence already exists under a surviving frozen query path.",
+        "predicted_observation": "Any successful local or depth-based rescue further weakens query-generation deficiency as the primary residual."
+      }
+    ]
+  },
+  "mechanism_family_comparison": [
+    {
+      "id": "LOCAL_NEIGHBORHOOD_RESCUE",
+      "mechanisms": [
+        "local_context_expansion",
+        "retrieval_path_corroboration",
+        "bounded_backfill"
+      ],
+      "role": "SELECTED_FIRST_DIAGNOSTIC",
+      "rationale": "Smallest mechanism that directly tests the observed adjacency/context-pruning hypothesis. It requires zero generation/model calls and one deterministic slot replacement under the already-frozen robustness stress."
+    },
+    {
+      "id": "DEEPER_PER_INTENT_ALLOCATION",
+      "mechanisms": [
+        "retrieval_depth",
+        "multi_evidence_per_intent",
+        "budget_allocation"
+      ],
+      "role": "NEXT_IF_LOCAL_RESCUE_NEGATIVE",
+      "rationale": "The unflagged author intent exposes complete e1.a only by depth10, so deeper within-intent allocation is plausible. It is deferred because blindly increasing depth/budget is more expensive and less diagnostic than first testing the adjacent-source rescue."
+    },
+    {
+      "id": "CROSS_INTENT_SURVIVAL_SELECTION",
+      "mechanisms": [
+        "retrieval_path_stability",
+        "multi_query_corroboration",
+        "robust_ranking"
+      ],
+      "role": "ALTERNATE_IF_LOCAL_RESCUE_PARTIAL",
+      "rationale": "Evidence that survives multiple query paths is a plausible robustness signal, but it introduces a new global ranking rule. Local rescue is smaller and directly grounded in the current failure."
+    },
+    {
+      "id": "ADAPTIVE_GAP_DIRECTED_RETRIEVAL",
+      "mechanisms": [
+        "gap_detection",
+        "iterative_retrieval",
+        "stopping"
+      ],
+      "role": "DEFERRED",
+      "rationale": "Adaptive retrieval is appropriate if static local/depth mechanisms fail, but it requires a new sufficiency/gap controller and is not the smallest current test."
+    },
+    {
+      "id": "NEW_QUERY_GENERATION_OR_REWRITING",
+      "mechanisms": [
+        "query_generation",
+        "decomposition",
+        "query_rewriting"
+      ],
+      "role": "NOT_AUTHORIZED_YET",
+      "rationale": "Existing frozen unflagged intent 3 already exposes the complete e1.a evidence by depth10; generating new queries would not test the smallest remaining premise."
+    },
+    {
+      "id": "PAIRWISE_SEMANTIC_REDUNDANCY_CERTIFICATE",
+      "mechanisms": [
+        "pairwise_score",
+        "threshold",
+        "replacement"
+      ],
+      "role": "INELIGIBLE_WITHOUT_NEW_PREMISE_EVIDENCE",
+      "rationale": "Repeated NLI, dependency predicate/argument, and AMR certificate failures remain negative evidence against reopening this family."
+    }
+  ],
+  "external_research_evidence": [
+    {
+      "source": "Perçin et al. Investigating the Robustness of Retrieval-Augmented Generation at the Query Level. GEM 2025.",
+      "url": "https://aclanthology.org/2025.gem-1.38/",
+      "lesson": "Retriever output can change sharply under modest query perturbations, motivating explicit path-robustness evaluation instead of assuming one query formulation is stable."
+    },
+    {
+      "source": "Verma et al. NEST: Nested Evidence Survival for Retrieval. ACL Industry 2026.",
+      "url": "https://aclanthology.org/2026.acl-industry.35/",
+      "lesson": "Separating recall amplification from precision selection and rescuing evidence pruned by static retrieval contexts supports a bounded local-context survival test before introducing iterative control or model scaling."
+    },
+    {
+      "source": "Banerjee et al. The Bottleneck Is Retrieval, Not Reading. Findings EMNLP 2026.",
+      "url": "https://aclanthology.org/2026.findings-emnlp.2222/",
+      "lesson": "Similarity retrieval often surfaces some relevant evidence but fails to surface all evidence required for multi-fact questions; chunking/context boundaries can discard relations needed across nearby evidence."
+    },
+    {
+      "source": "Singh et al. SPLADE-COVER: Coverage-Aware Representations for Learned Sparse Retrieval. EMNLP 2026.",
+      "url": "https://aclanthology.org/2026.emnlp-main.2695/",
+      "lesson": "Long-form retrieval benefits from explicit multi-aspect coverage rather than a single relevance score; this supports coverage-aware evidence rescue as a distinct mechanism family, while the learned model itself is not adopted here."
+    },
+    {
+      "source": "Ammann et al. Question Decomposition for Retrieval-Augmented Generation. ACL SRW 2025.",
+      "url": "https://aclanthology.org/2025.acl-srw.32/",
+      "lesson": "Subquery-specific retrieval can improve distributed evidence coverage, but EXTRACT already has a surviving query path to the missing evidence, so new decomposition is deferred until cheaper rescue mechanisms are falsified."
+    }
+  ],
+  "selected_discriminating_experiment": {
+    "id": "ADJACENT_PROPOSITION_RESCUE_DIAGNOSTIC_V1",
+    "implementation_scope": "one_teacher_control_deterministic_replay_only",
+    "purpose": "Under the exact previously observed flagged-origin stress that removes page:p2:s33, test whether a teacher-blind local-neighborhood backfill from surviving salience reservations can restore e1.a at fixed budget28 while preserving e6.a and all seven frozen controls.",
+    "new_generation_calls": 0,
+    "new_model_downloads": 0,
+    "new_model_training": false,
+    "production_routing_changed": false,
+    "scientific_state_materialized": false,
+    "frozen_inputs": {
+      "composed_result_run_id": 40139717644,
+      "composed_result_artifact_id": 12577434130,
+      "composed_result_artifact_zip_sha256": "de632b3371b25f9b1228b49a4d02e9c1f0bf9ba249d18826d0a742de3a49e6e2",
+      "composed_result_report_sha256": "315b18622bd1f5751ff2c551da974ec054d6c7dbf2fe3ff770cd7dcd4d987369",
+      "generated_intents_artifact_id": 12533721500,
+      "generated_intents_sha256": "a5a970725c1f16a694633416ad9fbd98e58418c267891ac83b7783d8af218ebd",
+      "teacher_control_item": "arxiv:2403.04036",
+      "stressed_intent": {
+        "generator_id": "QWEN35_SOURCE_AWARE_INTENTS_V1",
+        "intent_index": 0,
+        "role": "posthoc_stress_only",
+        "origin": "Exact sole flagged intent from the already-frozen teacher anti-leak audit. It is not used to generate or rank rescue candidates."
+      },
+      "surviving_tier1_intents": [
+        {
+          "generator_id": "QWEN35_SOURCE_AWARE_INTENTS_V1",
+          "intent_index": 1,
+          "group": "method"
+        },
+        {
+          "generator_id": "QWEN35_AUTHOR_ANCHORED_OBLIGATIONS_V1",
+          "intent_index": 2,
+          "group": "contribution"
+        },
+        {
+          "generator_id": "QWEN35_AUTHOR_ANCHORED_OBLIGATIONS_V1",
+          "intent_index": 3,
+          "group": "contribution"
+        },
+        {
+          "generator_id": "QWEN35_AUTHOR_ANCHORED_OBLIGATIONS_V1",
+          "intent_index": 4,
+          "group": "contribution"
+        }
+      ],
+      "surviving_intent_candidate_depth": 12,
+      "fixed_budget": 28,
+      "teacher_use": "Teacher data defines only the already-frozen stress condition and evaluates the final set. Teacher atoms/anchors may not generate the neighborhood, rank candidates, choose a rescue candidate, alter the budget, or tune any rule."
+    },
+    "stress_and_rescue_operator": {
+      "id": "FLAGGED_PATH_DROP_THEN_LOCAL_NEIGHBOR_RESCUE_V1",
+      "steps": [
+        "Load the exact composed 28-proposition set from run 40139717644 and verify report/artifact identity.",
+        "Reproduce the exact frozen flagged-origin sensitivity by removing page:p2:s33 with no backfill, yielding the known 27-proposition stressed set.",
+        "Identify surviving non-core salience-stratified reservation propositions in their exact original frontier order. The validated-alignment proposition is not a rescue seed.",
+        "For each surviving reservation seed, generate at most its immediate predecessor and immediate successor proposition on the same authoritative PDF page, excluding already-selected propositions and crossing no page boundary.",
+        "For every unique neighbor candidate, inspect only the frozen BM25 top12 rankings of the four surviving tier1 intents. No new retrieval query or model call is allowed.",
+        "Assign candidate structural support_count = number of surviving tier1 intents whose top12 contains the candidate; best_rank = best BM25 rank among those paths. Candidates absent from all surviving top12 rankings are ineligible.",
+        "Rank eligible neighbors by support_count descending, best_rank ascending, seed frontier rank ascending, neighbor distance (always 1), predecessor before successor, then proposition_id ascending.",
+        "Append exactly the top-ranked eligible neighbor to restore the set to exactly 28 propositions. No further backfill or retry is allowed.",
+        "Evaluate frozen teacher support only after the rescued set is fixed."
+      ],
+      "no_semantic_similarity": true,
+      "no_alignment_search": true,
+      "no_threshold_search": true,
+      "no_new_query_generation": true,
+      "no_teacher_candidate_filtering_or_ranking": true,
+      "no_post_result_rule_changes": true
+    },
+    "frozen_controls": [
+      "COMPOSED_COMPLEMENTARITY_FRAGILE primary: 9/13 with e1.a+e6.a+7 controls at budget28.",
+      "Exact flagged-origin sensitivity: 8/13 with e6.a+7 controls and e1.a absent after page:p2:s33 removal.",
+      "Unflagged author-contribution intent 3: e1.a first anchor rank1, second anchor rank10, complete depth10.",
+      "ALIGNMENT_AUGMENT_FEASIBLE: e6.a recovered with all seven controls preserved."
+    ],
+    "metrics": {
+      "primary": [
+        "rescued supported_atom_count",
+        "frozen_control_retention_count",
+        "e1.a supported",
+        "e6.a supported",
+        "observed residuals recovered from {e1.a,e6.a}"
+      ],
+      "mechanism": [
+        "eligible neighbor candidate identities",
+        "seed proposition/frontier rank for each candidate",
+        "surviving tier1 support_count",
+        "best surviving BM25 rank",
+        "chosen rescue proposition",
+        "whether chosen candidate is adjacent to a surviving author/source reservation"
+      ],
+      "cost_provenance": [
+        "selected proposition count exactly 28",
+        "incremental raw source chars vs immutable top24",
+        "unique source pages",
+        "all selected propositions exactly locatable to authoritative PDF page/proposition identity"
+      ]
+    },
+    "frozen_interpretation": {
+      "LOCAL_RESCUE_CONFIRMED": [
+        "The exact stressed set is restored to budget28 by one teacher-blind eligible local neighbor.",
+        "All seven frozen controls remain supported.",
+        "Both e1.a and e6.a are supported, yielding >=9/13.",
+        "All identity/provenance/teacher-boundary checks pass.",
+        "Interpretation: the observed robustness failure is a local proposition-pruning/context-boundary error; immediate source-neighborhood rescue is sufficient under the known stress."
+      ],
+      "LOCAL_RESCUE_PARTIAL": [
+        "The rescue completes safely and preserves all seven controls but only one of {e1.a,e6.a} is supported.",
+        "Interpretation: local context helps but does not fully restore the composed residual set; next compare deeper per-intent allocation against a jointly robust reservation policy."
+      ],
+      "LOCAL_RESCUE_NEGATIVE": [
+        "The rescue completes safely through one eligible neighbor but preserves the seven controls while e1.a remains unsupported.",
+        "Interpretation: immediate adjacency is insufficient despite known deeper unflagged exposure; next test deeper per-intent allocation or retrieval-path survival before adaptive gap planning."
+      ],
+      "LOCAL_RESCUE_NO_ELIGIBLE_NEIGHBOR": [
+        "No immediate neighbor of any surviving reservation seed appears in the frozen top12 of any surviving tier1 intent.",
+        "Interpretation: reject local-neighborhood rescue premise; move to deeper/global evidence allocation."
+      ],
+      "LOCAL_RESCUE_COLLISION": [
+        "A valid rescue causes loss of one or more frozen control atoms.",
+        "Interpretation: the rescue violates preservation and is rejected."
+      ],
+      "INVALID_EXECUTION": [
+        "Any exact input, sensitivity replay, proposition-neighborhood identity, fixed-budget, provenance, or teacher-boundary check fails.",
+        "Interpretation: no scientific verdict; repair only unchanged replay/identity mechanics with fresh explicit recovery authority."
+      ]
+    },
+    "stopping_rule": "Exactly one valid scientific execution after independent design review. Stop at LOCAL_RESCUE_CONFIRMED, LOCAL_RESCUE_PARTIAL, LOCAL_RESCUE_NEGATIVE, LOCAL_RESCUE_NO_ELIGIBLE_NEIGHBOR, or LOCAL_RESCUE_COLLISION. INVALID_EXECUTION is operational/no-verdict. No changes to the stress identity, surviving intents, depth12, adjacency rule, structural ranking, one-slot budget, teacher use, metrics, or interpretation after seeing a result.",
+    "pass_authority": {
+      "LOCAL_RESCUE_CONFIRMED": "Authorize a later bounded design that generalizes neighborhood-aware acquisition robustness beyond the one control paper and compares its cost against deeper-per-intent allocation. No production promotion.",
+      "LOCAL_RESCUE_PARTIAL": "Authorize only a direct comparison of deeper per-intent allocation versus robust structural reservation; do not expand neighborhood radius post hoc.",
+      "LOCAL_RESCUE_NEGATIVE": "Reject immediate-neighbor rescue and test deeper per-intent allocation/retrieval-path survival. New query generation remains deferred because frozen unflagged evidence exists at depth10.",
+      "LOCAL_RESCUE_NO_ELIGIBLE_NEIGHBOR": "Reject local-neighborhood premise and move to deeper/global evidence allocation.",
+      "LOCAL_RESCUE_COLLISION": "Reject local rescue as preservation-unsafe.",
+      "INVALID_EXECUTION": "No scientific authority."
+    }
+  },
+  "hard_boundaries": {
+    "teacher_used_for_candidate_generation": false,
+    "teacher_used_for_candidate_ranking": false,
+    "teacher_used_only_for_frozen_stress_and_posthoc_evaluation": true,
+    "new_query_generation": false,
+    "new_model_or_ranker": false,
+    "pairwise_semantic_similarity": false,
+    "threshold_calibration": false,
+    "nli_rescue": false,
+    "predicate_argument_rescue": false,
+    "amr_rescue": false,
+    "production_standard_codex_extract_changed": false,
+    "accepted_qwen_verify_changed": false,
+    "wave7b_started": false,
+    "semantic_control_or_ontology_output": false,
+    "implementation_authorized_before_independent_review": false
+  },
+  "reviewer_boundary": "Independent reviewer must audit this exact frozen design before implementation. Routine implementation/CI/trigger mechanics do not require reviewer stops unless science changes. Genuine result requires post-result review before next phase.",
+  "next_safe_action": "Run normal CI on this design-only artifact and merge only if clean. Then checkpoint the exact design in workspace-control and obtain independent review before implementing ADJACENT_PROPOSITION_RESCUE_DIAGNOSTIC_V1."
+}
