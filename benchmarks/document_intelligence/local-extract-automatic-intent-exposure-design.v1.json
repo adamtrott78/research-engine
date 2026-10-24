@@ -1,0 +1,212 @@
+{
+  "schema_version": 1,
+  "design_id": "local-extract-automatic-intent-exposure-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "status": "DESIGN_ONLY_REVIEW_REQUIRED_NO_IMPLEMENTATION_AUTHORIZED",
+  "scientific_question": "Why does e1.a remain absent from the small non-destructive frontier even though the frozen author-anchored top-24 branch supports e1.a: are the required evidence facets already shallowly exposed by existing automatic intents but suppressed by aggregation, only deeply exposed due weak query specificity, or absent from the current static intent set?",
+  "result_lineage": {
+    "strongest_preservation_checkpoint": "ALIGNMENT_AUGMENT_FEASIBLE",
+    "strongest_preservation_support": "8/13 with all 7/7 frozen controls and e6.a recovered",
+    "latest_checkpoint": "ADDITIVE_FRONTIER_PARTIAL",
+    "latest_run": 40131250903,
+    "latest_report_sha256": "8c1ddc2ddd5f916a5f0b8898d26992d46138816b59bf416ead3ed528934895bc",
+    "latest_observation": "Append-only author evidence recovers e6.a by budget26 but e1.a remains absent through budget32; increasing evidence cost to +13,322 raw chars does not change 8/13 support.",
+    "rejected_mechanisms": [
+      "NLI_CERTIFICATE_REJECTED",
+      "PREDICATE_ARGUMENT_CERTIFICATE_REJECTED",
+      "AMR_GRAPH_CERTIFICATE_REJECTED"
+    ]
+  },
+  "residual_problem_model": {
+    "target_atom": {
+      "id": "e1.a",
+      "page_number": 2,
+      "normalized_form": "The proposed framework pre-trains on unlabeled source and target data to learn domain-invariant representations.",
+      "required_anchors": [
+        "pretrainthemodelbasedonthesourceandtargetdataset",
+        "learnadomaininvariantrepresentationwithoutdevicelabels"
+      ]
+    },
+    "positive_control_atom": {
+      "id": "e6.a",
+      "page_number": 6,
+      "role": "Known recoverable residual: ALIGNMENT_AUGMENT_FEASIBLE and ADDITIVE_FRONTIER_PARTIAL both recover it."
+    },
+    "observed_automatic_intent_evidence": [
+      "Frozen source-aware intent explicitly asks which learning technique learns domain-invariant representations without device labels during pre-training.",
+      "Frozen author-anchored intent explicitly asks what role target data plays in the pre-training stage.",
+      "Frozen author-anchored top-24 BM25 branch supports e1.a, proving the required anchor evidence is present somewhere in the existing per-intent top-12 candidate universe.",
+      "The append-only first eight unique author propositions do not support e1.a, proving global branch ordering suppresses that evidence within the frozen small frontier."
+    ],
+    "competing_hypotheses": [
+      {
+        "id": "H1_SHALLOW_FACET_SUPPRESSION",
+        "statement": "All e1.a anchors are retrieved at shallow rank by existing automatic intents, but global RRF/branch aggregation suppresses niche facets.",
+        "implication": "Do not generate new queries yet; next architecture should reserve/assemble evidence by intent or facet."
+      },
+      {
+        "id": "H2_DISTRIBUTED_COMPOSITION",
+        "statement": "The two e1.a anchors are shallowly retrievable but under different automatic intents, so no single query exposes the whole evidence unit.",
+        "implication": "Use multi-intent evidence-set coverage planning rather than pairwise redundancy or simple global ranking."
+      },
+      {
+        "id": "H3_QUERY_SPECIFICITY_DEFICIT",
+        "statement": "The current intents point toward e1.a but at least one required anchor is only retrieved at moderate/deep rank within the frozen top-12.",
+        "implication": "A source-derived subquestion/query-refinement mechanism is justified before a larger planner."
+      },
+      {
+        "id": "H4_STATIC_INTENT_INSUFFICIENCY",
+        "statement": "At least one e1.a anchor is absent from every frozen automatic intent top-12 candidate list.",
+        "implication": "Current static intents are insufficient; compare genuinely new source-derived decomposition against iterative gap-directed retrieval."
+      }
+    ]
+  },
+  "mechanism_family_comparison": [
+    {
+      "id": "FACET_RESERVED_EVIDENCE_PLANNING",
+      "mechanisms": [
+        "coverage_planning",
+        "per_intent_or_per_facet_reservation",
+        "evidence_set_assembly"
+      ],
+      "evidence_for": "The author branch already supports e1.a and the static frontier PARTIAL indicates useful evidence is being suppressed by allocation rather than entirely absent.",
+      "risk": "Naive per-intent reservation can inflate evidence cost or preserve noisy/redundant intents; must first establish shallow exposure."
+    },
+    {
+      "id": "SOURCE_DERIVED_SUBQUESTION_REFINEMENT",
+      "mechanisms": [
+        "decomposition",
+        "query_generation",
+        "retrieval"
+      ],
+      "evidence_for": "Question decomposition and sub-question coverage literature shows complex information needs benefit from explicit facet queries and merged candidate pools.",
+      "risk": "Existing automatic intents already verbalize e1.a facets; generating more questions before measuring current exposure could add noise without changing the failed premise."
+    },
+    {
+      "id": "ITERATIVE_GAP_DIRECTED_RETRIEVAL",
+      "mechanisms": [
+        "gap_detection",
+        "followup_query_generation",
+        "iterative_retrieval",
+        "stopping"
+      ],
+      "evidence_for": "FIRE and DIVER show iterative evidence pursuit can reduce fixed-retrieval inefficiency and refine searches based on current evidence state.",
+      "risk": "EXTRACT currently lacks an independently validated teacher-blind gap detector/stopping signal; building the loop before proving static intents are insufficient is premature."
+    },
+    {
+      "id": "PAIRWISE_SEMANTIC_REDUNDANCY_CERTIFICATE",
+      "mechanisms": [
+        "pairwise_score",
+        "threshold",
+        "replacement"
+      ],
+      "role": "INELIGIBLE_WITHOUT_NEW_PREMISE_EVIDENCE",
+      "reason": "NLI and AMR independently rejected the broader pairwise-score/threshold safe-redundancy premise."
+    }
+  ],
+  "external_research_evidence": [
+    {
+      "source": "Ammann, Golde, Akbik. Question Decomposition for Retrieval-Augmented Generation. ACL SRW 2025.",
+      "url": "https://aclanthology.org/2025.acl-srw.32/",
+      "lesson": "Decompose a complex question into subquestions, retrieve each independently, then merge/rerank the pool; this supports facet acquisition as a mechanism separate from semantic redundancy scoring."
+    },
+    {
+      "source": "Xie et al. Do RAG Systems Cover What Matters? NAACL 2025.",
+      "url": "https://aclanthology.org/2025.naacl-long.301/",
+      "lesson": "Sub-question coverage reveals missed core facets and using core subquestions can improve retrieval; this motivates measuring facet exposure before another ranker/model swap."
+    },
+    {
+      "source": "Xie et al. FIRE. Findings NAACL 2025.",
+      "url": "https://aclanthology.org/2025.findings-naacl.158/",
+      "lesson": "Iterative retrieval plus verification can be more cost-efficient than a fixed evidence count, but requires a confidence/gap decision mechanism."
+    },
+    {
+      "source": "Zhang, Kabir, Boyd-Graber. DIVER. Findings EMNLP 2026.",
+      "url": "https://aclanthology.org/2026.findings-emnlp.855/",
+      "lesson": "Incremental claim extraction and iterative evidence refinement are useful in retrieval-intensive settings; this is a later alternative if static automatic intents prove insufficient."
+    }
+  ],
+  "selected_candidate_direction": {
+    "id": "FACET_RESERVED_EVIDENCE_PLANNER_V1",
+    "status": "CANDIDATE_PREMISE_ONLY_NOT_IMPLEMENTATION_AUTHORIZED",
+    "rationale": "Current automatic intents already encode e1.a's scientific facets and their frozen author-anchored candidate universe supports e1.a. The smallest unresolved question is whether those facets are shallowly exposed but suppressed by global aggregation. Coverage planning is therefore the leading candidate, with source-derived query refinement and iterative retrieval retained as competing families."
+  },
+  "selected_discriminating_experiment": {
+    "id": "AUTOMATIC_INTENT_EXPOSURE_DIAGNOSTIC_V1",
+    "purpose": "Measure where each required anchor for e1.a and the positive-control e6.a first appears within the exact frozen BM25 rankings of every accepted source-aware and author-anchored automatic intent, without changing generation, ranking, or selection.",
+    "implementation_scope": "teacher_blind_replay_plus_posthoc_evaluation_only",
+    "corpus_scope": "Teacher-control paper arxiv:2403.04036 only; no nine-paper architecture bakeoff is justified before this premise test.",
+    "frozen_inputs": {
+      "generated_intents_artifact_id": 12533721500,
+      "generated_intents_zip_sha256": "cd02b842ad44bbadab7aad661ff424cc6108f8047d260df5d0064fba2b4f35fb",
+      "generated_intents_sha256": "a5a970725c1f16a694633416ad9fbd98e58418c267891ac83b7783d8af218ebd",
+      "source_aware_generator_id": "QWEN35_SOURCE_AWARE_INTENTS_V1",
+      "author_anchored_generator_id": "QWEN35_AUTHOR_ANCHORED_OBLIGATIONS_V1",
+      "retriever": "BM25_DIRECT",
+      "per_intent_depth": 12,
+      "rrf_or_global_selector_used_for_verdict": false
+    },
+    "evaluation_depths": [
+      1,
+      3,
+      5,
+      8,
+      12
+    ],
+    "evaluation_only_teacher_use": [
+      "For each target atom anchor, record the earliest rank at which the normalized anchor occurs in a proposition on the atom's expected PDF page for each automatic intent.",
+      "Record whether all required anchors for an atom are jointly present within one intent's top-k or only distributed across multiple intents.",
+      "Teacher anchors must not alter the questions, rankings, depths, candidate pool, or any selection."
+    ],
+    "primary_target": "e1.a",
+    "positive_control": "e6.a",
+    "metrics": [
+      "earliest_rank_per_required_anchor_by_generator_and_intent",
+      "minimum_depth_at_which_any_single_intent_contains_all_required_anchors",
+      "minimum_depth_at_which_union_of_all_intents_contains_all_required_anchors",
+      "number_of_distinct_intents_needed_for_complete_anchor_exposure_at_each frozen depth",
+      "accepted_intent_count and teacher-leak rejection count per generator"
+    ],
+    "frozen_interpretation": {
+      "SHALLOW_SINGLE_INTENT_EXPOSURE": {
+        "gate": "All e1.a required anchors occur within one existing automatic intent by depth<=3.",
+        "meaning": "Query generation is already sufficiently specific. Authorize design of a teacher-blind per-intent/facet reservation planner; do not add a new decomposition model or iterative agent."
+      },
+      "SHALLOW_DISTRIBUTED_EXPOSURE": {
+        "gate": "No single intent contains all e1.a anchors by depth<=3, but the union of existing automatic intents contains every anchor by depth<=3.",
+        "meaning": "The residual is primarily multi-intent evidence assembly/coverage allocation. Authorize a teacher-blind facet-reserved evidence-set planner; preserve compositional grouping and do not add new query generation yet."
+      },
+      "DEEP_EXPOSURE": {
+        "gate": "Every e1.a anchor is present within the frozen top-12 universe, but at least one anchor first appears only at depth>3 and no shallow exposure gate passes.",
+        "meaning": "Existing intents are directionally correct but insufficiently precise. Authorize a source-derived subquestion/query-refinement design before any iterative retrieval loop."
+      },
+      "STATIC_INTENTS_INSUFFICIENT": {
+        "gate": "At least one e1.a required anchor is absent from all accepted source-aware and author-anchored intent top-12 rankings.",
+        "meaning": "Reject current static-intent coverage as sufficient. Next design must compare genuinely new source-derived decomposition with iterative gap-directed retrieval; a fixed coverage planner alone is not justified."
+      },
+      "REPLAY_INCONSISTENT": {
+        "gate": "The frozen author-anchored replay fails to reproduce known e1.a support in its frozen top-24 candidate set or the e6.a positive-control exposure expected from prior valid results.",
+        "meaning": "No scientific interpretation. Repair only replay/identity mechanics if frozen science is unchanged."
+      }
+    },
+    "stopping_rule": "Exactly one valid diagnostic execution after independent design review. Stop at the frozen exposure classification. Do not change depth cutoffs, target anchors, intent sets, BM25 ranking, or interpretation after seeing the result.",
+    "pass_authority": "The result authorizes only the mechanism family named by the frozen interpretation. It does not authorize a production EXTRACT change, a large architecture bakeoff, teacher-informed selection, new semantic redundancy scoring, Wave 7B, or semantic-control/RDF/ontology output."
+  },
+  "hard_boundaries": {
+    "new_generation_calls": 0,
+    "new_model_downloads": 0,
+    "new_model_training": false,
+    "teacher_used_for_query_or_ranking": false,
+    "teacher_used_only_for_frozen_evaluation": true,
+    "pairwise_semantic_similarity": false,
+    "threshold_calibration": false,
+    "production_standard_codex_extract_changed": false,
+    "accepted_qwen_verify_changed": false,
+    "wave7b_started": false,
+    "semantic_control_or_ontology_output": false,
+    "rejected_mechanism_rescue": false,
+    "implementation_authorized_before_independent_review": false
+  },
+  "reviewer_boundary": "Independent reviewer must audit this exact design before implementation. Routine implementation/CI/trigger mechanics do not require another review unless science changes. After the genuine exposure result, reviewer must be consulted before selecting the next scientific phase.",
+  "next_safe_action": "Run normal CI on this design-only artifact and merge only if clean. Then checkpoint the design in workspace-control and obtain independent review before implementing AUTOMATIC_INTENT_EXPOSURE_DIAGNOSTIC_V1."
+}
