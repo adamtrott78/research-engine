@@ -143,7 +143,7 @@ def test_spark_seed_uses_canonical_topic_and_text_identity() -> None:
         smatch_module=fake,
     )
     assert fake.random.seed_calls == [
-        pair_seed("topic\\0left\\0right")
+        pair_seed("topic\0left\0right")
     ]
 
 
