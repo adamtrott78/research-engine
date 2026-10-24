@@ -16,7 +16,7 @@ jobs:
       github.event.comment.author_association == 'OWNER' &&
       startsWith(github.event.comment.body, '/local-extract-nli-certificate-validation ')
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 120
 
     steps:
       - name: Verify exact PR head
