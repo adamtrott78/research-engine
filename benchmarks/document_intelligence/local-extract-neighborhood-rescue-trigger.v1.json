@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "operation": "ADJACENT_PROPOSITION_RESCUE_DIAGNOSTIC_V1_TRIGGER",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "implementation_sha": "14acd0aeb6cda93f0d82bc129649a73dba21a200",
+  "scientific_trigger_issued": false,
+  "constraints": [
+    "This PR is an inert exact-SHA trigger anchor only.",
+    "Do not merge this PR before the scientific result is durably checkpointed.",
+    "Exactly one /local-extract-adjacent-proposition-rescue <exact-head-sha> trigger may be issued after workspace-control authority is durable.",
+    "Do not alter the frozen corrected design, stress identity, surviving intents, depth12, adjacency rule, structural candidate ranking, one-slot budget28, teacher use, alignment mechanism, interpretation, or stopping rule.",
+    "Do not issue a second valid scientific trigger or post-result tuning."
+  ]
+}
