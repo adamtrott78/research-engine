@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "evidence_id": "semantic-control-integrated-hardening-run-40048589513",
+  "pr_number": 214,
+  "corrected_pr_head_sha": "edc2e5f9c80de956f48919e4b3b3ec2a469d98b6",
+  "ci_run_id": 40048589513,
+  "ci_job_id": 120735879415,
+  "initial_collection_failure": {
+    "run_id": 40048437904,
+    "cause": "pytest module-name collision with existing tests/semantic_control/test_integrated_benchmark.py",
+    "semantic_failure": false,
+    "correction": "renamed hardening test module only; benchmark logic unchanged"
+  },
+  "result_marker": "SEMANTIC_CONTROL_INTEGRATED_HARDENING_V1",
+  "verdict": "HARDENING_PASS",
+  "result_sha256": "3b14229dca3b2c06915a97bd820a21536ecfdfa55d944458e709e6b1460b98f6",
+  "authorization_escape_count": 0,
+  "hardening_authorizes_production": false,
+  "hardening_binds_extract": false,
+  "production_mutation": false,
+  "extract_mutation": false
+}
