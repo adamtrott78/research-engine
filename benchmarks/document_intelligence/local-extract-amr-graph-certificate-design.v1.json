@@ -33,11 +33,11 @@
       "disposition": "SELECTED_FOR_EXTERNAL_VALIDATION",
       "evidence": [
         "AMR abstracts away from syntactic realization and represents predicate-argument semantics as a graph.",
-        "REMATCH (NAACL Findings 2024) reports stronger semantic similarity than prior AMR metrics on STS-B/SICK-R, confirming graph semantics can support semantic comparison.",
-        "Cross-domain AMR parsing research documents word/concept distribution shift as the central domain risk.",
-        "SemEval-2017 Task 9 publishes a freely downloadable biomedical Bio-AMR v0.8 corpus with 500 dev and 500 test AMRs, enabling an external scientific-domain parser gate.",
-        "Historical SemEval biomedical parsers topped out near 0.61 Smatch, providing a defensible domain-fidelity floor.",
-        "amrlib parse_xfm_bart_base v0.1.0 reports 82.3 Smatch on AMR-3 and is substantially lighter than large AMRBART variants."
+        "AMR similarity work shows graph structure can support semantic comparison, while symbolic Smatch remains the standard auditable structural metric.",
+        "Cross-domain AMR parsing research identifies word/concept distribution shift as a central domain risk and reports modern general-domain parsers around 0.597-0.669 Smatch on the Bio OOD benchmark.",
+        "AMR-3 LDC2020T02 documents general-domain sources only; Bio-AMR is separately used as a 500-instance biomedical OOD test set, so Bio-AMR is eligible as independent domain-fidelity evidence for an AMR-3-trained parser.",
+        "A public Git mirror pins the original Bio-AMR v0.8 test bytes at AMR-World@802923ae6c7376a9930e93ce52cd6b9faf43c411, blob 7e816eb86104fa6c07d8eff9f9c6abc84bae2898.",
+        "amrlib parse_xfm_bart_large v0.1.0 reports 83.7 Smatch on AMR-3 and is publicly released under the MIT-licensed amrlib stack."
       ],
       "strengths": [
         "Direct graph representation of semantic concepts and roles rather than local surface tuples.",
@@ -46,8 +46,9 @@
       ],
       "risks": [
         "General-domain parser may fail under scientific domain shift.",
-        "Smatch is primarily structural graph overlap and may not perfectly represent semantic equivalence.",
-        "Neural parsing introduces a new learned component and GPU execution cost."
+        "Smatch is structural graph overlap and may not perfectly represent semantic equivalence.",
+        "Smatch v1.0.4 internally reseeds its hill-climbing search from system entropy unless explicitly intercepted, so deterministic validation requires a frozen seed wrapper.",
+        "Neural AMR parsing introduces a learned component and GPU execution cost."
       ]
     },
     {
@@ -78,7 +79,7 @@
       "exact_sha_issue_comment_gate": true,
       "production_state_materialized": false,
       "external_network_use": "Only pinned source/model/data acquisition needed for this validation is allowed.",
-      "timeout_minutes": 45
+      "timeout_minutes": 90
     },
     "amrlib": {
       "repository": "bjascob/amrlib",
@@ -86,23 +87,31 @@
       "version": "0.8.1",
       "license": "MIT",
       "parse_inference_blob": "eee40d776dbcaa028a9a82d325565b48937b9cfb",
-      "smatch_evaluator_blob": "0e040f26632ee16751240dbff28fa8d62c101ebb"
+      "smatch_evaluator_blob": "0e040f26632ee16751240dbff28fa8d62c101ebb",
+      "smatch": {
+        "repository": "snowblink14/smatch",
+        "release_tag": "v1.0.4",
+        "release_commit": "1bcd49cc8535056aa1c941763580fc5a572f1204",
+        "license": "MIT",
+        "standard_iteration_num": 5,
+        "deterministic_reseed_rule": "For each AMR pair, derive seed = first 64 bits of SHA256(canonical pair identity). Temporarily replace smatch.random.seed with a wrapper that always calls the captured original random.seed(seed), so every internal no-argument reseed is deterministic; restore the original seed function after scoring."
+      }
     },
     "parser_model": {
       "repository": "bjascob/amrlib-models",
-      "release_tag": "parse_xfm_bart_base-v0_1_0",
-      "release_asset_id": 57062880,
-      "release_asset_name": "model_parse_xfm_bart_base-v0_1_0.tar.gz",
-      "release_asset_size_bytes": 515968261,
-      "published_md5": "f8eb889468f4d0c3c0677fc910fb2240",
+      "release_tag": "parse_xfm_bart_large-v0_1_0",
+      "release_asset_id": 57066548,
+      "release_asset_name": "model_parse_xfm_bart_large-v0_1_0.tar.gz",
+      "release_asset_size_bytes": 1506463657,
+      "published_md5": "5633e5e6f8a4f4398ce64abab71c473a",
       "model_type": "stog",
       "model_version": "0.1.0",
-      "base_model": "facebook/bart-base",
-      "published_amr3_smatch": 0.823,
+      "base_model": "facebook/bart-large",
+      "published_amr3_smatch": 0.837,
       "inference": {
         "device": "cuda:0",
-        "batch_size": 24,
-        "num_beams": 1,
+        "batch_size": 8,
+        "num_beams": 4,
         "add_metadata": false,
         "deterministic_seed": 1729
       },
@@ -111,7 +120,7 @@
     "external_validation_sets": [
       {
         "id": "BIO_AMR_V0_8_TEST",
-        "source": "SemEval-2017 Task 9",
+        "source": "SemEval-2017 Task 9 / AMR-ISI public corpus, pinned via AMR-World mirror",
         "official_url": "https://amr.isi.edu/download/2016-03-14/amr-release-test-bio.txt",
         "expected_amr_count": 500,
         "domain": "biomedical scientific literature",
@@ -119,7 +128,15 @@
           "corpus_smatch_f1_min": 0.6,
           "valid_prediction_fraction_min": 0.98
         },
-        "identity_rule": "Workflow must compute and persist SHA256 of the downloaded official file before scoring."
+        "identity_rule": "Workflow must acquire exactly the pinned AMR-World mirror commit/blob and persist SHA256 of the file before scoring.",
+        "mirror_repository": "flipz357/AMR-World",
+        "mirror_commit": "802923ae6c7376a9930e93ce52cd6b9faf43c411",
+        "mirror_file": "data/reference_amrs/amr-release-test-bio.txt",
+        "mirror_git_blob_sha": "7e816eb86104fa6c07d8eff9f9c6abc84bae2898",
+        "leakage_audit": {
+          "result": "PASS",
+          "evidence": "AMR-3 LDC2020T02 documents general-domain source datasets; published OOD evaluations treat Bio-AMR as separate from AMR-3 and evaluate AMR-3-trained parsers on Bio."
+        }
       },
       {
         "id": "SPARK_PROPOSITION_CLUSTERING_MANUAL",
@@ -142,8 +159,9 @@
       }
     ],
     "graph_similarity": {
-      "metric": "SEEDED_SMATCH_F1_V1",
-      "definition": "Parse both propositions once, remove metadata, and compute standard Smatch F1. Before every pair score, seed Python random with the first 64 bits of SHA256(canonical pair identity) so Smatch hill-climbing is reproducible. Invalid/unparseable graphs score 0.0.",
+      "metric": "DETERMINISTIC_SMATCH_F1_V1",
+      "definition": "Parse both propositions once with the pinned amrlib parser, remove metadata, and compute standard Smatch v1.0.4 F1. Invalid/unparseable graphs score 0.0.",
+      "deterministic_alignment": "For every pair, derive a pair-specific seed from SHA256(canonical pair identity) and intercept Smatch's internal random.seed() calls so they always reseed to that pair seed; retain standard iteration_num=5 and restore random.seed after scoring.",
       "threshold_grid": [
         0.4,
         0.45,
@@ -159,10 +177,11 @@
         0.95
       ],
       "parser_cache": "Parse every unique SPARK text once; reuse the graph for all pairs.",
+      "bio_scoring": "Score all 500 pinned Bio-AMR predictions against gold with deterministic per-example Smatch; report aggregate corpus precision/recall/F1 from summed matching/test/gold triples and valid prediction fraction. Invalid predictions contribute zero matches and remain in the denominator.",
       "teacher_blind": true
     },
     "gate_logic": {
-      "bio_amr_pass": "corpus Smatch F1 >=0.60 AND valid prediction fraction >=0.98",
+      "bio_amr_pass": "aggregate corpus Smatch F1 >=0.60 AND valid prediction fraction >=0.98",
       "spark_pass": "safe calibration threshold exists AND held-out precision>=0.90 AND recall>=0.05 AND false-positive-rate<=0.02",
       "AMR_GRAPH_CERTIFICATE_VALIDATED": "bio_amr_pass AND spark_pass",
       "AMR_GRAPH_CERTIFICATE_PARTIAL": "exactly one of bio_amr_pass or spark_pass",
@@ -170,8 +189,8 @@
       "note": "No EXTRACT teacher label, teacher atom, or EXTRACT benchmark may participate in parser selection, threshold selection, or verdict."
     },
     "decision_boundary": {
-      "if_validated": "Checkpoint exact parser tarball SHA256, Bio-AMR file SHA256, SPARK file SHA256, parser/metric identities, threshold, run/artifact/report identities, then open a separate EXTRACT design for substituting graph similarity into the accepted dynamic-swap/page-preservation/top-24 architecture.",
-      "if_partial_or_rejected": "Do not tune parser, Smatch seeds, threshold grid, or Bio-AMR/SPARK gates using EXTRACT results. Reassess claim/question decomposition or another materially different teacher-blind evidence representation.",
+      "if_validated": "Checkpoint exact parser tarball SHA256, pinned Bio-AMR mirror commit/blob/file SHA256, SPARK file SHA256, amrlib/smatch identities, selected threshold, run/artifact/report identities, then open a separate EXTRACT design for substituting graph similarity into the accepted dynamic-swap/page-preservation/top-24 architecture.",
+      "if_partial_or_rejected": "Do not tune parser model, beam count, Smatch deterministic reseed rule, threshold grid, or Bio-AMR/SPARK gates using EXTRACT results. Reassess claim/question decomposition, UCCA, or another materially different teacher-blind evidence representation.",
       "never": "Do not start Wave 7B, change production EXTRACT/VERIFY, retrain/fine-tune the AMR parser, use EXTRACT teacher labels, emit RDF/ontology output, or change EXTRACT output for semantic-control."
     }
   },
@@ -191,14 +210,15 @@
     ]
   },
   "research_sources": [
+    "https://catalog.ldc.upenn.edu/LDC2020T02",
     "https://aclanthology.org/2022.emnlp-main.749/",
-    "https://aclanthology.org/2024.findings-naacl.64/",
-    "https://aclanthology.org/2025.naacl-long.320/",
-    "https://aclanthology.org/2025.acl-long.254/",
-    "https://alt.qcri.org/semeval2017/task9/index.php?id=data-and-tools",
-    "https://aclanthology.org/S17-2090/",
+    "https://aclanthology.org/2022.naacl-main.393/",
+    "https://faculty.sist.shanghaitech.edu.cn/faculty/tukw/emnlp23amr.pdf",
     "https://github.com/bjascob/amrlib",
-    "https://github.com/bjascob/amrlib-models"
+    "https://github.com/bjascob/amrlib-models",
+    "https://github.com/snowblink14/smatch",
+    "https://github.com/flipz357/AMR-World",
+    "https://github.com/oriern/SPARK"
   ],
   "hard_boundaries": {
     "extract_teacher_accessed": false,
