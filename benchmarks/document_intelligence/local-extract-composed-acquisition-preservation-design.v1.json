@@ -1,0 +1,303 @@
+{
+  "schema_version": 1,
+  "design_id": "local-extract-composed-acquisition-preservation-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "status": "DESIGN_ONLY_REVIEW_REQUIRED_NO_IMPLEMENTATION_AUTHORIZED",
+  "selected_architecture": {
+    "id": "COMPOSED_ACQUISITION_PRESERVATION_V1",
+    "mechanism_families": [
+      "coverage_planning",
+      "preservation_compression",
+      "evidence_set_composition"
+    ],
+    "summary": "Compose the independently positive facet-reserved acquisition planner with the independently positive same-page alignment preservation swap, without introducing new queries, models, rankers, thresholds, or teacher-informed selection."
+  },
+  "scientific_question": "Can the two strongest independently validated positive mechanisms coexist in one bounded evidence set—facet-reserved acquisition of e1.a plus alignment-preserving recovery of e6.a—while retaining all seven frozen control atoms, and is any 9/13 gain robust to the already-observed flagged-intent sensitivity?",
+  "problem_model": {
+    "established": [
+      "FROZEN_SOURCE_AWARE_BM25_RRF_V1 supports 7/13 atoms and defines the immutable seven-atom control core.",
+      "ALIGNMENT_AUGMENT_FEASIBLE supports 8/13, retaining all 7/7 frozen controls and recovering e6.a with one teacher-blind same-page certified swap at a 24-proposition budget.",
+      "ADDITIVE_FRONTIER_PARTIAL showed static global append recovers e6.a but not e1.a through budget32.",
+      "SHALLOW_DISTRIBUTED_EXPOSURE showed both e1.a required anchors are already present shallowly across existing automatic intents; missing static query coverage is not the primary e1.a residual on the control paper.",
+      "FACET_RESERVATION_CONFIRMED showed deterministic structural reservation recovers e1.a by budget28 while retaining all 7/7 controls.",
+      "The facet-reservation gain is fragile: the predeclared posthoc anti-leak sensitivity removes flagged-only proposition page:p2:s33 and returns support from 8/13 to the 7/13 core.",
+      "NLI_CERTIFICATE_REJECTED, PREDICATE_ARGUMENT_CERTIFICATE_REJECTED, and AMR_GRAPH_CERTIFICATE_REJECTED remain negative evidence against reopening pairwise-score -> threshold -> safe redundancy certificates."
+    ],
+    "residual_hypotheses": [
+      {
+        "id": "H1_COMPLEMENTARY_COMPOSABILITY",
+        "statement": "The e1.a acquisition gain from structural reservation and the e6.a preservation/compression gain from alignment augmentation are complementary and can coexist at the same bounded evidence budget.",
+        "predicted_observation": "Applying the exact validated alignment swap to the exact frozen facet-planner budget28 set yields all seven controls plus e1.a and e6.a, for at least 9/13 support, with 28 selected propositions."
+      },
+      {
+        "id": "H2_BOUNDED_BUDGET_INTERFERENCE",
+        "statement": "The two positive mechanisms interfere when composed: the alignment replacement deletes evidence needed by the planner, the planner set invalidates the preservation certificate, or one residual displaces another.",
+        "predicted_observation": "The exact composition fails to retain both e1.a and e6.a or loses a frozen control atom despite both mechanisms succeeding independently."
+      },
+      {
+        "id": "H3_ACQUISITION_FRAGILITY_DOMINATES",
+        "statement": "The mechanisms compose successfully on the primary path, but the combined e1.a gain still depends on evidence unique to the historically flagged source intent.",
+        "predicted_observation": "Primary composition reaches >=9/13, but the predeclared posthoc flagged-origin sensitivity loses e1.a and falls back to the seven controls plus e6.a or lower."
+      },
+      {
+        "id": "H4_NEW_QUERY_GENERATION_IS_NOT_YET_JUSTIFIED",
+        "statement": "Because e1.a evidence is already shallowly exposed across existing intents, new query generation should remain deferred unless composition or robustness evidence contradicts that exposure result.",
+        "predicted_observation": "A successful or fragile composition result advances evidence-set robustness/compression rather than query generation."
+      }
+    ]
+  },
+  "preserved_positive_evidence": [
+    {
+      "checkpoint": "ALIGNMENT_AUGMENT_FEASIBLE",
+      "result_file": "benchmarks/document_intelligence/local-extract-proposition-alignment-preservation-result.v1.json",
+      "support": "8/13",
+      "frozen_controls_retained": "7/7",
+      "residual_recovered": "e6.a",
+      "exact_teacher_swap": {
+        "removed_proposition_id": "page:p4:s33",
+        "retained_same_page_certifier_id": "page:p4:s28",
+        "alignment_score": 0.4444444444444444,
+        "frozen_threshold": 0.4,
+        "added_proposition_id": "page:p6:s13"
+      }
+    },
+    {
+      "checkpoint": "FACET_RESERVATION_CONFIRMED",
+      "workflow_run_id": 40136509371,
+      "artifact_id": 12577280307,
+      "report_sha256": "7ec84d93dde8814442a6079704773c48739e90fa3d8246514713129288998901",
+      "support_at_budget28": "8/13",
+      "frozen_controls_retained": "7/7",
+      "residual_recovered": "e1.a",
+      "qualifying_budget": 28,
+      "incremental_raw_source_chars_vs_top24": 623,
+      "caveat": "Predeclared flagged-origin sensitivity removes page:p2:s33 and loses e1.a, returning to 7/13."
+    }
+  ],
+  "rejected_mechanisms": [
+    "NLI_CERTIFICATE_REJECTED",
+    "PREDICATE_ARGUMENT_CERTIFICATE_REJECTED",
+    "AMR_GRAPH_CERTIFICATE_REJECTED"
+  ],
+  "mechanism_family_comparison": [
+    {
+      "id": "COMPOSED_ACQUISITION_PRESERVATION",
+      "mechanisms": [
+        "coverage_planning",
+        "preservation_compression",
+        "evidence_set_composition"
+      ],
+      "role": "SELECTED_FIRST_DIAGNOSTIC",
+      "rationale": "It directly composes the two independently positive mechanisms already earned by evidence. The diagnostic is deterministic, one-paper, zero-model, zero-generation, and can falsify complementarity before any larger architecture is built."
+    },
+    {
+      "id": "ROBUSTNESS_AWARE_STRUCTURAL_COVERAGE",
+      "mechanisms": [
+        "coverage_planning",
+        "intent_origin_robustness",
+        "leave_one_origin_out_or_perturbation"
+      ],
+      "role": "NEXT_IF_COMPOSITION_IS_FRAGILE",
+      "rationale": "The facet planner's e1.a gain depends on a proposition unique to a historically flagged source intent. Query-level robustness work shows retrieval pipelines can be sensitive even to modest query variation, so a future teacher-blind perturbation/origin-stability design is justified if composition succeeds only on the fragile path."
+    },
+    {
+      "id": "ADAPTIVE_EVIDENCE_SET_PLANNING",
+      "mechanisms": [
+        "gap_detection",
+        "iterative_retrieval",
+        "marginal_information_utility",
+        "stopping"
+      ],
+      "role": "DEFERRED_IF_SIMPLE_COMPOSITION_FAILS",
+      "rationale": "Recent adaptive information-control systems motivate selecting whether and how much evidence to retrieve based on marginal utility, but this adds a control policy and stopping signal that are unnecessary until the exact positive mechanisms are tested for simple composability."
+    },
+    {
+      "id": "DIVERSITY_FOCUSED_SELECTION",
+      "mechanisms": [
+        "relevance_diversity_tradeoff",
+        "MMR_or_pairwise_dissimilarity"
+      ],
+      "role": "DEFERRED",
+      "rationale": "Recent DF-RAG evidence supports diversity as a way to reduce redundant retrieval, but the mechanism depends on pairwise similarity/dissimilarity. EXTRACT already has stronger structural evidence and repeated negative results around pairwise semantic certificates, so this is not the smallest justified next step."
+    },
+    {
+      "id": "SUBMODULAR_OR_SET_COVER_EVIDENCE_OPTIMIZATION",
+      "mechanisms": [
+        "collective_set_utility",
+        "coverage_optimization",
+        "evidence_set_reasoning"
+      ],
+      "role": "DEFERRED",
+      "rationale": "Recent work supports collective evidence utility and minimal evidence groups, but current methods often require semantic/entailment scoring or graph structure. EXTRACT should first test deterministic composition of already validated structural mechanisms."
+    },
+    {
+      "id": "NEW_QUERY_GENERATION_OR_REWRITING",
+      "mechanisms": [
+        "query_decomposition",
+        "query_reformulation",
+        "generation"
+      ],
+      "role": "NOT_AUTHORIZED_YET",
+      "rationale": "SHALLOW_DISTRIBUTED_EXPOSURE already shows the required e1.a evidence is shallowly available across existing automatic intents. New generation would not be the smallest explanation for the current residual."
+    }
+  ],
+  "external_research_evidence": [
+    {
+      "source": "Perçin et al. Investigating the Robustness of Retrieval-Augmented Generation at the Query Level. GEM 2025.",
+      "url": "https://aclanthology.org/2025.gem-1.38/",
+      "lesson": "Retriever effectiveness can degrade under modest query perturbations, supporting explicit robustness testing when a gain depends on one intent path."
+    },
+    {
+      "source": "Khan et al. DF-RAG: Query-Aware Diversity for Retrieval-Augmented Generation. Findings EACL 2026.",
+      "url": "https://aclanthology.org/2026.findings-eacl.150/",
+      "lesson": "Diversifying selected evidence can improve recall on reasoning-heavy QA, but its MMR-style pairwise dissimilarity is not preferred here because structural mechanisms already have positive EXTRACT-specific evidence."
+    },
+    {
+      "source": "Peng et al. COSMOS: Connectivity-Oriented Submodular Maximization for Optimal Subgraph Retrieval. ACL 2026.",
+      "url": "https://aclanthology.org/2026.acl-long.1662/",
+      "lesson": "Collective evidence utility can be formulated as constrained set optimization, supporting evidence-set reasoning as a later mechanism family if deterministic composition is insufficient."
+    },
+    {
+      "source": "Li et al. Minimal Evidence Group Identification for Claim Verification. TrustNLP 2025.",
+      "url": "https://aclanthology.org/2025.trustnlp-main.8/",
+      "lesson": "Claims can require multiple evidence pieces jointly; this supports set-level reasoning as a distinct family, but the published approach relies on entailment estimates, which EXTRACT should not import after its NLI certificate rejection without new evidence."
+    },
+    {
+      "source": "Xiong et al. Adaptive Information Control for Search-Augmented LLM Reasoning. Findings EMNLP 2026.",
+      "url": "https://aclanthology.org/volumes/2026.findings-emnlp/",
+      "lesson": "Marginal information utility and adaptive retrieval extent/resolution are plausible later controls if fixed composition or robustness testing fails."
+    }
+  ],
+  "selected_discriminating_experiment": {
+    "id": "PLANNER_ALIGNMENT_COMPOSITION_DIAGNOSTIC_V1",
+    "implementation_scope": "one_teacher_control_deterministic_replay_only",
+    "purpose": "Test whether the exact independently validated e1.a acquisition and e6.a preservation mechanisms compose at a fixed 28-proposition budget, and separately classify whether any combined gain survives the already-predeclared flagged-origin sensitivity.",
+    "new_generation_calls": 0,
+    "new_model_downloads": 0,
+    "new_model_training": false,
+    "production_routing_changed": false,
+    "scientific_state_materialized": false,
+    "frozen_inputs": {
+      "teacher_control_item": "arxiv:2403.04036",
+      "facet_planner_run_id": 40136509371,
+      "facet_planner_artifact_id": 12577280307,
+      "facet_planner_artifact_zip_sha256": "90c2f198bcd7eb8ab51fc1f74a662e46c857ed68bf0f31c557f1d843d2996878",
+      "facet_planner_report_sha256": "7ec84d93dde8814442a6079704773c48739e90fa3d8246514713129288998901",
+      "facet_planner_budget": 28,
+      "alignment_result_file": "benchmarks/document_intelligence/local-extract-proposition-alignment-preservation-result.v1.json",
+      "alignment_run_id": 40038661074,
+      "alignment_artifact_id": 12537639453,
+      "alignment_report_sha256": "f676a5d36c030984f3839ed4ee0e7f07408996ffc81910597b0b1b417fdc8c8f",
+      "alignment_swap": {
+        "remove": "page:p4:s33",
+        "require_same_page_certifier_present": "page:p4:s28",
+        "frozen_alignment_score": 0.4444444444444444,
+        "frozen_alignment_threshold": 0.4,
+        "add": "page:p6:s13"
+      },
+      "teacher_use": "Evaluation only after composition. Teacher data may not change the planner set, alignment swap, budget, sensitivity, or any selection decision."
+    },
+    "composition_operator": {
+      "id": "EXACT_PLANNER28_THEN_VALIDATED_ALIGNMENT_SWAP_V1",
+      "steps": [
+        "Load the exact frozen facet-planner budget28 selected proposition set from the exact report.",
+        "Verify exact selected-set identity, proposition/page provenance, and 28-item count before composition.",
+        "Require page:p4:s33 to be present, page:p4:s28 to remain present as the already-validated same-page certifier, and page:p6:s13 to be absent before the swap.",
+        "Apply exactly the previously validated alignment transformation: remove page:p4:s33 and add page:p6:s13.",
+        "Preserve all other proposition identities and their source provenance; do not rerank, rescore, backfill, generate, or search.",
+        "Require the composed set to remain exactly 28 propositions.",
+        "Evaluate frozen teacher atom support only after the composed set is fixed.",
+        "Run the exact predeclared facet-planner flagged-origin sensitivity on the composed set with no backfill, then evaluate teacher support again."
+      ],
+      "no_new_alignment_search": true,
+      "no_threshold_search": true,
+      "no_teacher_filtering_or_selection": true,
+      "no_post_result_budget_or_swap_changes": true
+    },
+    "frozen_controls": [
+      "FROZEN_SOURCE_AWARE_BM25_RRF_V1: 7/13, all seven frozen controls.",
+      "ALIGNMENT_AUGMENT_FEASIBLE: 8/13 at budget24, e6.a recovered, 7/7 controls retained.",
+      "FACET_RESERVATION_CONFIRMED: 8/13 at budget28, e1.a recovered, 7/7 controls retained.",
+      "FACET_RESERVATION flagged-origin sensitivity: 7/13 after removing evidence unique to the historically flagged source intent.",
+      "ADDITIVE_FRONTIER_PARTIAL: 8/13 with e6.a but e1.a absent through budget32."
+    ],
+    "metrics": {
+      "primary": [
+        "supported_atom_count in exact composed budget28 set",
+        "frozen_control_retention_count",
+        "e1.a supported",
+        "e6.a supported",
+        "observed residual atoms recovered from {e1.a,e6.a}"
+      ],
+      "interaction": [
+        "alignment swap preconditions satisfied on exact planner28 set",
+        "selected proposition count remains exactly 28",
+        "whether composition changes either independently positive residual outcome",
+        "whether any frozen control atom is lost"
+      ],
+      "robustness": [
+        "supported_atom_count after exact flagged-origin sensitivity with no backfill",
+        "e1.a support after sensitivity",
+        "e6.a support after sensitivity",
+        "frozen controls retained after sensitivity"
+      ],
+      "cost_provenance": [
+        "incremental raw source chars vs immutable top24",
+        "unique source pages",
+        "all selected propositions exactly locatable to authoritative PDF proposition/page identity"
+      ]
+    },
+    "frozen_interpretation": {
+      "COMPOSED_COMPLEMENTARITY_ROBUST": [
+        "Primary composed budget28 set supports all 7/7 frozen controls plus both e1.a and e6.a (>=9/13 total).",
+        "Flagged-origin sensitivity with no backfill still supports all 7 controls plus both e1.a and e6.a.",
+        "All exact-input, provenance, budget, and teacher-blind safety checks pass.",
+        "Interpretation: the independently positive acquisition and preservation mechanisms compose and the e1.a gain is not dependent on the flagged intent path."
+      ],
+      "COMPOSED_COMPLEMENTARITY_FRAGILE": [
+        "Primary composed budget28 set supports all 7/7 frozen controls plus both e1.a and e6.a (>=9/13 total).",
+        "Flagged-origin sensitivity loses e1.a while preserving all 7 controls and e6.a, or otherwise reduces the combined residual gain without violating execution safety.",
+        "Interpretation: acquisition and preservation are mechanically complementary, but acquisition robustness—not compatibility—is the next residual."
+      ],
+      "COMPOSITION_PARTIAL": [
+        "Exact safe composition retains all 7 frozen controls but supports only one of {e1.a,e6.a}.",
+        "Interpretation: the positive mechanisms interfere or one positive result is not transportable to the composed set; reject naive serial composition and compare a joint evidence-set planner against adaptive planning."
+      ],
+      "COMPOSITION_COLLISION": [
+        "Exact safe composition loses one or more of the seven frozen control atoms.",
+        "Interpretation: serial composition violates the preservation objective; reject this composition operator and do not generalize it."
+      ],
+      "INVALID_EXECUTION": [
+        "Any exact report/artifact identity, swap-precondition, proposition provenance, fixed-budget, or teacher-blind hard-safety check fails.",
+        "Interpretation: no scientific verdict; repair only unchanged replay/identity mechanics and require fresh explicit one-shot authority before any recovery execution."
+      ]
+    },
+    "stopping_rule": "Exactly one valid scientific execution after independent design review. Stop at COMPOSED_COMPLEMENTARITY_ROBUST, COMPOSED_COMPLEMENTARITY_FRAGILE, COMPOSITION_PARTIAL, or COMPOSITION_COLLISION. INVALID_EXECUTION is operational/no-verdict. No changes to the exact planner28 set, alignment swap, budget28, teacher audit, sensitivity, metrics, or interpretation after seeing a result.",
+    "pass_authority": {
+      "COMPOSED_COMPLEMENTARITY_ROBUST": "Authorize a later broader generalization/cost study of the composed acquisition+preservation architecture across the nine-paper corpus. No production promotion.",
+      "COMPOSED_COMPLEMENTARITY_FRAGILE": "Authorize only a robustness-aware acquisition design that tests intent-origin/query perturbation stability while preserving the confirmed alignment mechanism. Do not generalize the exact planner schedule as robust.",
+      "COMPOSITION_PARTIAL": "Reject naive serial composition. Next architecture search should compare joint structural evidence-set optimization against adaptive information-control planning.",
+      "COMPOSITION_COLLISION": "Reject the serial composition operator; preserve the individual positive results but require a new joint preservation/acquisition design.",
+      "INVALID_EXECUTION": "No scientific authority."
+    }
+  },
+  "hard_boundaries": {
+    "teacher_used_for_selection": false,
+    "teacher_used_only_for_posthoc_evaluation": true,
+    "new_query_generation": false,
+    "new_model_or_ranker": false,
+    "new_alignment_search": false,
+    "pairwise_semantic_similarity_new": false,
+    "threshold_calibration": false,
+    "nli_rescue": false,
+    "predicate_argument_rescue": false,
+    "amr_rescue": false,
+    "production_standard_codex_extract_changed": false,
+    "accepted_qwen_verify_changed": false,
+    "wave7b_started": false,
+    "semantic_control_or_ontology_output": false,
+    "implementation_authorized_before_independent_review": false
+  },
+  "reviewer_boundary": "Independent reviewer must audit this exact frozen design before implementation. Routine implementation/CI/packaging/trigger mechanics do not require reviewer stops unless they alter the frozen experiment. A genuine result requires post-result review before any next scientific phase.",
+  "next_safe_action": "Run normal CI on this design-only artifact and merge only if clean. Then checkpoint the exact design in workspace-control and obtain independent review before implementing PLANNER_ALIGNMENT_COMPOSITION_DIAGNOSTIC_V1."
+}
