@@ -1,0 +1,312 @@
+{
+  "schema_version": 1,
+  "design_id": "local-extract-cross-paper-recovery-comparison-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "status": "DESIGN_ONLY_REVIEW_REQUIRED_NO_IMPLEMENTATION_AUTHORIZED",
+  "selected_architecture": {
+    "id": "CROSS_PAPER_STRUCTURAL_RECOVERY_COMPARISON_V1",
+    "mechanism_families": [
+      "robust_retrieval",
+      "local_context_expansion",
+      "retrieval_depth_allocation",
+      "paired_counterfactual_evaluation"
+    ],
+    "summary": "Across all nine frozen papers, replay a teacher-blind budget28 structural planner, create one-slot leave-one-reservation-origin-out stresses, and compare radius-1 neighborhood rescue against deeper surviving-intent allocation under identical fixed-budget conditions."
+  },
+  "scientific_question": "Does the one-case neighborhood-rescue mechanism generalize as a structurally stable and lower-cost recovery strategy across the nine-paper corpus, or does deeper per-intent allocation recover more origin-dropped evidence selections?",
+  "problem_model": {
+    "established": [
+      "LOCAL_RESCUE_CONFIRMED shows immediate same-page neighborhood rescue is sufficient on the known fragile teacher-control case: page:p2:s33 is restored teacher-blind and budget28 returns to 9/13 with all seven controls plus e1.a/e6.a.",
+      "Independent review limits that result to one-known-case sufficiency; cross-paper robustness is untested.",
+      "The nine-paper fixture preserves exact PDFs plus historical evidence-bearing page locations for all nine papers, but proposition-level teacher labels exist only for arxiv:2403.04036.",
+      "Therefore a cross-paper experiment may evaluate structural recovery/stability and cost on all nine papers, plus historical page membership as secondary context, but must not claim proposition-level semantic correctness for the eight non-teacher papers.",
+      "The frozen generated-intent artifact covers the nine-paper corpus and preserves source-aware and author-anchored accepted intents.",
+      "New query generation remains deferred because the known fragile proposition was already exposed under surviving frozen retrieval paths.",
+      "NLI_CERTIFICATE_REJECTED, PREDICATE_ARGUMENT_CERTIFICATE_REJECTED, and AMR_GRAPH_CERTIFICATE_REJECTED remain negative evidence against pairwise semantic redundancy certificates."
+    ],
+    "residual_hypotheses": [
+      {
+        "id": "H1_LOCAL_STRUCTURAL_RECOVERY_GENERALIZES",
+        "statement": "Origin-fragile selected evidence is often recoverable from immediate same-page context corroborated by surviving retrieval paths, so radius-1 rescue provides structural robustness beyond the single teacher control at lower search breadth than deeper allocation.",
+        "predicted_observation": "Across paired leave-one-reservation-origin-out stresses, local rescue has unique exact recoveries or matches deeper allocation while examining a smaller candidate universe."
+      },
+      {
+        "id": "H2_DEEPER_PER_INTENT_ALLOCATION_GENERALIZES_BETTER",
+        "statement": "The teacher-case adjacency was incidental; robust recovery more often requires drawing from deeper surviving intent rankings rather than local neighbors.",
+        "predicted_observation": "Deeper ranks4-12 allocation has one or more unique exact recoveries with no local-only recoveries, or materially broader recovery across the paired stresses."
+      },
+      {
+        "id": "H3_MECHANISMS_ARE_COMPLEMENTARY",
+        "statement": "Local context and deeper retrieval recover different origin-dropped selections and should eventually be composed rather than treated as substitutes.",
+        "predicted_observation": "At least one stress is local-only and at least one different stress is deep-only."
+      },
+      {
+        "id": "H4_STATIC_RECOVERY_IS_INSUFFICIENT",
+        "statement": "Neither radius-1 local rescue nor fixed deeper allocation reliably reconstructs origin-dropped selections, motivating an adaptive gap/sufficiency controller.",
+        "predicted_observation": "Neither mechanism exactly recovers any stressed selection across valid stresses, or baseline/stress coverage is insufficient for a cross-paper conclusion."
+      }
+    ]
+  },
+  "evaluation_scope": {
+    "papers": "All nine exact-SHA papers in local-extract-wave1-corpus.v1.json.",
+    "historical_oracle": "Historical evidence-bearing page locations only for all nine papers. These are secondary evaluation context, not proposition-level labels and not selection inputs.",
+    "teacher_subset": "arxiv:2403.04036 remains the only proposition/claim-level teacher subset. The completed run 40143476764 is a frozen calibration result and is not rerun or used to tune this cross-paper experiment.",
+    "semantic_claim_boundary": "Exact recovery of a removed selected proposition is a structural stability metric. Same-page or historical-evidence-page recovery is descriptive secondary evidence. No semantic-support claim is made for unlabeled papers."
+  },
+  "mechanism_family_comparison": [
+    {
+      "id": "RADIUS1_NEIGHBORHOOD_RESCUE",
+      "mechanisms": [
+        "local_context_expansion",
+        "surviving_path_corroboration",
+        "one_slot_backfill"
+      ],
+      "role": "ARM_A",
+      "rationale": "Direct generalization of LOCAL_RESCUE_CONFIRMED. Candidate generation is minimal: only immediate same-page neighbors of surviving tier1 reservation seeds."
+    },
+    {
+      "id": "DEEPER_PER_INTENT_ALLOCATION",
+      "mechanisms": [
+        "retrieval_depth",
+        "surviving_path_corroboration",
+        "one_slot_backfill"
+      ],
+      "role": "ARM_B",
+      "rationale": "Directly tests the competing hypothesis already exposed on the teacher control: missing evidence may require deeper surviving-intent ranks rather than adjacency. Candidate pool is ranks4-12 of surviving tier1 intents."
+    },
+    {
+      "id": "ADAPTIVE_GAP_DIRECTED_RETRIEVAL",
+      "mechanisms": [
+        "gap_detection",
+        "iterative_retrieval",
+        "stopping"
+      ],
+      "role": "DEFERRED_IF_BOTH_WEAK",
+      "rationale": "Current evidence does not justify a new controller until the two cheapest static recovery mechanisms are compared across the full corpus."
+    },
+    {
+      "id": "NEW_QUERY_GENERATION_OR_REWRITING",
+      "mechanisms": [
+        "query_generation",
+        "decomposition",
+        "rewriting"
+      ],
+      "role": "NOT_AUTHORIZED_YET",
+      "rationale": "The known fragile evidence was already present under surviving frozen queries. Query generation is not the smallest remaining premise."
+    },
+    {
+      "id": "PAIRWISE_SEMANTIC_REDUNDANCY_CERTIFICATE",
+      "mechanisms": [
+        "pairwise_score",
+        "threshold",
+        "replacement"
+      ],
+      "role": "INELIGIBLE_WITHOUT_NEW_PREMISE_EVIDENCE",
+      "rationale": "Repeated NLI, predicate-argument, and AMR certificate failures remain negative evidence."
+    }
+  ],
+  "external_research_evidence": [
+    {
+      "source": "Perçin et al. Investigating the Robustness of Retrieval-Augmented Generation at the Query Level. GEM 2025.",
+      "url": "https://aclanthology.org/2025.gem-1.38/",
+      "lesson": "Retriever behavior can degrade under modest query variation, supporting explicit perturbation/path-robustness evaluation."
+    },
+    {
+      "source": "Verma et al. NEST: Nested Evidence Survival for Retrieval. ACL Industry 2026.",
+      "url": "https://aclanthology.org/2026.acl-industry.35/",
+      "lesson": "Lightweight evidence-survival mechanisms can rescue context lost by static retrieval while separating recall amplification from precision selection."
+    },
+    {
+      "source": "Banerjee et al. The Bottleneck Is Retrieval, Not Reading. Findings EMNLP 2026.",
+      "url": "https://aclanthology.org/2026.findings-emnlp.2222/",
+      "lesson": "Similarity retrieval often surfaces some but not all required evidence, and chunking can destroy useful document context; retrieval/context structure should be tested directly."
+    },
+    {
+      "source": "Singh et al. SPLADE-COVER: Coverage-Aware Representations for Learned Sparse Retrieval. EMNLP 2026.",
+      "url": "https://aclanthology.org/2026.emnlp-main.2695/",
+      "lesson": "Multi-aspect coverage is a distinct retrieval objective; EXTRACT uses this only as motivation for coverage evaluation, not to import a new learned model."
+    }
+  ],
+  "selected_discriminating_experiment": {
+    "id": "LEAVE_ONE_RESERVATION_ORIGIN_OUT_COMPARISON_V1",
+    "implementation_scope": "nine_paper_deterministic_teacher_blind_structural_replay",
+    "purpose": "Compare radius-1 local rescue with deeper ranks4-12 allocation under matched one-slot origin-drop stresses across the exact nine-paper corpus, measuring structural recovery and cost without treating page-level historical labels as proposition-level truth.",
+    "new_generation_calls": 0,
+    "new_model_downloads": 0,
+    "new_model_training": false,
+    "production_routing_changed": false,
+    "scientific_state_materialized": false,
+    "frozen_inputs": {
+      "corpus_fixture": "benchmarks/document_intelligence/local-extract-wave1-corpus.v1.json",
+      "corpus_fixture_blob": "c472329d560df3d7dccab2bf49bf94d6805faef2",
+      "paper_count": 9,
+      "historical_evidence_bearing_page_count": 43,
+      "generated_intents_artifact_id": 12533721500,
+      "generated_intents_sha256": "a5a970725c1f16a694633416ad9fbd98e58418c267891ac83b7783d8af218ebd",
+      "source_generator": "QWEN35_SOURCE_AWARE_INTENTS_V1",
+      "author_generator": "QWEN35_AUTHOR_ANCHORED_OBLIGATIONS_V1",
+      "retriever": "BM25_DIRECT",
+      "baseline_core_budget": 24,
+      "baseline_total_budget": 28,
+      "baseline_reservation_depth": 3,
+      "recovery_evidence_depth": 12,
+      "neighborhood_radius": 1,
+      "completed_teacher_calibration": {
+        "run_id": 40143476764,
+        "artifact_id": 12580076512,
+        "report_sha256": "e1a2f61f16cae4e957b10a9c24b475d5cb481afa9381084de65a1cd9c6568d23",
+        "verdict": "LOCAL_RESCUE_CONFIRMED",
+        "role": "Frozen prior evidence only; do not rerun or use to tune cross-paper rules."
+      }
+    },
+    "teacher_blind_cross_paper_baseline": {
+      "core": "For each paper, compute source-aware BM25 rankings for all accepted source-aware intents exactly as stored, with no teacher anti-leak filtering, and RRF-merge to a 24-proposition core using the frozen Wave7A.3 RRF parameters.",
+      "tier1_reservations": "Append four propositions, or fail baseline completeness for that paper, using only tier1 source facet=method and author anchor_role=contribution intents in exact accepted artifact order, alternating source-group then author-group and scanning each visited intent's top3 for the highest-ranked unseen proposition.",
+      "reason_for_no_teacher_filter": "Cross-paper selection must not depend on teacher labels; the historical teacher anti-leak filter is not available for eight papers and is excluded from this baseline.",
+      "fixed_budget": 28
+    },
+    "stress_generator": {
+      "id": "LEAVE_ONE_TIER1_RESERVATION_ORIGIN_OUT_V1",
+      "operation": [
+        "Require the teacher-blind baseline to contain exactly 24 core propositions plus four tier1 reservation events.",
+        "Create four stress cases per valid paper, one for each reservation event in frontier order.",
+        "For one stress case, remove exactly that reservation proposition from the 28-set, yielding 27 propositions.",
+        "Exclude that reservation event's selecting intent (generator_id + intent_index) from all recovery-path support for that stress.",
+        "Do not remove or alter any other selected proposition, query, rank, or intent.",
+        "The removed proposition identity is hidden from both recovery arms and is used only for posthoc structural exact-recovery scoring."
+      ],
+      "expected_stress_cases_if_all_papers_complete": 36,
+      "baseline_completeness_gate": "All nine papers must produce exactly four tier1 reservation events at budget28. If any paper cannot, verdict is INSUFFICIENT_BASELINE_GENERALIZATION and no mechanism preference is authorized."
+    },
+    "arm_a_local_neighborhood": {
+      "id": "RADIUS1_SURVIVING_PATH_RESCUE_V1",
+      "candidate_generation": [
+        "Use the three surviving non-core reservation propositions as seeds in original frontier order.",
+        "Generate immediate predecessor and successor propositions on the same authoritative PDF page only.",
+        "Exclude already-selected propositions and cross-page neighbors.",
+        "A neighbor is eligible only if it appears within top12 of at least one surviving tier1 intent."
+      ],
+      "candidate_ranking": [
+        "surviving_path_support_count descending",
+        "best_surviving_bm25_rank ascending",
+        "seed_frontier_rank ascending",
+        "predecessor before successor",
+        "proposition_id ascending"
+      ],
+      "action": "Append exactly the top-ranked eligible candidate; if none, arm returns NO_CANDIDATE."
+    },
+    "arm_b_deeper_allocation": {
+      "id": "DEEPER_SURVIVING_INTENT_ALLOCATION_V1",
+      "candidate_generation": [
+        "Use all unique unselected propositions appearing at BM25 ranks4-12 of surviving tier1 intents.",
+        "Do not include ranks1-3, because those constitute the already-frozen reservation frontier.",
+        "Do not use adjacency, teacher labels, semantic similarity, or new queries."
+      ],
+      "candidate_ranking": [
+        "surviving_path_support_count descending",
+        "best_surviving_bm25_rank ascending",
+        "earliest surviving intent accepted-order index ascending",
+        "proposition_id ascending"
+      ],
+      "action": "Append exactly the top-ranked eligible candidate; if none, arm returns NO_CANDIDATE."
+    },
+    "metrics": {
+      "primary_structural": [
+        "valid_paper_count",
+        "valid_stress_case_count",
+        "local_exact_removed_proposition_recovery_count",
+        "deep_exact_removed_proposition_recovery_count",
+        "both_exact_recovery_count",
+        "local_only_exact_recovery_count",
+        "deep_only_exact_recovery_count",
+        "neither_exact_recovery_count"
+      ],
+      "secondary_page_context": [
+        "removed_proposition_on_historical_evidence_page_count",
+        "local_selected_on_historical_evidence_page_count",
+        "deep_selected_on_historical_evidence_page_count",
+        "local_same_page_as_removed_count",
+        "deep_same_page_as_removed_count"
+      ],
+      "cost": [
+        "local_total_unique_candidate_count",
+        "deep_total_unique_candidate_count",
+        "local_total_candidate_raw_source_chars",
+        "deep_total_candidate_raw_source_chars",
+        "local_total_selected_raw_source_chars",
+        "deep_total_selected_raw_source_chars"
+      ],
+      "provenance": [
+        "all baseline/rescue propositions exactly locatable to authoritative PDF page/proposition identity",
+        "exact generated-intent artifact identity",
+        "exact corpus PDF SHA/page-count identity",
+        "no teacher data used in baseline/stress/candidate generation/ranking"
+      ]
+    },
+    "frozen_interpretation": {
+      "INSUFFICIENT_BASELINE_GENERALIZATION": [
+        "At least one of the nine papers fails to produce exactly four tier1 reservation events at teacher-blind budget28, or any identity/provenance/teacher-boundary gate fails.",
+        "Interpretation: the selected cross-paper baseline itself does not generalize cleanly enough to compare recovery mechanisms. No local-vs-deep preference."
+      ],
+      "COMPLEMENTARY_STRUCTURAL_RECOVERY": [
+        "local_only_exact_recovery_count > 0 and deep_only_exact_recovery_count > 0.",
+        "Interpretation: local context and deeper allocation recover different origin-dropped selections; next design should test a deterministic hybrid rather than choose one family."
+      ],
+      "LOCAL_STRUCTURAL_ADVANTAGE": [
+        "local_only_exact_recovery_count > 0 and deep_only_exact_recovery_count == 0.",
+        "Interpretation: radius-1 rescue adds structural recovery unavailable to deeper allocation across the frozen stresses. Cost metrics determine whether later generalization should preserve it as the primary recovery layer."
+      ],
+      "DEEPER_ALLOCATION_ADVANTAGE": [
+        "deep_only_exact_recovery_count > 0 and local_only_exact_recovery_count == 0.",
+        "Interpretation: deeper surviving-intent allocation adds structural recovery unavailable to radius-1 rescue; next design should prefer depth allocation over generalized neighborhood expansion."
+      ],
+      "BOTH_STRUCTURALLY_WEAK": [
+        "local_exact_removed_proposition_recovery_count == 0 and deep_exact_removed_proposition_recovery_count == 0.",
+        "Interpretation: neither static recovery family reconstructs any origin-dropped selection; move toward adaptive gap/sufficiency planning rather than tuning radius or depth post hoc."
+      ],
+      "EQUIVALENT_STRUCTURAL_RECOVERY": [
+        "local_only_exact_recovery_count == 0 and deep_only_exact_recovery_count == 0 and both_exact_recovery_count > 0.",
+        "Interpretation: both mechanisms recover exactly the same stress cases. Use predeclared cost metrics to decide the cheaper bounded follow-up; this is structural equivalence, not semantic equivalence."
+      ]
+    },
+    "interpretation_priority": [
+      "INSUFFICIENT_BASELINE_GENERALIZATION",
+      "COMPLEMENTARY_STRUCTURAL_RECOVERY",
+      "LOCAL_STRUCTURAL_ADVANTAGE",
+      "DEEPER_ALLOCATION_ADVANTAGE",
+      "BOTH_STRUCTURALLY_WEAK",
+      "EQUIVALENT_STRUCTURAL_RECOVERY"
+    ],
+    "stopping_rule": "Exactly one valid scientific execution after independent design review. Stop at the first verdict in interpretation_priority. No changes to corpus, baseline construction, four stress cases per paper, dropped-origin rule, radius1, depths3/12, ranking rules, budget28, metrics, or interpretation after seeing the result.",
+    "pass_authority": {
+      "INSUFFICIENT_BASELINE_GENERALIZATION": "No recovery-family authority. Redesign the cross-paper baseline teacher-blind before comparing rescue mechanisms.",
+      "COMPLEMENTARY_STRUCTURAL_RECOVERY": "Authorize a later deterministic hybrid recovery design, still teacher-blind and fixed-budget; no production promotion.",
+      "LOCAL_STRUCTURAL_ADVANTAGE": "Authorize a later broader neighborhood-aware robustness/cost design and collection of genuinely proposition-level heldout labels before semantic generalization.",
+      "DEEPER_ALLOCATION_ADVANTAGE": "Authorize a later deeper-per-intent robustness/cost design and collection of proposition-level heldout labels before semantic generalization.",
+      "BOTH_STRUCTURALLY_WEAK": "Authorize evidence-first adaptive gap/sufficiency-controller research; do not tune radius/depth post hoc.",
+      "EQUIVALENT_STRUCTURAL_RECOVERY": "Authorize only the lower-cost mechanism as the next bounded structural robustness design; if cost is tied, require a new discriminator rather than arbitrary selection."
+    }
+  },
+  "hard_boundaries": {
+    "teacher_used_for_cross_paper_baseline": false,
+    "teacher_used_for_stress_generation": false,
+    "teacher_used_for_candidate_generation": false,
+    "teacher_used_for_candidate_ranking": false,
+    "historical_page_oracle_used_only_posthoc": true,
+    "proposition_semantic_generalization_claim": false,
+    "new_query_generation": false,
+    "new_model_or_ranker": false,
+    "pairwise_semantic_similarity": false,
+    "threshold_calibration": false,
+    "nli_rescue": false,
+    "predicate_argument_rescue": false,
+    "amr_rescue": false,
+    "production_standard_codex_extract_changed": false,
+    "accepted_qwen_verify_changed": false,
+    "wave7b_started": false,
+    "semantic_control_or_ontology_output": false,
+    "implementation_authorized_before_independent_review": false
+  },
+  "reviewer_boundary": "Independent reviewer must audit this exact frozen cross-paper design before implementation. Routine implementation/CI/trigger mechanics do not require reviewer stops unless science changes. Genuine result requires post-result review before next-phase selection.",
+  "next_safe_action": "Run normal CI on this design-only artifact and merge only if clean. Then checkpoint the exact design in workspace-control and obtain independent review before implementing LEAVE_ONE_RESERVATION_ORIGIN_OUT_COMPARISON_V1."
+}
