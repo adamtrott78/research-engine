@@ -94,7 +94,7 @@
         "release_commit": "1bcd49cc8535056aa1c941763580fc5a572f1204",
         "license": "MIT",
         "standard_iteration_num": 5,
-        "deterministic_reseed_rule": "For each AMR pair, derive seed = first 64 bits of SHA256(canonical pair identity). Temporarily replace smatch.random.seed with a wrapper that always calls the captured original random.seed(seed), so every internal no-argument reseed is deterministic; restore the original seed function after scoring."
+        "deterministic_reseed_rule": "For each AMR pair, derive seed = first 64 bits of SHA256(canonical pair identity). Call the captured original random.seed(seed) exactly once before Smatch alignment; then temporarily replace smatch.random.seed with a no-op so Smatch's internal no-argument reseed calls cannot pull system entropy and the PRNG stream advances deterministically across standard iteration_num=5. Restore the original seed function after scoring."
       }
     },
     "parser_model": {
@@ -167,7 +167,7 @@
     "graph_similarity": {
       "metric": "DETERMINISTIC_SMATCH_F1_V1",
       "definition": "Parse both propositions once with the pinned amrlib parser, remove metadata, and compute standard Smatch v1.0.4 F1. Invalid/unparseable graphs score 0.0.",
-      "deterministic_alignment": "For every pair, derive a pair-specific seed from SHA256(canonical pair identity) and intercept Smatch's internal random.seed() calls so they always reseed to that pair seed; retain standard iteration_num=5 and restore random.seed after scoring.",
+      "deterministic_alignment": "For every pair, derive a pair-specific seed from SHA256(canonical pair identity), seed the underlying PRNG once, then intercept Smatch's internal random.seed() calls as no-ops for the duration of that score. This preserves distinct deterministic restart mappings across standard iteration_num=5; restore random.seed after scoring.",
       "threshold_grid": [
         0.4,
         0.45,
@@ -196,7 +196,7 @@
     },
     "decision_boundary": {
       "if_validated": "Checkpoint exact parser tarball SHA256, pinned tokenizer revision/manifest SHA256, pinned Bio-AMR mirror commit/blob/file SHA256, SPARK file SHA256, amrlib/smatch identities, selected threshold, run/artifact/report identities, then open a separate EXTRACT design for substituting graph similarity into the accepted dynamic-swap/page-preservation/top-24 architecture.",
-      "if_partial_or_rejected": "Do not tune parser model, tokenizer revision, beam count, Smatch deterministic reseed rule, threshold grid, or Bio-AMR/SPARK gates using EXTRACT results. Reassess claim/question decomposition, UCCA, or another materially different teacher-blind evidence representation.",
+      "if_partial_or_rejected": "Do not tune parser model, tokenizer revision, beam count, Smatch one-time seed/no-op internal-reseed rule, threshold grid, or Bio-AMR/SPARK gates using EXTRACT results. Reassess claim/question decomposition, UCCA, or another materially different teacher-blind evidence representation.",
       "never": "Do not start Wave 7B, change production EXTRACT/VERIFY, retrain/fine-tune the AMR parser, use EXTRACT teacher labels, emit RDF/ontology output, or change EXTRACT output for semantic-control."
     }
   },
@@ -238,5 +238,5 @@
     "semantic_control_or_ontology_in_extract": false,
     "rdf_or_ontology_output": false
   },
-  "next_safe_action": "CI-lock this tokenizer-pinned design hotfix. Before implementation, re-read the independent-review capsule for any checkpoint explicitly tied to the exact durable hotfix SHA. If none exists, implement only the external AMR_GRAPH_REDUNDANCY_CERTIFICATE_VALIDATION_V1 harness/workflow and run no EXTRACT teacher benchmark."
+  "next_safe_action": "CI-lock this deterministic-Smacth hotfix. Before implementation, re-read the independent-review capsule for any checkpoint explicitly tied to the exact durable hotfix SHA. If none exists, implement only the external AMR_GRAPH_REDUNDANCY_CERTIFICATE_VALIDATION_V1 harness/workflow and run no EXTRACT teacher benchmark."
 }

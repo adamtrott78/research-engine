@@ -58,7 +58,8 @@ def test_smatch_reseeding_and_spark_gate_are_frozen() -> None:
     assert smatch["release_tag"] == "v1.0.4"
     assert smatch["release_commit"] == "1bcd49cc8535056aa1c941763580fc5a572f1204"
     assert smatch["standard_iteration_num"] == 5
-    assert "Temporarily replace smatch.random.seed" in smatch["deterministic_reseed_rule"]
+    assert "Call the captured original random.seed(seed) exactly once" in smatch["deterministic_reseed_rule"]
+    assert "replace smatch.random.seed with a no-op" in smatch["deterministic_reseed_rule"]
     assert selected["graph_similarity"]["threshold_grid"] == [
         0.40, 0.45, 0.50, 0.55, 0.60, 0.65,
         0.70, 0.75, 0.80, 0.85, 0.90, 0.95,
