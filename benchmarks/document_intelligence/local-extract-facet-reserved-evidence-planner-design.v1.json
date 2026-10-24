@@ -1,0 +1,292 @@
+{
+  "schema_version": 1,
+  "design_id": "local-extract-facet-reserved-evidence-planner-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "status": "DESIGN_ONLY_REVIEW_REQUIRED_NO_IMPLEMENTATION_AUTHORIZED",
+  "scientific_question": "Given SHALLOW_DISTRIBUTED_EXPOSURE for e1.a, can a fixed teacher-blind salience-stratified reservation schedule recover the missing e1.a evidence within the same small additive budget where global append ordering failed, without changing the validated source-aware core?",
+  "evidence_state": {
+    "strongest_positive_preservation": {
+      "checkpoint": "ALIGNMENT_AUGMENT_FEASIBLE",
+      "result": "8/13 total support; all 7/7 frozen source-aware controls preserved; e6.a recovered.",
+      "role": "Preservation/compression reference only in this premise test. It is not generalized into a new redundancy certificate."
+    },
+    "latest_result": {
+      "checkpoint": "SHALLOW_DISTRIBUTED_EXPOSURE",
+      "run_id": 40133862467,
+      "report_sha256": "0908733e01e3a7efe9bc1b18bf198bc65d354520841c34b1ea8e320401e4aefc",
+      "findings": [
+        "e1.a minimum union-complete depth=1 across existing automatic intents.",
+        "e1.a minimum single-intent complete depth=10.",
+        "Two distinct intents are required for complete e1.a exposure through depths 1/3/5/8.",
+        "The two rank-1 contributors are frozen source-aware method intent 0 and frozen author-anchored contribution intent 3.",
+        "e6.a positive control is single-intent complete at depth1.",
+        "Replay consistency PASS."
+      ]
+    },
+    "prior_allocation_results": [
+      "BALANCED_FACILITY_LOCATION_RRF_V1 / COVERAGE_PRESERVING_FACILITY_LOCATION_REJECTED: global coverage optimization collapsed source-aware support from 7/13 to 4/13.",
+      "CONTROL20_RESIDUAL4_QUOTA_V1 was diagnostic-only and preserved 7/7 controls while adding e6.a, but did not establish a promotable planner.",
+      "NONDESTRUCTIVE_EVIDENCE_FRONTIER_DIAGNOSTIC_V1 returned ADDITIVE_FRONTIER_PARTIAL: global author-residual append recovered e6.a by budget26 but e1.a remained absent through budget32."
+    ],
+    "rejected_mechanisms": [
+      "NLI_CERTIFICATE_REJECTED",
+      "PREDICATE_ARGUMENT_CERTIFICATE_REJECTED",
+      "AMR_GRAPH_CERTIFICATE_REJECTED"
+    ]
+  },
+  "residual_problem_model": {
+    "primary_residual": {
+      "id": "e1.a",
+      "status": "EVIDENCE_SHALLOWLY_AVAILABLE_BUT_DISTRIBUTED_AND_GLOBALLY_SUPPRESSED",
+      "explanation": "The necessary evidence exists at rank1 under two independently generated intents, but prior global fusion/append policies do not retain both pieces inside the small final evidence set."
+    },
+    "competing_hypotheses": [
+      {
+        "id": "H1_SALIENCE_STRATIFIED_ALLOCATION_SUFFICIENT",
+        "statement": "Global fusion is the dominant remaining failure for e1.a; a fixed structural reservation schedule over high-salience method/contribution intents can expose both shallow pieces within a small additive frontier.",
+        "predicted_observation": "e1.a becomes supported by budget<=28 while the immutable source-aware top24 remains unchanged."
+      },
+      {
+        "id": "H2_STRUCTURAL_GROUPS_TOO_COARSE",
+        "statement": "The available facet/role metadata is insufficient to choose the right shallow propositions without adaptive evidence-set reasoning.",
+        "predicted_observation": "e1.a remains unsupported through the fixed budget32 reservation schedule despite shallow exposure in the underlying intent rankings."
+      },
+      {
+        "id": "H3_ADDITIVE_ACQUISITION_WORKS_BUT_COMPRESSION_REMAINS_OPEN",
+        "statement": "Reservation can recover e1.a only by increasing evidence budget; fixed-budget compression is a separate unresolved preservation problem.",
+        "predicted_observation": "e1.a is recovered at budget28/32, but no claim is made that the extra propositions can yet be safely compressed back to 24."
+      },
+      {
+        "id": "H4_QUERY_GENERATION_DEFICIT",
+        "statement": "New query generation is still necessary.",
+        "status": "DEPRIORITIZED_BY_SHALLOW_DISTRIBUTED_EXPOSURE",
+        "predicted_observation": "Would require current shallow evidence to be absent, which the frozen exposure result contradicts on this control."
+      }
+    ]
+  },
+  "mechanism_family_comparison": [
+    {
+      "id": "GLOBAL_RRF_OR_FACILITY_LOCATION",
+      "role": "REJECTED_OR_NEGATIVE_PRIOR",
+      "rationale": "Already tested; broad global coverage displaced strong source-aware evidence or suppressed niche residual evidence."
+    },
+    {
+      "id": "GLOBAL_APPEND_ONLY_FRONTIER",
+      "role": "PARTIAL_PRIOR",
+      "rationale": "Preserves controls structurally and recovers e6.a, but e1.a remains absent through budget32."
+    },
+    {
+      "id": "SALIENCE_STRATIFIED_RESERVATION",
+      "role": "SELECTED",
+      "mechanisms": [
+        "coverage_planning",
+        "structural_strata",
+        "per_intent_reservation",
+        "append_only_evidence_union"
+      ],
+      "rationale": "Directly targets the newly observed cross-intent suppression using only frozen generator metadata and frozen BM25 rankings; no new model, query generation, semantic similarity, or teacher-informed selection."
+    },
+    {
+      "id": "SOURCE_DERIVED_QUERY_REFINEMENT",
+      "role": "DEFERRED",
+      "rationale": "Shallow exposure already exists; generating more queries would not be the smallest explanation or falsification test."
+    },
+    {
+      "id": "ITERATIVE_GAP_DIRECTED_RETRIEVAL",
+      "role": "DEFERRED",
+      "rationale": "More complex and requires a teacher-blind gap/stopping mechanism; current evidence is already present in the static rankings."
+    },
+    {
+      "id": "PAIRWISE_SEMANTIC_REDUNDANCY",
+      "role": "INELIGIBLE_WITHOUT_NEW_PREMISE_EVIDENCE",
+      "rationale": "NLI and AMR independently rejected the broader pairwise-score/threshold safety premise."
+    }
+  ],
+  "selected_architecture": {
+    "id": "FACET_RESERVED_EVIDENCE_PLANNER_V1",
+    "status": "FROZEN_DESIGN_NOT_IMPLEMENTATION_AUTHORIZED",
+    "principle": "Preserve the exact source-aware BM25 RRF top24 as an immutable core, then allocate a small additive frontier using only frozen intent metadata and shallow BM25 rankings in salience-stratified order.",
+    "why_it_builds_on_positive_evidence": "The immutable core preserves the established 7-atom source-aware control. ALIGNMENT_AUGMENT_FEASIBLE remains the validated preservation/compression reference for a later phase if this planner establishes useful acquisition; this experiment does not assume alignment generalizes as a universal certificate."
+  },
+  "selected_discriminating_experiment": {
+    "id": "SALIENCE_STRATIFIED_RESERVATION_DIAGNOSTIC_V1",
+    "implementation_scope": "one_teacher_control_replay_only",
+    "purpose": "Test whether deterministic salience-first reservation can recover e1.a at the same 28/32 proposition ceilings where global append failed.",
+    "new_generation_calls": 0,
+    "new_model_downloads": 0,
+    "new_model_training": false,
+    "production_routing_changed": false,
+    "scientific_state_materialized": false,
+    "frozen_inputs": {
+      "generated_intents_artifact_id": 12533721500,
+      "generated_intents_sha256": "a5a970725c1f16a694633416ad9fbd98e58418c267891ac83b7783d8af218ebd",
+      "teacher_control_item": "arxiv:2403.04036",
+      "source_generator": "QWEN35_SOURCE_AWARE_INTENTS_V1",
+      "author_generator": "QWEN35_AUTHOR_ANCHORED_OBLIGATIONS_V1",
+      "retriever": "BM25_DIRECT",
+      "per_intent_candidate_depth": 3,
+      "immutable_core": "Exact frozen source-aware BM25 RRF top24 from valid Wave 7A.3 control.",
+      "teacher_use": "Evaluation only after selection; teacher data may not change strata, schedule, ranks, budgets, or candidate selection."
+    },
+    "structural_strata": [
+      {
+        "tier": 1,
+        "source_group": {
+          "generator": "QWEN35_SOURCE_AWARE_INTENTS_V1",
+          "field": "facet",
+          "values": [
+            "method"
+          ]
+        },
+        "author_group": {
+          "generator": "QWEN35_AUTHOR_ANCHORED_OBLIGATIONS_V1",
+          "anchor_role": [
+            "contribution"
+          ]
+        }
+      },
+      {
+        "tier": 2,
+        "source_group": {
+          "generator": "QWEN35_SOURCE_AWARE_INTENTS_V1",
+          "field": "facet",
+          "values": [
+            "evaluation"
+          ]
+        },
+        "author_group": {
+          "generator": "QWEN35_AUTHOR_ANCHORED_OBLIGATIONS_V1",
+          "anchor_role": [
+            "result"
+          ]
+        }
+      },
+      {
+        "tier": 3,
+        "source_group": {
+          "generator": "QWEN35_SOURCE_AWARE_INTENTS_V1",
+          "field": "facet",
+          "values": [
+            "robustness",
+            "limitation"
+          ]
+        },
+        "author_group": {
+          "generator": "QWEN35_AUTHOR_ANCHORED_OBLIGATIONS_V1",
+          "anchor_role": [
+            "limitation_or_future_work"
+          ]
+        }
+      },
+      {
+        "tier": 4,
+        "source_group": {
+          "generator": "QWEN35_SOURCE_AWARE_INTENTS_V1",
+          "field": "facet",
+          "values": [
+            "dataset"
+          ]
+        },
+        "author_group": {
+          "generator": "QWEN35_AUTHOR_ANCHORED_OBLIGATIONS_V1",
+          "anchor_role": [
+            "problem"
+          ]
+        }
+      }
+    ],
+    "reservation_schedule": {
+      "id": "TIERED_GENERATOR_ALTERNATING_INTENT_RESERVATION_V1",
+      "operation": [
+        "Begin with the exact immutable 24-proposition source-aware control core.",
+        "For each tier in ascending order, alternate source-group then author-group intents in their exact accepted artifact order.",
+        "Within a group, visit each accepted intent once before revisiting any intent in that group.",
+        "For each visited intent, scan only its frozen BM25 top3 and append the highest-ranked proposition not already selected.",
+        "If all top3 propositions for that intent are already selected, the intent contributes no proposition and the schedule continues.",
+        "Continue the frozen schedule until each predeclared budget snapshot is reached or the eligible top3 reservation stream is exhausted.",
+        "Never remove, replace, rerank, or reorder the immutable core."
+      ],
+      "diagnostic_budgets": [
+        24,
+        26,
+        28,
+        32
+      ],
+      "primary_small_ceiling": 28,
+      "maximum_ceiling": 32,
+      "deduplicate_by": "paper_id + proposition_id",
+      "no_teacher_filtering_or_calibration": true,
+      "no_post_result_schedule_or_budget_selection": true
+    },
+    "controls": [
+      "Frozen source-aware BM25 RRF top24: 7/13 supported atoms.",
+      "Prior global append frontier: budget26/28/32 = 8/13 with e6.a recovered and e1.a absent.",
+      "ALIGNMENT_AUGMENT_FEASIBLE: 8/13 with all 7 controls preserved and e6.a recovered; preservation reference only."
+    ],
+    "metrics": {
+      "primary": [
+        "e1.a support at budgets 24/26/28/32",
+        "supported atom count at each budget",
+        "frozen source-aware control atoms retained",
+        "observed residual atoms recovered from {e1.a,e6.a}"
+      ],
+      "mechanism": [
+        "reservation origin generator/facet_or_anchor_role/intent_index/rank for every appended proposition",
+        "unique reservations added at each budget",
+        "whether both e1.a required anchors occur in selected evidence at each budget"
+      ],
+      "cost_provenance": [
+        "incremental raw source chars vs immutable top24",
+        "unique source pages",
+        "all selected propositions exactly locatable to authoritative PDF proposition/page identity"
+      ],
+      "posthoc_nonverdict_sensitivity": [
+        "selected reservations whose originating intent is flagged by the frozen teacher anti-leak audit",
+        "e1.a support after ignoring propositions introduced only by flagged-origin reservations"
+      ]
+    },
+    "frozen_interpretation": {
+      "FACET_RESERVATION_CONFIRMED": [
+        "By budget<=28, e1.a is supported.",
+        "The immutable 7/7 source-aware control atoms remain supported.",
+        "All provenance and teacher-blind safety conditions pass.",
+        "Interpretation: structural salience-first reservation is sufficient to acquire the previously suppressed e1.a evidence at a small frontier."
+      ],
+      "FACET_RESERVATION_PARTIAL": [
+        "CONFIRMED is not met, but e1.a is supported by budget32 with all 7 controls retained and safety/provenance intact.",
+        "Interpretation: structural reservation works but exceeds the preferred small frontier; acquisition is plausible while cost/compression remains a first-order issue."
+      ],
+      "FACET_RESERVATION_NEGATIVE": [
+        "e1.a remains unsupported through budget32, or a provenance/teacher-blind boundary fails.",
+        "Interpretation: fixed structural facet/role reservation is insufficient; move to a materially more adaptive evidence-set planner rather than more query generation or rejected semantic certificates."
+      ],
+      "REPLAY_INCONSISTENT": [
+        "The exact source-aware top24 control, frozen intent identities, or frozen BM25 replay cannot be reproduced.",
+        "Interpretation: operational/no scientific verdict; repair only identity/replay mechanics if science is unchanged."
+      ]
+    },
+    "stopping_rule": "Exactly one valid scientific execution after independent design review. Stop at the frozen classification. No changes to strata, tier order, intent order, depth3, budgets 24/26/28/32, teacher audit treatment, or interpretation after seeing the result.",
+    "pass_authority": {
+      "FACET_RESERVATION_CONFIRMED": "Authorize a later bounded design that combines/compares the confirmed acquisition planner with ALIGNMENT_AUGMENT_FEASIBLE or another independently justified compression strategy, plus broader cost/generalization validation. No production promotion.",
+      "FACET_RESERVATION_PARTIAL": "Authorize only a cost/compression-focused follow-up design; do not increase reservation budget post hoc.",
+      "FACET_RESERVATION_NEGATIVE": "Reject this fixed structural reservation schedule and compare adaptive evidence-set reasoning mechanisms. Do not reopen new query generation unless separate evidence contradicts shallow exposure.",
+      "REPLAY_INCONSISTENT": "No scientific authority."
+    }
+  },
+  "hard_boundaries": {
+    "teacher_used_for_selection": false,
+    "teacher_used_only_for_posthoc_evaluation": true,
+    "new_query_generation": false,
+    "new_model_or_ranker": false,
+    "pairwise_semantic_similarity": false,
+    "threshold_calibration": false,
+    "production_standard_codex_extract_changed": false,
+    "accepted_qwen_verify_changed": false,
+    "wave7b_started": false,
+    "semantic_control_or_ontology_output": false,
+    "rejected_mechanism_rescue": false,
+    "implementation_authorized_before_independent_review": false
+  },
+  "reviewer_boundary": "Independent reviewer must audit this exact design before implementation. Routine implementation/CI/trigger mechanics do not require another review unless science changes. After the genuine result, independent review is required before selecting the following scientific phase.",
+  "next_safe_action": "Run normal CI on this design-only artifact and merge only if clean. Then checkpoint the exact design in workspace-control and obtain independent design review before implementing SALIENCE_STRATIFIED_RESERVATION_DIAGNOSTIC_V1."
+}
