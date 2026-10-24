@@ -53,7 +53,7 @@ def _md5(path: pathlib.Path) -> str:
 
 def _git_blob_sha1(path: pathlib.Path) -> str:
     data = path.read_bytes()
-    header = f"blob {len(data)}\\0".encode("ascii")
+    header = f"blob {len(data)}\0".encode("ascii")
     return hashlib.sha1(header + data).hexdigest()
 
 
@@ -91,7 +91,7 @@ def _load_bio_amr(
     sentences: list[str] = []
     graphs: list[str] = []
 
-    for block in re.split(r"\\n\\s*\\n", text):
+    for block in re.split(r"\n\s*\n", text):
         lines = [line.rstrip() for line in block.splitlines()]
         sentence = None
         example_id = None
@@ -384,7 +384,7 @@ def main() -> int:
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
-        json.dumps(report, indent=2, sort_keys=True) + "\\n",
+        json.dumps(report, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
     print(
