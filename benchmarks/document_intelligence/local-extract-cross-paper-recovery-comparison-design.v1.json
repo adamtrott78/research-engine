@@ -8,12 +8,13 @@
     "mechanism_families": [
       "robust_retrieval",
       "local_context_expansion",
+      "surviving_intent_allocation",
       "retrieval_depth_allocation",
       "paired_counterfactual_evaluation"
     ],
-    "summary": "Across all nine frozen papers, replay a teacher-blind budget28 structural planner, create one-slot leave-one-reservation-origin-out stresses, and compare radius-1 neighborhood rescue against deeper surviving-intent allocation under identical fixed-budget conditions."
+    "summary": "Across all nine frozen papers, replay a teacher-blind budget28 structural planner, create one-slot leave-one-reservation-origin-out stresses, and compare radius-1 neighborhood rescue against global surviving-intent allocation over the full frozen top12; the latter explicitly reports whether recovery came from unvisited shallow ranks1-3 or true deeper ranks4-12."
   },
-  "scientific_question": "Does the one-case neighborhood-rescue mechanism generalize as a structurally stable and lower-cost recovery strategy across the nine-paper corpus, or does deeper per-intent allocation recover more origin-dropped evidence selections?",
+  "scientific_question": "Does the one-case neighborhood-rescue mechanism generalize as a structurally stable and lower-cost recovery strategy across the nine-paper corpus, or are origin-dropped selections better recovered by surviving intents—either because the tier1 schedule had not yet visited a shallow candidate or because genuine depth4-12 allocation is required?",
   "problem_model": {
     "established": [
       "LOCAL_RESCUE_CONFIRMED shows immediate same-page neighborhood rescue is sufficient on the known fragile teacher-control case: page:p2:s33 is restored teacher-blind and budget28 returns to 9/13 with all seven controls plus e1.a/e6.a.",
@@ -31,18 +32,23 @@
         "predicted_observation": "Across paired leave-one-reservation-origin-out stresses, local rescue has unique exact recoveries or matches deeper allocation while examining a smaller candidate universe."
       },
       {
-        "id": "H2_DEEPER_PER_INTENT_ALLOCATION_GENERALIZES_BETTER",
-        "statement": "The teacher-case adjacency was incidental; robust recovery more often requires drawing from deeper surviving intent rankings rather than local neighbors.",
-        "predicted_observation": "Deeper ranks4-12 allocation has one or more unique exact recoveries with no local-only recoveries, or materially broader recovery across the paired stresses."
+        "id": "H2_SHALLOW_SCHEDULE_ALLOCATION_GAP",
+        "statement": "Some fragile selections can be recovered from ranks1-3 of a surviving tier1 intent that the budget28 schedule had not yet visited; the residual is schedule allocation rather than neighborhood context or retrieval depth.",
+        "predicted_observation": "The global surviving-intent arm uniquely recovers stressed selections and the recovering candidate's best surviving rank is <=3."
       },
       {
-        "id": "H3_MECHANISMS_ARE_COMPLEMENTARY",
-        "statement": "Local context and deeper retrieval recover different origin-dropped selections and should eventually be composed rather than treated as substitutes.",
-        "predicted_observation": "At least one stress is local-only and at least one different stress is deep-only."
+        "id": "H3_DEEPER_PER_INTENT_ALLOCATION_GAP",
+        "statement": "Some fragile selections require surviving intent evidence beyond the original top3 frontier.",
+        "predicted_observation": "The global surviving-intent arm uniquely recovers stressed selections and at least one such recovery has best surviving rank in 4-12."
       },
       {
-        "id": "H4_STATIC_RECOVERY_IS_INSUFFICIENT",
-        "statement": "Neither radius-1 local rescue nor fixed deeper allocation reliably reconstructs origin-dropped selections, motivating an adaptive gap/sufficiency controller.",
+        "id": "H4_MECHANISMS_ARE_COMPLEMENTARY",
+        "statement": "Local context and surviving-intent allocation recover different origin-dropped selections and should eventually be composed rather than treated as substitutes.",
+        "predicted_observation": "At least one stress is local-only and at least one different stress is allocation-only."
+      },
+      {
+        "id": "H5_STATIC_RECOVERY_IS_INSUFFICIENT",
+        "statement": "Neither radius-1 local rescue nor fixed surviving-intent allocation reliably reconstructs origin-dropped selections, motivating an adaptive gap/sufficiency controller.",
         "predicted_observation": "Neither mechanism exactly recovers any stressed selection across valid stresses, or baseline/stress coverage is insufficient for a cross-paper conclusion."
       }
     ]
@@ -65,14 +71,15 @@
       "rationale": "Direct generalization of LOCAL_RESCUE_CONFIRMED. Candidate generation is minimal: only immediate same-page neighbors of surviving tier1 reservation seeds."
     },
     {
-      "id": "DEEPER_PER_INTENT_ALLOCATION",
+      "id": "SURVIVING_INTENT_ALLOCATION",
       "mechanisms": [
+        "schedule_allocation",
         "retrieval_depth",
         "surviving_path_corroboration",
         "one_slot_backfill"
       ],
       "role": "ARM_B",
-      "rationale": "Directly tests the competing hypothesis already exposed on the teacher control: missing evidence may require deeper surviving-intent ranks rather than adjacency. Candidate pool is ranks4-12 of surviving tier1 intents."
+      "rationale": "Fair comparator to local rescue. It considers every unselected proposition in surviving tier1 top12 rankings, then records whether the selected recovery came from ranks1-3 (schedule/visit allocation) or ranks4-12 (true depth extension). This avoids bias from budget28 not necessarily visiting every surviving tier1 intent."
     },
     {
       "id": "ADAPTIVE_GAP_DIRECTED_RETRIEVAL",
@@ -130,7 +137,7 @@
   "selected_discriminating_experiment": {
     "id": "LEAVE_ONE_RESERVATION_ORIGIN_OUT_COMPARISON_V1",
     "implementation_scope": "nine_paper_deterministic_teacher_blind_structural_replay",
-    "purpose": "Compare radius-1 local rescue with deeper ranks4-12 allocation under matched one-slot origin-drop stresses across the exact nine-paper corpus, measuring structural recovery and cost without treating page-level historical labels as proposition-level truth.",
+    "purpose": "Compare radius-1 local rescue with global surviving-intent allocation under matched one-slot origin-drop stresses across the exact nine-paper corpus, while separately identifying whether allocation recoveries come from unvisited shallow ranks1-3 or true depth4-12.",
     "new_generation_calls": 0,
     "new_model_downloads": 0,
     "new_model_training": false,
@@ -195,46 +202,33 @@
       ],
       "action": "Append exactly the top-ranked eligible candidate; if none, arm returns NO_CANDIDATE."
     },
-    "arm_b_deeper_allocation": {
-      "id": "DEEPER_SURVIVING_INTENT_ALLOCATION_V1",
-      "candidate_generation": [
-        "Use all unique unselected propositions appearing at BM25 ranks4-12 of surviving tier1 intents.",
-        "Do not include ranks1-3, because those constitute the already-frozen reservation frontier.",
-        "Do not use adjacency, teacher labels, semantic similarity, or new queries."
-      ],
-      "candidate_ranking": [
-        "surviving_path_support_count descending",
-        "best_surviving_bm25_rank ascending",
-        "earliest surviving intent accepted-order index ascending",
-        "proposition_id ascending"
-      ],
-      "action": "Append exactly the top-ranked eligible candidate; if none, arm returns NO_CANDIDATE."
-    },
     "metrics": {
       "primary_structural": [
         "valid_paper_count",
         "valid_stress_case_count",
         "local_exact_removed_proposition_recovery_count",
-        "deep_exact_removed_proposition_recovery_count",
+        "allocation_exact_removed_proposition_recovery_count",
         "both_exact_recovery_count",
         "local_only_exact_recovery_count",
-        "deep_only_exact_recovery_count",
-        "neither_exact_recovery_count"
+        "allocation_only_exact_recovery_count",
+        "neither_exact_recovery_count",
+        "allocation_exact_recoveries_from_shallow_frontier_count",
+        "allocation_exact_recoveries_from_depth_extension_count"
       ],
       "secondary_page_context": [
         "removed_proposition_on_historical_evidence_page_count",
         "local_selected_on_historical_evidence_page_count",
-        "deep_selected_on_historical_evidence_page_count",
+        "allocation_selected_on_historical_evidence_page_count",
         "local_same_page_as_removed_count",
-        "deep_same_page_as_removed_count"
+        "allocation_same_page_as_removed_count"
       ],
       "cost": [
         "local_total_unique_candidate_count",
-        "deep_total_unique_candidate_count",
+        "allocation_total_unique_candidate_count",
         "local_total_candidate_raw_source_chars",
-        "deep_total_candidate_raw_source_chars",
+        "allocation_total_candidate_raw_source_chars",
         "local_total_selected_raw_source_chars",
-        "deep_total_selected_raw_source_chars"
+        "allocation_total_selected_raw_source_chars"
       ],
       "provenance": [
         "all baseline/rescue propositions exactly locatable to authoritative PDF page/proposition identity",
@@ -246,45 +240,60 @@
     "frozen_interpretation": {
       "INSUFFICIENT_BASELINE_GENERALIZATION": [
         "At least one of the nine papers fails to produce exactly four tier1 reservation events at teacher-blind budget28, or any identity/provenance/teacher-boundary gate fails.",
-        "Interpretation: the selected cross-paper baseline itself does not generalize cleanly enough to compare recovery mechanisms. No local-vs-deep preference."
+        "Interpretation: the selected cross-paper baseline itself does not generalize cleanly enough to compare recovery mechanisms. No mechanism preference."
       ],
       "COMPLEMENTARY_STRUCTURAL_RECOVERY": [
-        "local_only_exact_recovery_count > 0 and deep_only_exact_recovery_count > 0.",
-        "Interpretation: local context and deeper allocation recover different origin-dropped selections; next design should test a deterministic hybrid rather than choose one family."
+        "local_only_exact_recovery_count > 0 and allocation_only_exact_recovery_count > 0.",
+        "Interpretation: local context and surviving-intent allocation recover different origin-dropped selections; next design should test a deterministic hybrid rather than choose one family."
       ],
       "LOCAL_STRUCTURAL_ADVANTAGE": [
-        "local_only_exact_recovery_count > 0 and deep_only_exact_recovery_count == 0.",
-        "Interpretation: radius-1 rescue adds structural recovery unavailable to deeper allocation across the frozen stresses. Cost metrics determine whether later generalization should preserve it as the primary recovery layer."
+        "local_only_exact_recovery_count > 0 and allocation_only_exact_recovery_count == 0.",
+        "Interpretation: radius-1 rescue adds structural recovery unavailable to global surviving-intent allocation across the frozen stresses. Cost metrics determine whether later generalization should preserve it as the primary recovery layer."
       ],
-      "DEEPER_ALLOCATION_ADVANTAGE": [
-        "deep_only_exact_recovery_count > 0 and local_only_exact_recovery_count == 0.",
-        "Interpretation: deeper surviving-intent allocation adds structural recovery unavailable to radius-1 rescue; next design should prefer depth allocation over generalized neighborhood expansion."
+      "SURVIVING_ALLOCATION_ADVANTAGE": [
+        "allocation_only_exact_recovery_count > 0 and local_only_exact_recovery_count == 0.",
+        "Interpretation: global surviving-intent allocation adds structural recovery unavailable to radius-1 rescue. The predeclared rank-stratum counts distinguish whether the advantage is primarily unvisited shallow schedule allocation (ranks1-3), true depth extension (ranks4-12), or both."
       ],
       "BOTH_STRUCTURALLY_WEAK": [
-        "local_exact_removed_proposition_recovery_count == 0 and deep_exact_removed_proposition_recovery_count == 0.",
+        "local_exact_removed_proposition_recovery_count == 0 and allocation_exact_removed_proposition_recovery_count == 0.",
         "Interpretation: neither static recovery family reconstructs any origin-dropped selection; move toward adaptive gap/sufficiency planning rather than tuning radius or depth post hoc."
       ],
       "EQUIVALENT_STRUCTURAL_RECOVERY": [
-        "local_only_exact_recovery_count == 0 and deep_only_exact_recovery_count == 0 and both_exact_recovery_count > 0.",
-        "Interpretation: both mechanisms recover exactly the same stress cases. Use predeclared cost metrics to decide the cheaper bounded follow-up; this is structural equivalence, not semantic equivalence."
+        "local_only_exact_recovery_count == 0 and allocation_only_exact_recovery_count == 0 and both_exact_recovery_count > 0.",
+        "Interpretation: both mechanisms recover exactly the same stress cases. Use predeclared cost metrics and allocation rank-stratum evidence to decide the cheaper/simpler bounded follow-up; this is structural equivalence, not semantic equivalence."
       ]
     },
     "interpretation_priority": [
       "INSUFFICIENT_BASELINE_GENERALIZATION",
       "COMPLEMENTARY_STRUCTURAL_RECOVERY",
       "LOCAL_STRUCTURAL_ADVANTAGE",
-      "DEEPER_ALLOCATION_ADVANTAGE",
+      "SURVIVING_ALLOCATION_ADVANTAGE",
       "BOTH_STRUCTURALLY_WEAK",
       "EQUIVALENT_STRUCTURAL_RECOVERY"
     ],
-    "stopping_rule": "Exactly one valid scientific execution after independent design review. Stop at the first verdict in interpretation_priority. No changes to corpus, baseline construction, four stress cases per paper, dropped-origin rule, radius1, depths3/12, ranking rules, budget28, metrics, or interpretation after seeing the result.",
+    "stopping_rule": "Exactly one valid scientific execution after independent design review. Stop at the first verdict in interpretation_priority. No changes to corpus, baseline construction, four stress cases per paper, dropped-origin rule, radius1, top12 allocation pool, rank-stratum definition, ranking rules, budget28, metrics, or interpretation after seeing the result.",
     "pass_authority": {
       "INSUFFICIENT_BASELINE_GENERALIZATION": "No recovery-family authority. Redesign the cross-paper baseline teacher-blind before comparing rescue mechanisms.",
       "COMPLEMENTARY_STRUCTURAL_RECOVERY": "Authorize a later deterministic hybrid recovery design, still teacher-blind and fixed-budget; no production promotion.",
       "LOCAL_STRUCTURAL_ADVANTAGE": "Authorize a later broader neighborhood-aware robustness/cost design and collection of genuinely proposition-level heldout labels before semantic generalization.",
-      "DEEPER_ALLOCATION_ADVANTAGE": "Authorize a later deeper-per-intent robustness/cost design and collection of proposition-level heldout labels before semantic generalization.",
+      "SURVIVING_ALLOCATION_ADVANTAGE": "If exact-recovery advantage is predominantly SHALLOW_FRONTIER, authorize schedule-allocation redesign; if predominantly DEPTH_EXTENSION, authorize deeper-per-intent robustness/cost design; if mixed, keep both hypotheses live. Collect proposition-level heldout labels before semantic generalization.",
       "BOTH_STRUCTURALLY_WEAK": "Authorize evidence-first adaptive gap/sufficiency-controller research; do not tune radius/depth post hoc.",
-      "EQUIVALENT_STRUCTURAL_RECOVERY": "Authorize only the lower-cost mechanism as the next bounded structural robustness design; if cost is tied, require a new discriminator rather than arbitrary selection."
+      "EQUIVALENT_STRUCTURAL_RECOVERY": "Authorize only the lower-cost/simpler mechanism as the next bounded structural robustness design; if cost is tied, require a new discriminator rather than arbitrary selection."
+    },
+    "arm_b_surviving_intent_allocation": {
+      "id": "GLOBAL_SURVIVING_INTENT_ALLOCATION_V1",
+      "candidate_generation": [
+        "Use all unique unselected propositions appearing within BM25 top12 of surviving tier1 intents.",
+        "Do not use adjacency, teacher labels, semantic similarity, or new queries.",
+        "Annotate every candidate with best surviving BM25 rank and rank_stratum=SHALLOW_FRONTIER for ranks1-3 or DEPTH_EXTENSION for ranks4-12."
+      ],
+      "candidate_ranking": [
+        "surviving_path_support_count descending",
+        "best_surviving_bm25_rank ascending",
+        "earliest surviving intent accepted-order index ascending",
+        "proposition_id ascending"
+      ],
+      "action": "Append exactly the top-ranked eligible candidate; if none, arm returns NO_CANDIDATE."
     }
   },
   "hard_boundaries": {
@@ -308,5 +317,16 @@
     "implementation_authorized_before_independent_review": false
   },
   "reviewer_boundary": "Independent reviewer must audit this exact frozen cross-paper design before implementation. Routine implementation/CI/trigger mechanics do not require reviewer stops unless science changes. Genuine result requires post-result review before next-phase selection.",
-  "next_safe_action": "Run normal CI on this design-only artifact and merge only if clean. Then checkpoint the exact design in workspace-control and obtain independent review before implementing LEAVE_ONE_RESERVATION_ORIGIN_OUT_COMPARISON_V1."
+  "next_safe_action": "Run normal CI on this design-only artifact and merge only if clean. Then checkpoint the exact design in workspace-control and obtain independent review before implementing LEAVE_ONE_RESERVATION_ORIGIN_OUT_COMPARISON_V1.",
+  "review_correction": {
+    "id": "cross-paper-allocation-comparator-fairness-correction-v1",
+    "reason": "Pre-implementation audit found that budget28 may stop before every tier1 intent has been visited, so excluding surviving ranks1-3 from Arm B would bias the comparison against non-local allocation.",
+    "correction": [
+      "Arm B now considers all surviving tier1 top12 candidates.",
+      "Every Arm B candidate is labeled SHALLOW_FRONTIER (rank1-3) or DEPTH_EXTENSION (rank4-12), so the experiment distinguishes schedule-allocation failure from true retrieval-depth failure.",
+      "Arm A, stress generation, fixed budget28, teacher-blind boundary, historical-page secondary metrics, and one-run stopping rule are unchanged."
+    ],
+    "implementation_started_before_correction": false,
+    "re_review_required": false
+  }
 }
