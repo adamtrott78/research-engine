@@ -166,11 +166,17 @@ def score_spark_pairs(
         left = str(row["left"])
         right = str(row["right"])
         labels.append(int(row["label"]))
+        first, second = (
+            (left, right) if left <= right else (right, left)
+        )
+        pair_identity = (
+            str(row["topic"]) + "\0" + first + "\0" + second
+        )
         scores.append(
             smatch_f1(
                 graph_by_text.get(left),
                 graph_by_text.get(right),
-                pair_identity=str(row["pair_id"]),
+                pair_identity=pair_identity,
                 smatch_module=smatch_module,
             )
         )
