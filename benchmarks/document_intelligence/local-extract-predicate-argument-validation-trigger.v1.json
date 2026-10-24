@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "purpose": "INERT_TRIGGER_ONLY",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "base_implementation_sha": "8913b49218ee1519b2921bc1ff29675d06ef4d06",
+  "durable_implementation_merge_sha": "5eddc47dac17cd28216b64c890fd99a32ad2649d",
+  "diagnostic_id": "DEPENDENCY_PREDICATE_ARGUMENT_CERTIFICATE_VALIDATION_V1",
+  "scientific_semantics_changed": false,
+  "merge_forbidden": true
+}
