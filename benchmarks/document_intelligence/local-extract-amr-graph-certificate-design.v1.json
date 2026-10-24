@@ -1,0 +1,216 @@
+{
+  "schema_version": 1,
+  "design_id": "local-extract-amr-graph-certificate-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "baseline_result_sha": "a135b89a855166171073ab1012df41a0be5ba9b6",
+  "status": "DESIGN_ONLY_NO_EXTRACT_EXECUTION_AUTHORIZED",
+  "scientific_context": {
+    "strongest_accepted_preservation": {
+      "mechanism": "DYNAMIC_SAME_PAGE_ALIGNMENT_SWAP_V1",
+      "verdict": "ALIGNMENT_AUGMENT_FEASIBLE",
+      "evidence": "8/13 teacher atoms, all 7/7 frozen control atoms retained, e6.a recovered, full page-ceiling fraction",
+      "lexical_certificate_threshold": 0.4,
+      "constraint": "Accepted lexical threshold remains frozen and is not retuned post hoc."
+    },
+    "rejected_generalizations": [
+      {
+        "mechanism": "SCIENTIFIC_NLI_REDUNDANCY_CERTIFICATE_VALIDATION_V1",
+        "verdict": "NLI_CERTIFICATE_REJECTED",
+        "sha": "eb492ee8284fc9198bb8d931e3591c870b34ea12",
+        "reason": "No frozen SPARK threshold met precision>=0.95 and recall>=0.05."
+      },
+      {
+        "mechanism": "DEPENDENCY_PREDICATE_ARGUMENT_CERTIFICATE_VALIDATION_V1",
+        "verdict": "PREDICATE_ARGUMENT_CERTIFICATE_REJECTED",
+        "sha": "a135b89a855166171073ab1012df41a0be5ba9b6",
+        "reason": "No safe SPARK threshold; FOBIE held-out relation recall 4/153 despite 100% sentence unit coverage."
+      }
+    ]
+  },
+  "research_comparison": [
+    {
+      "id": "AMR_GRAPH_REDUNDANCY",
+      "disposition": "SELECTED_FOR_EXTERNAL_VALIDATION",
+      "evidence": [
+        "AMR abstracts away from syntactic realization and represents predicate-argument semantics as a graph.",
+        "REMATCH (NAACL Findings 2024) reports stronger semantic similarity than prior AMR metrics on STS-B/SICK-R, confirming graph semantics can support semantic comparison.",
+        "Cross-domain AMR parsing research documents word/concept distribution shift as the central domain risk.",
+        "SemEval-2017 Task 9 publishes a freely downloadable biomedical Bio-AMR v0.8 corpus with 500 dev and 500 test AMRs, enabling an external scientific-domain parser gate.",
+        "Historical SemEval biomedical parsers topped out near 0.61 Smatch, providing a defensible domain-fidelity floor.",
+        "amrlib parse_xfm_bart_base v0.1.0 reports 82.3 Smatch on AMR-3 and is substantially lighter than large AMRBART variants."
+      ],
+      "strengths": [
+        "Direct graph representation of semantic concepts and roles rather than local surface tuples.",
+        "Parser fidelity can be independently measured on biomedical gold AMR before any EXTRACT use.",
+        "SPARK can separately test whether graph similarity is safe enough for proposition redundancy."
+      ],
+      "risks": [
+        "General-domain parser may fail under scientific domain shift.",
+        "Smatch is primarily structural graph overlap and may not perfectly represent semantic equivalence.",
+        "Neural parsing introduces a new learned component and GPU execution cost."
+      ]
+    },
+    {
+      "id": "CLAIM_OR_QUESTION_DECOMPOSITION",
+      "disposition": "DEFERRED",
+      "evidence": [
+        "Question decomposition can improve complementary evidence retrieval on multi-hop RAG benchmarks.",
+        "2025 fact-checking research documents decomposition error/noise and sensitivity to atomicity.",
+        "Verifier-preferred decomposition can improve downstream verification but introduces a generation policy and verifier interaction."
+      ],
+      "strengths": [
+        "Could expose missing evidence obligations directly.",
+        "Naturally supports iterative coverage/retrieval."
+      ],
+      "risks": [
+        "Adds generative decomposition before a directly gold-validatable semantic graph route is exhausted.",
+        "Atomicity and decontextualization choices create another model-controlled semantic bottleneck.",
+        "External validation is less cleanly separable from downstream verifier behavior."
+      ]
+    }
+  ],
+  "selected_validation": {
+    "id": "AMR_GRAPH_REDUNDANCY_CERTIFICATE_VALIDATION_V1",
+    "purpose": "Externally validate both scientific-domain AMR parser fidelity and graph-similarity redundancy safety before any AMR-derived certificate is allowed inside EXTRACT.",
+    "execution": {
+      "runner": "lambda-research-engine-gpu",
+      "gpu_requirement": "one CUDA-visible GPU is sufficient; parser must bind to cuda:0 only",
+      "exact_sha_issue_comment_gate": true,
+      "production_state_materialized": false,
+      "external_network_use": "Only pinned source/model/data acquisition needed for this validation is allowed.",
+      "timeout_minutes": 45
+    },
+    "amrlib": {
+      "repository": "bjascob/amrlib",
+      "source_commit": "38b29706ea982da5a5b081a04f00c93cc6cc1e9c",
+      "version": "0.8.1",
+      "license": "MIT",
+      "parse_inference_blob": "eee40d776dbcaa028a9a82d325565b48937b9cfb",
+      "smatch_evaluator_blob": "0e040f26632ee16751240dbff28fa8d62c101ebb"
+    },
+    "parser_model": {
+      "repository": "bjascob/amrlib-models",
+      "release_tag": "parse_xfm_bart_base-v0_1_0",
+      "release_asset_id": 57062880,
+      "release_asset_name": "model_parse_xfm_bart_base-v0_1_0.tar.gz",
+      "release_asset_size_bytes": 515968261,
+      "published_md5": "f8eb889468f4d0c3c0677fc910fb2240",
+      "model_type": "stog",
+      "model_version": "0.1.0",
+      "base_model": "facebook/bart-base",
+      "published_amr3_smatch": 0.823,
+      "inference": {
+        "device": "cuda:0",
+        "batch_size": 24,
+        "num_beams": 1,
+        "add_metadata": false,
+        "deterministic_seed": 1729
+      },
+      "identity_rule": "Workflow must verify release asset size and published MD5 before extraction, compute SHA256 of the downloaded tarball, and persist that SHA256 in the report."
+    },
+    "external_validation_sets": [
+      {
+        "id": "BIO_AMR_V0_8_TEST",
+        "source": "SemEval-2017 Task 9",
+        "official_url": "https://amr.isi.edu/download/2016-03-14/amr-release-test-bio.txt",
+        "expected_amr_count": 500,
+        "domain": "biomedical scientific literature",
+        "predeclared_gate": {
+          "corpus_smatch_f1_min": 0.6,
+          "valid_prediction_fraction_min": 0.98
+        },
+        "identity_rule": "Workflow must compute and persist SHA256 of the downloaded official file before scoring."
+      },
+      {
+        "id": "SPARK_PROPOSITION_CLUSTERING_MANUAL",
+        "repository": "oriern/SPARK",
+        "repository_commit": "71465f36c83cfef589facadcb014e70c0bad1b3b",
+        "file": "derived_datasets/proposition_clustering.json",
+        "git_blob_sha": "eb0b82a6f53b0a7d2a6288f0dff4ed2e72abf4ad",
+        "pair_construction": {
+          "positive": "unordered distinct-text span pairs in the same proposition cluster",
+          "negative": "unordered distinct-text span pairs from different proposition clusters within the same topic",
+          "negative_sampling": "deterministically retain at most 5 negatives per positive by SHA256(pair identity), separately per split",
+          "topic_split": "Sort topic IDs by SHA256(topic_id); first half calibration, second half held-out evaluation."
+        },
+        "calibration_rule": "Choose the lowest graph-similarity threshold in the frozen grid with precision >=0.95 and recall >=0.05. If none exists, validation is rejected.",
+        "heldout_gate": {
+          "precision_min": 0.9,
+          "recall_min": 0.05,
+          "false_positive_rate_max": 0.02
+        }
+      }
+    ],
+    "graph_similarity": {
+      "metric": "SEEDED_SMATCH_F1_V1",
+      "definition": "Parse both propositions once, remove metadata, and compute standard Smatch F1. Before every pair score, seed Python random with the first 64 bits of SHA256(canonical pair identity) so Smatch hill-climbing is reproducible. Invalid/unparseable graphs score 0.0.",
+      "threshold_grid": [
+        0.4,
+        0.45,
+        0.5,
+        0.55,
+        0.6,
+        0.65,
+        0.7,
+        0.75,
+        0.8,
+        0.85,
+        0.9,
+        0.95
+      ],
+      "parser_cache": "Parse every unique SPARK text once; reuse the graph for all pairs.",
+      "teacher_blind": true
+    },
+    "gate_logic": {
+      "bio_amr_pass": "corpus Smatch F1 >=0.60 AND valid prediction fraction >=0.98",
+      "spark_pass": "safe calibration threshold exists AND held-out precision>=0.90 AND recall>=0.05 AND false-positive-rate<=0.02",
+      "AMR_GRAPH_CERTIFICATE_VALIDATED": "bio_amr_pass AND spark_pass",
+      "AMR_GRAPH_CERTIFICATE_PARTIAL": "exactly one of bio_amr_pass or spark_pass",
+      "AMR_GRAPH_CERTIFICATE_REJECTED": "neither passes OR no safe SPARK calibration threshold exists",
+      "note": "No EXTRACT teacher label, teacher atom, or EXTRACT benchmark may participate in parser selection, threshold selection, or verdict."
+    },
+    "decision_boundary": {
+      "if_validated": "Checkpoint exact parser tarball SHA256, Bio-AMR file SHA256, SPARK file SHA256, parser/metric identities, threshold, run/artifact/report identities, then open a separate EXTRACT design for substituting graph similarity into the accepted dynamic-swap/page-preservation/top-24 architecture.",
+      "if_partial_or_rejected": "Do not tune parser, Smatch seeds, threshold grid, or Bio-AMR/SPARK gates using EXTRACT results. Reassess claim/question decomposition or another materially different teacher-blind evidence representation.",
+      "never": "Do not start Wave 7B, change production EXTRACT/VERIFY, retrain/fine-tune the AMR parser, use EXTRACT teacher labels, emit RDF/ontology output, or change EXTRACT output for semantic-control."
+    }
+  },
+  "independent_review_boundary": {
+    "review_task": "workspace-local-extract-independent-review-v1",
+    "authority_over_extract": false,
+    "action": "After this design is durable and before implementation, re-read the review capsule and consume only an exact-SHA review if one exists; do not block indefinitely if none exists."
+  },
+  "coordination_boundary": {
+    "semantic_control_task": "workspace-semantic-control-hardening-v1",
+    "authority_over_extract": false,
+    "extract_integration_signal_ready": false,
+    "rules": [
+      "Do not alter EXTRACT science, graph representation, thresholds, or output shape for semantic-control.",
+      "Do not emit RDF, ontology-native output, or SemanticObservationV1.",
+      "Integration remains downstream of a future accepted EXTRACT output checkpoint."
+    ]
+  },
+  "research_sources": [
+    "https://aclanthology.org/2022.emnlp-main.749/",
+    "https://aclanthology.org/2024.findings-naacl.64/",
+    "https://aclanthology.org/2025.naacl-long.320/",
+    "https://aclanthology.org/2025.acl-long.254/",
+    "https://alt.qcri.org/semeval2017/task9/index.php?id=data-and-tools",
+    "https://aclanthology.org/S17-2090/",
+    "https://github.com/bjascob/amrlib",
+    "https://github.com/bjascob/amrlib-models"
+  ],
+  "hard_boundaries": {
+    "extract_teacher_accessed": false,
+    "extract_scientific_state_materialized": false,
+    "amr_certificate_used_in_extract": false,
+    "parser_training_authorized": false,
+    "qwen_or_codex_changed": false,
+    "accepted_qwen_verify_changed": false,
+    "production_routing_changed": false,
+    "wave7b": false,
+    "semantic_control_or_ontology_in_extract": false,
+    "rdf_or_ontology_output": false
+  },
+  "next_safe_action": "CI-lock this design. Before implementation, re-read the independent-review capsule for any checkpoint explicitly tied to the exact durable design SHA. If none exists, implement only the external AMR_GRAPH_REDUNDANCY_CERTIFICATE_VALIDATION_V1 harness/workflow and run no EXTRACT teacher benchmark."
+}
