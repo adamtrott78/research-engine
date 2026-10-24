@@ -24,20 +24,35 @@ def test_amr_validation_is_external_and_teacher_blind() -> None:
 def test_parser_identity_and_bio_gate_are_frozen() -> None:
     selected = _load()["selected_validation"]
     model = selected["parser_model"]
-    assert model["release_asset_id"] == 57062880
-    assert model["release_asset_size_bytes"] == 515968261
-    assert model["published_md5"] == "f8eb889468f4d0c3c0677fc910fb2240"
-    assert model["inference"]["num_beams"] == 1
+    assert model["release_asset_id"] == 57066548
+    assert model["release_asset_size_bytes"] == 1506463657
+    assert model["published_md5"] == "5633e5e6f8a4f4398ce64abab71c473a"
+    assert model["base_model"] == "facebook/bart-large"
+    assert model["inference"] == {
+        "device": "cuda:0",
+        "batch_size": 8,
+        "num_beams": 4,
+        "add_metadata": False,
+        "deterministic_seed": 1729,
+    }
     bio = selected["external_validation_sets"][0]
     assert bio["expected_amr_count"] == 500
+    assert bio["mirror_commit"] == "802923ae6c7376a9930e93ce52cd6b9faf43c411"
+    assert bio["mirror_git_blob_sha"] == "7e816eb86104fa6c07d8eff9f9c6abc84bae2898"
+    assert bio["leakage_audit"]["result"] == "PASS"
     assert bio["predeclared_gate"] == {
         "corpus_smatch_f1_min": 0.60,
         "valid_prediction_fraction_min": 0.98,
     }
 
 
-def test_spark_gate_and_threshold_grid_are_frozen() -> None:
+def test_smatch_reseeding_and_spark_gate_are_frozen() -> None:
     selected = _load()["selected_validation"]
+    smatch = selected["amrlib"]["smatch"]
+    assert smatch["release_tag"] == "v1.0.4"
+    assert smatch["release_commit"] == "1bcd49cc8535056aa1c941763580fc5a572f1204"
+    assert smatch["standard_iteration_num"] == 5
+    assert "Temporarily replace smatch.random.seed" in smatch["deterministic_reseed_rule"]
     assert selected["graph_similarity"]["threshold_grid"] == [
         0.40, 0.45, 0.50, 0.55, 0.60, 0.65,
         0.70, 0.75, 0.80, 0.85, 0.90, 0.95,
