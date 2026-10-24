@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "purpose": "INERT_REPLACEMENT_TRIGGER_ONLY",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "recovery_head_sha": "443a03ce84508859f18129aee3cad1bd703e295c",
+  "durable_recovery_merge_sha": "315d73e3c2f17902d228430f8b13ece002d487c9",
+  "prior_timeout_run_id": 40044921709,
+  "replacement_run_limit": 1,
+  "scientific_semantics_changed": false,
+  "merge_forbidden": true
+}
