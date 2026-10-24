@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "design_id": "local-extract-semantic-certificate-generalization-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "baseline_result_sha": "9566532288bf500db8997b9befcc339788609184",
+  "status": "DESIGN_ONLY_NO_EXTRACT_EXECUTION_AUTHORIZED",
+  "accepted_scientific_premise": {
+    "mechanism": "DYNAMIC_SAME_PAGE_ALIGNMENT_SWAP_V1",
+    "result": "ALIGNMENT_AUGMENT_FEASIBLE",
+    "evidence": "8/13 teacher atoms, all 7/7 frozen control atoms retained, e6.a recovered, full page-ceiling fraction",
+    "constraint": "Do not tune the accepted lexical token-F1 >=0.40 certificate post hoc; semantic generalization must be evaluated as a distinct mechanism."
+  },
+  "coordination_boundary": {
+    "sibling_task": "workspace-semantic-control-hardening-v1",
+    "role": "coordination_only_downstream_consumer",
+    "authority_over_extract": false,
+    "rules": [
+      "Do not change EXTRACT hypotheses, benchmarks, retrieval/generation, Qwen/Codex decisions, acceptance criteria, or output shape for semantic-control.",
+      "Do not emit RDF or ontology-specific output for integration.",
+      "Only a future genuinely accepted EXTRACT output checkpoint with exact schema/artifact/Git identity may signal downstream EXTRACT binding."
+    ]
+  },
+  "research_comparison": [
+    {
+      "id": "SEMANTIC_TUPLE_COVERAGE",
+      "evidence": [
+        "Ge et al., INLG 2024 represent sentences as predicate-argument semantic tuples and use an autoregressive Transformer to extract target-summary tuples before greedy sentence coverage.",
+        "The published evaluation is on CNN/DM and NYT rather than mixed scientific papers."
+      ],
+      "strengths": [
+        "Fine-grained semantic units can capture information equivalence beyond lexical overlap.",
+        "Coverage is explicit rather than implicit in a global similarity score."
+      ],
+      "risks": [
+        "Introduces a new IE/autoregressive generation subsystem before the pairwise preservation premise is exhausted.",
+        "Training/evaluation domain is news, creating an additional scientific-domain transfer problem.",
+        "Tuple extraction errors would become a new preservation failure mode."
+      ],
+      "disposition": "DEFERRED_UNTIL_PAIRWISE_NLI_VALIDATION"
+    },
+    {
+      "id": "LEARNED_MUTUAL_ENTAILMENT_CERTIFICATE",
+      "evidence": [
+        "SciNLI contains 107,412 scientific sentence pairs and shows scientific NLI differs materially from everyday-language NLI.",
+        "MSciNLI extends scientific NLI across five additional domains, explicitly exposing domain shift.",
+        "tasksource/deberta-small-long-nli is a 0.1B Apache-2.0 DeBERTa-v3-small NLI model whose training metadata explicitly includes tasksource/scinli and sadat2307/MSciNLI.",
+        "Ernst et al., Findings ACL 2024 provide manual proposition-level redundancy clusters (SPARK), directly matching the preservation question."
+      ],
+      "strengths": [
+        "Preserves the accepted proposition-to-proposition certificate architecture.",
+        "Can require mutual entailment, making the certificate directional in both directions and stricter than embedding similarity.",
+        "Small enough for bounded hosted validation without changing production EXTRACT."
+      ],
+      "risks": [
+        "NLI confidence can be miscalibrated and domain-dependent.",
+        "SPARK is news-domain and research-only licensed; it may be used only as an ephemeral external validation set.",
+        "The model has seen SciNLI/MSciNLI training data, so scientific held-out testing validates behavior but is not an independent training-domain test."
+      ],
+      "disposition": "SELECTED_FOR_SEPARATE_VALIDATION"
+    }
+  ],
+  "selected_validation": {
+    "id": "SCIENTIFIC_NLI_REDUNDANCY_CERTIFICATE_VALIDATION_V1",
+    "purpose": "Validate a learned mutual-entailment redundancy certificate independently of EXTRACT teacher labels before any learned certificate is allowed into EXTRACT.",
+    "extract_scientific_state_materialized": false,
+    "extract_runtime_changed": false,
+    "production_routing_changed": false,
+    "model": {
+      "repository": "tasksource/deberta-small-long-nli",
+      "revision": "9d545db675cfad1e7d9c5c56351e19b4868dce65",
+      "model_family": "DeBERTa-v3-small",
+      "parameter_scale": "0.1B",
+      "license": "apache-2.0",
+      "expected_model_safetensors_sha256": "9af30c7ad7235a2054300bc2df1d98149ad6008dd1ef06212be8b32b5d1b3458",
+      "entailment_label_id": 0,
+      "neutral_label_id": 1,
+      "contradiction_label_id": 2
+    },
+    "external_validation_sets": [
+      {
+        "id": "SPARK_PROPOSITION_CLUSTERING_MANUAL",
+        "repository": "oriern/SPARK",
+        "repository_commit": "71465f36c83cfef589facadcb014e70c0bad1b3b",
+        "file": "derived_datasets/proposition_clustering.json",
+        "git_blob_sha": "eb0b82a6f53b0a7d2a6288f0dff4ed2e72abf4ad",
+        "license_boundary": "Research-only ephemeral validation; do not vendor or create a production dependency because SPARK inherits MultiNews non-commercial research restrictions.",
+        "pair_construction": {
+          "positive": "unordered distinct-text span pairs in the same proposition cluster",
+          "negative": "unordered distinct-text span pairs from different proposition clusters within the same topic",
+          "negative_sampling": "deterministically retain at most 5 negatives per positive by SHA256(pair identity), separately per split",
+          "topic_split": "Sort topic IDs by SHA256(topic_id); first half calibration, second half held-out evaluation."
+        }
+      },
+      {
+        "id": "SCINLI_HELDOUT_ENTAILMENT",
+        "repository": "tasksource/scinli",
+        "revision": "f4fe43c66f7f501e0e1ec7191a8a4cb1dce31390",
+        "file": "test.csv",
+        "expected_rows": 4000,
+        "original_dataset_license": "CC BY-SA 4.0 per the authors' SciNLI repository; use ephemerally and do not vendor.",
+        "evaluation": "Binary entailment-vs-non-entailment discrimination using the model's entailment probability; reasoning, contrasting, and neutral are non-entailment for this gate."
+      }
+    ],
+    "certificate_score": {
+      "definition": "min(P(entailment | A premise, B hypothesis), P(entailment | B premise, A hypothesis))",
+      "reason": "A baseline proposition is replaceable only when a retained proposition expresses the same information strongly enough in both directions."
+    },
+    "calibration": {
+      "threshold_grid": [
+        0.5,
+        0.55,
+        0.6,
+        0.65,
+        0.7,
+        0.75,
+        0.8,
+        0.85,
+        0.9,
+        0.95,
+        0.97,
+        0.99
+      ],
+      "selection_rule": "On SPARK calibration topics, choose the lowest threshold with precision >=0.95 and recall >=0.05. If none exists, validation is rejected and no EXTRACT learned-certificate run is authorized.",
+      "no_extract_teacher_access": true
+    },
+    "gates": {
+      "spark_heldout": {
+        "precision_min": 0.9,
+        "recall_min": 0.05,
+        "false_positive_rate_max": 0.02
+      },
+      "scinli_heldout": {
+        "roc_auc_min": 0.65,
+        "average_precision_min": 0.4
+      }
+    },
+    "verdicts": {
+      "NLI_CERTIFICATE_VALIDATED": "Calibration threshold exists and every SPARK held-out and SciNLI held-out gate passes.",
+      "NLI_CERTIFICATE_PARTIAL": "SPARK safety gate passes but SciNLI gate fails, or SciNLI gate passes while SPARK precision/recall/FPR is insufficient. No EXTRACT learned-certificate run is authorized.",
+      "NLI_CERTIFICATE_REJECTED": "No safe calibration threshold exists or SPARK held-out precision is below 0.90. No EXTRACT learned-certificate run is authorized."
+    },
+    "decision_boundary": {
+      "if_validated": "Checkpoint exact model revision/hash, external-data identities, selected threshold, and held-out metrics. Then open a separate EXTRACT design that substitutes the validated mutual-entailment certificate for the lexical certificate while preserving the accepted dynamic-swap/page-preservation/top-24 architecture.",
+      "if_partial_or_rejected": "Do not tune on EXTRACT teacher results. Reassess semantic tuples or another evidence-unit representation.",
+      "never": "Do not change production EXTRACT/VERIFY, start Wave 7B, train a new model, emit ontology/RDF output, promote fixed 20/4, or use EXTRACT teacher labels to select the NLI threshold."
+    }
+  },
+  "research_sources": [
+    "https://aclanthology.org/2024.inlg-main.10/",
+    "https://aclanthology.org/2022.acl-long.511/",
+    "https://aclanthology.org/2024.findings-acl.389/",
+    "https://github.com/oriern/SPARK",
+    "https://huggingface.co/tasksource/deberta-small-long-nli",
+    "https://huggingface.co/datasets/tasksource/scinli"
+  ],
+  "boundaries": {
+    "extract_teacher_used_for_validation": false,
+    "qwen_generation_changed": false,
+    "codex_extract_changed": false,
+    "accepted_qwen_verify_changed": false,
+    "wave7b": false,
+    "production_routing_changed": false,
+    "model_training_authorized": false,
+    "model_download_authorized_only_for_external_validation": true,
+    "semantic_control_or_ontology_in_extract": false
+  },
+  "next_safe_action": "CI-lock this design. Then implement the external-only SCIENTIFIC_NLI_REDUNDANCY_CERTIFICATE_VALIDATION_V1 harness and hosted workflow exactly as frozen. It may download only the pinned NLI model and pinned public validation data, may not read EXTRACT teacher fixtures, and must emit NLI_CERTIFICATE_VALIDATED/PARTIAL/REJECTED before any learned certificate can enter an EXTRACT experiment."
+}
