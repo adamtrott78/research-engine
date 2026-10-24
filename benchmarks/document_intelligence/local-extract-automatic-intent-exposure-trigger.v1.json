@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "operation": "AUTOMATIC_INTENT_EXPOSURE_DIAGNOSTIC_V1_TRIGGER",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "implementation_sha": "bf47d704019f7028b79841d8d5dc36254a519d1d",
+  "scientific_trigger_issued": false,
+  "constraints": [
+    "This PR is an inert exact-SHA trigger anchor only.",
+    "Do not merge this PR before the scientific result is durably checkpointed.",
+    "Exactly one /local-extract-automatic-intent-exposure <exact-head-sha> trigger may be issued after workspace-control authority is durable.",
+    "Do not alter the frozen design, BM25 ranking, intent sets, depths 1/3/5/8/12, teacher anchors, interpretation table, or stopping rule.",
+    "No generation/model changes, production EXTRACT/VERIFY changes, Wave 7B, or semantic-control/RDF/ontology output."
+  ]
+}
