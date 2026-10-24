@@ -1,0 +1,229 @@
+{
+  "schema_version": 1,
+  "design_id": "local-extract-predicate-argument-evidence-unit-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "baseline_result_sha": "eb492ee8284fc9198bb8d931e3591c870b34ea12",
+  "status": "DESIGN_ONLY_NO_EXTRACT_EXECUTION_AUTHORIZED",
+  "accepted_scientific_premise": {
+    "mechanism": "DYNAMIC_SAME_PAGE_ALIGNMENT_SWAP_V1",
+    "result": "ALIGNMENT_AUGMENT_FEASIBLE",
+    "evidence": "8/13 teacher atoms, all 7/7 frozen control atoms retained, e6.a recovered, full page-ceiling fraction",
+    "constraint": "The accepted lexical token-F1 >=0.40 certificate remains frozen and is not retuned post hoc."
+  },
+  "exclusion_evidence": [
+    {
+      "result": "NLI_CERTIFICATE_REJECTED",
+      "sha": "eb492ee8284fc9198bb8d931e3591c870b34ea12",
+      "implication": "A model can discriminate scientific entailment adequately yet still fail safe redundancy calibration; sentence-pair NLI confidence is not sufficient evidence for proposition redundancy."
+    },
+    {
+      "result": "GENERIC_OPENIE_RISK",
+      "evidence": "FOBIE scientific IE work reports Open IE performs poorly on long/complex scientific sentences and that 65% of erroneous/uninformative Open IE extractions could be filtered by narrow IE.",
+      "implication": "Do not use unconstrained OpenIE triples as the next evidence representation."
+    }
+  ],
+  "research_comparison": [
+    {
+      "id": "DEPENDENCY_PREDICATE_ARGUMENT_UNITS",
+      "disposition": "SELECTED_FOR_SEPARATE_EXTERNAL_VALIDATION",
+      "evidence": [
+        "Ge et al., INLG 2024 show that fine-grained predicate-argument semantic tuples can serve as explicit coverage targets for extractive summarization.",
+        "spaCy en_core_web_sm 3.8.0 exposes deterministic dependency labels needed to derive bounded predicate/argument units and is MIT licensed.",
+        "FOBIE provides held-out scientific sentences with relation indicators and arguments, allowing domain-faithfulness testing before EXTRACT."
+      ],
+      "strengths": [
+        "Keeps the successful direct-preservation idea but moves from whole-proposition overlap to explicit information-bearing units.",
+        "No autoregressive generation is required for the first validation.",
+        "External validation can independently test redundancy safety and scientific relation fidelity."
+      ],
+      "risks": [
+        "Dependency parses are trained on general-domain data and can degrade on scientific syntax.",
+        "A hand-defined unit extractor can overgenerate or miss nominal/embedded relations.",
+        "Lexical component matching may still miss paraphrastic equivalence."
+      ]
+    },
+    {
+      "id": "AMR_GRAPH_COVERAGE",
+      "disposition": "DEFERRED",
+      "evidence": [
+        "AMR captures predicate-argument semantics in graph form.",
+        "Bai et al., EMNLP 2022 report cross-domain AMR parsing challenges arising from distribution shifts in words and AMR concepts.",
+        "Clinical-domain AMR work requires explicit domain adaptation, reinforcing the domain-transfer risk."
+      ],
+      "strengths": [
+        "Richer semantic representation than dependency tuples.",
+        "Can preserve relations beyond local surface structure."
+      ],
+      "risks": [
+        "Adds a larger parser and graph-matching subsystem before simpler evidence units are exhausted.",
+        "Cross-domain parser error becomes a new semantic-preservation failure mode.",
+        "External validation and execution cost are materially higher."
+      ]
+    },
+    {
+      "id": "NAIVE_GENERIC_OPENIE",
+      "disposition": "INELIGIBLE",
+      "reason": "Published scientific-text evidence directly reports weak behavior on long/complex scientific sentences and high erroneous/uninformative extraction rates."
+    }
+  ],
+  "selected_validation": {
+    "id": "DEPENDENCY_PREDICATE_ARGUMENT_CERTIFICATE_VALIDATION_V1",
+    "purpose": "Validate a bounded dependency-derived predicate/argument evidence-unit representation independently of EXTRACT teacher labels before it may replace the accepted lexical certificate in any EXTRACT experiment.",
+    "extract_scientific_state_materialized": false,
+    "extract_runtime_changed": false,
+    "production_routing_changed": false,
+    "parser": {
+      "package": "spacy",
+      "package_version": "3.8.2",
+      "model": "en_core_web_sm",
+      "model_version": "3.8.0",
+      "model_license": "MIT",
+      "model_wheel_sha256": "1932429db727d4bff3deed6b34cfc05df17794f4a52eeb26cf8928f7c1a0fb85",
+      "model_metadata_checksum": "14a2f31bc476af87019819ea8c9948fabdfd473a442edd6b1cba62bf0c2c0f55"
+    },
+    "evidence_unit_extraction": {
+      "predicate_pos": [
+        "VERB",
+        "ADJ",
+        "NOUN"
+      ],
+      "predicate_eligibility": "A content token is eligible if dep is ROOT or it has at least one direct child in the frozen argument dependency set.",
+      "argument_dependencies": [
+        "nsubj",
+        "nsubjpass",
+        "dobj",
+        "dative",
+        "attr",
+        "oprd",
+        "pobj",
+        "ccomp",
+        "xcomp",
+        "acomp",
+        "agent",
+        "prep"
+      ],
+      "argument_span": "Use the full dependency subtree of the direct argument child, trimmed to non-punctuation tokens.",
+      "negation": "Attach direct neg child surface/lemma to the predicate signature.",
+      "normalization": "Lowercase lemmas; discard punctuation/space; preserve argument dependency labels; no stopword deletion inside argument spans.",
+      "minimum_arguments": 1,
+      "max_units_per_sentence": 12,
+      "truncation_rule": "If more than 12 eligible units exist, retain earliest predicate token offsets; ties by normalized tuple string.",
+      "teacher_blind": true
+    },
+    "redundancy_score": {
+      "unit_similarity": "0.50 * token_f1(predicate_signature_A, predicate_signature_B) + 0.50 * mean over arguments in A of max token_f1(argument_text_A, argument_text_B), matching arguments without replacement by descending token_f1.",
+      "directional_proposition_coverage": "Mean over units in source proposition of maximum unit_similarity to a unit in target proposition.",
+      "mutual_proposition_coverage": "min(coverage(A->B), coverage(B->A))",
+      "threshold_grid": [
+        0.4,
+        0.45,
+        0.5,
+        0.55,
+        0.6,
+        0.65,
+        0.7,
+        0.75,
+        0.8,
+        0.85,
+        0.9,
+        0.95
+      ]
+    },
+    "external_validation_sets": [
+      {
+        "id": "SPARK_PROPOSITION_CLUSTERING_MANUAL",
+        "repository": "oriern/SPARK",
+        "repository_commit": "71465f36c83cfef589facadcb014e70c0bad1b3b",
+        "file": "derived_datasets/proposition_clustering.json",
+        "git_blob_sha": "eb0b82a6f53b0a7d2a6288f0dff4ed2e72abf4ad",
+        "pair_construction": {
+          "positive": "unordered distinct-text span pairs in the same proposition cluster",
+          "negative": "unordered distinct-text span pairs from different proposition clusters within the same topic",
+          "negative_sampling": "deterministically retain at most 5 negatives per positive by SHA256(pair identity), separately per split",
+          "topic_split": "Sort topic IDs by SHA256(topic_id); first half calibration, second half held-out evaluation."
+        },
+        "calibration_rule": "Choose the lowest mutual-coverage threshold in the frozen grid with precision >=0.95 and recall >=0.05. If none exists, validation is rejected."
+      },
+      {
+        "id": "FOBIE_SCIENTIFIC_RELATION_FIDELITY",
+        "repository": "rubenkruiper/FOBIE",
+        "repository_commit": "b49683fa2dced187d305abadcc36c55e2fb16c44",
+        "dev_file": "data/dev_set.json",
+        "dev_git_blob_sha": "cc82568b662df6e7536b1a0d1d18e06f7efca232",
+        "test_file": "data/test_set.json",
+        "test_git_blob_sha": "91140779df8200df2a9517b62556b1665e7b1390",
+        "dev_counts": {
+          "documents": 138,
+          "sentences": 150,
+          "tradeoff_relations": 155
+        },
+        "test_counts": {
+          "documents": 144,
+          "sentences": 150,
+          "tradeoff_relations": 153
+        },
+        "relation_recovery": "A gold trade-off relation is recovered when one extracted unit has predicate token_f1 >=0.50 against the TO_indicator text and every annotated Arg0/Arg1/Arg2 present in that relation has token_f1 >=0.50 against a distinct extracted argument span in that same unit.",
+        "purpose": "Measure whether the frozen evidence-unit extractor preserves relation-bearing predicate/argument content in held-out scientific sentences rather than winning SPARK through noisy overgeneration."
+      }
+    ],
+    "gates": {
+      "spark_heldout": {
+        "precision_min": 0.9,
+        "recall_min": 0.05,
+        "false_positive_rate_max": 0.02
+      },
+      "fobie_test": {
+        "full_relation_recall_min": 0.5,
+        "sentence_with_at_least_one_unit_fraction_min": 0.95,
+        "mean_units_per_sentence_max": 8
+      }
+    },
+    "verdicts": {
+      "PREDICATE_ARGUMENT_CERTIFICATE_VALIDATED": "A SPARK calibration threshold exists and every SPARK held-out + FOBIE test gate passes.",
+      "PREDICATE_ARGUMENT_CERTIFICATE_PARTIAL": "Exactly one external gate family passes. No EXTRACT predicate/argument certificate experiment is authorized.",
+      "PREDICATE_ARGUMENT_CERTIFICATE_REJECTED": "No safe SPARK calibration threshold exists, or neither external gate family passes. No EXTRACT predicate/argument certificate experiment is authorized."
+    },
+    "decision_boundary": {
+      "if_validated": "Checkpoint parser/model/data identities, selected SPARK threshold, held-out metrics, and extractor schema. Then open a separate EXTRACT design that substitutes this validated evidence-unit redundancy certificate into the accepted dynamic-swap/page-preservation/top-24 architecture.",
+      "if_partial_or_rejected": "Do not tune using EXTRACT teacher results. Reassess AMR or another materially different evidence-unit representation.",
+      "never": "Do not change production EXTRACT/VERIFY, start Wave 7B, train a parser/model, emit ontology/RDF output, promote fixed 20/4, or use EXTRACT teacher labels for threshold/rule selection."
+    }
+  },
+  "independent_review_boundary": {
+    "review_task": "workspace-local-extract-independent-review-v1",
+    "authority_over_extract": false,
+    "action": "After this design becomes a durable pre-implementation checkpoint, re-read the review capsule and consume only a review checkpoint that explicitly applies to this exact design SHA. Do not block indefinitely if none exists."
+  },
+  "coordination_boundary": {
+    "semantic_control_task": "workspace-semantic-control-hardening-v1",
+    "authority_over_extract": false,
+    "extract_integration_signal_ready": false,
+    "rules": [
+      "Do not alter EXTRACT science or output shape for semantic-control.",
+      "Do not emit RDF, ontology-native output, or SemanticObservationV1.",
+      "Integration remains downstream of a future genuinely accepted EXTRACT output checkpoint."
+    ]
+  },
+  "research_sources": [
+    "https://aclanthology.org/2024.inlg-main.10/",
+    "https://aclanthology.org/2020.acl-main.137/",
+    "https://aclanthology.org/2022.emnlp-main.749/",
+    "https://aclanthology.org/2024.clinicalnlp-1.23/",
+    "https://github.com/explosion/spacy-models",
+    "https://github.com/rubenkruiper/FOBIE",
+    "https://github.com/oriern/SPARK"
+  ],
+  "boundaries": {
+    "extract_teacher_used_for_validation": false,
+    "qwen_generation_changed": false,
+    "codex_extract_changed": false,
+    "accepted_qwen_verify_changed": false,
+    "wave7b": false,
+    "production_routing_changed": false,
+    "model_training_authorized": false,
+    "parser_download_authorized_only_for_external_validation": true,
+    "semantic_control_or_ontology_in_extract": false,
+    "rdf_or_ontology_output": false
+  },
+  "next_safe_action": "CI-lock this design. Before implementation, re-read the independent-review capsule and consume any exact-SHA review checkpoint that applies. If none exists, implement only the external DEPENDENCY_PREDICATE_ARGUMENT_CERTIFICATE_VALIDATION_V1 harness/workflow exactly as frozen; do not read EXTRACT teacher fixtures."
+}
