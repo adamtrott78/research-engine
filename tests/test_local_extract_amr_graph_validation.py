@@ -213,5 +213,11 @@ def test_workflow_is_exact_sha_teacher_blind_and_identity_pinned() -> None:
     assert "7e816eb86104fa6c07d8eff9f9c6abc84bae2898" in text
     assert "71465f36c83cfef589facadcb014e70c0bad1b3b" in text
     assert "eb0b82a6f53b0a7d2a6288f0dff4ed2e72abf4ad" in text
+    assert "eee40d776dbcaa028a9a82d325565b48937b9cfb" in text
+    assert "0e040f26632ee16751240dbff28fa8d62c101ebb" in text
+    assert "Unidecode==1.3.8" in text
+    assert "AMR_GRAPH_AMRLIB_SRC" in text
+    assert "AMR_GRAPH_SMATCH_SRC" in text
+    assert "git+https://github.com/bjascob/amrlib.git@" not in text
     assert "local-extract-teacher" not in text
     assert "SemanticObservationV1" not in text
