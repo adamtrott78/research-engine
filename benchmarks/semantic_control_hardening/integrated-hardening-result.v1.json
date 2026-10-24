@@ -1,0 +1,266 @@
+{
+  "adversary_results": [
+    {
+      "case_id": "V1_STALE_ALLOW_CURRENT_DENY",
+      "decision": "DENY",
+      "reason_code": "STALE_AUTHORITY_CONTEXT"
+    },
+    {
+      "case_id": "V2_POLICY_EPOCH_MISMATCH_WITHOUT_CURRENT_RECORD",
+      "decision": "ABSTAIN",
+      "reason_code": "REQUIRED_AUTHORITY_UNAVAILABLE"
+    },
+    {
+      "case_id": "V3_TASK_CHECKPOINT_DRIFT",
+      "decision": "ABSTAIN",
+      "reason_code": "TASK_STATE_STALE"
+    },
+    {
+      "authority_effect": "NONE",
+      "case_id": "V4_RECEIPT_BINDING_MISMATCH",
+      "receipt_status": "INVALID_BINDING"
+    },
+    {
+      "case_id": "V5_SOURCE_BLOB_DRIFT",
+      "decision": "ABSTAIN",
+      "reason_code": "SOURCE_IDENTITY_DRIFT"
+    },
+    {
+      "case_id": "V6_REPOSITORY_DISAGREEMENT",
+      "decision": "ABSTAIN",
+      "reason_code": "CROSS_SOURCE_DISAGREEMENT",
+      "sources": [
+        {
+          "checkpoint": "A",
+          "repository": "research-engine",
+          "value": "READY"
+        },
+        {
+          "checkpoint": "B",
+          "repository": "workspace-control",
+          "value": "NOT_READY"
+        }
+      ]
+    },
+    {
+      "case_id": "V7_FAKE_EPISTEMIC_ALLOW",
+      "decision": "ABSTAIN",
+      "reason_code": "NON_AUTHORITATIVE_PERMISSION_CLAIM"
+    },
+    {
+      "authority_effect": "NONE",
+      "case_id": "V8_CORRUPT_PROJECTION_DUPLICATE_ID",
+      "projection_status": "FAIL_CLOSED",
+      "reason_code": "DUPLICATE_OBSERVATION_ID"
+    }
+  ],
+  "audit_chain_sha256": "c08a5bd6a8da31389cf4fa86c45cb122ff8aeca4d46caf30ded6539adb5790a1",
+  "audit_tamper_detected": true,
+  "audit_valid": true,
+  "authorization_escape_count": 0,
+  "benchmark_id": "semantic-control-integrated-hardening-v1",
+  "evidence_results": [
+    {
+      "case_id": "E1_CONTRADICTION",
+      "ok": true,
+      "requirement_id": "hardening:req:814f2f136cce2373b5bb"
+    },
+    {
+      "case_id": "E2_MISSING_FACET",
+      "ok": true,
+      "requirement_id": "hardening:req:ffc24546f19ebe14e3ca"
+    },
+    {
+      "case_id": "E3_SOURCE_LEVEL",
+      "ok": true,
+      "requirement_id": "hardening:req:6af56550a331f5e5100a"
+    },
+    {
+      "case_id": "E4_VERIFICATION",
+      "ok": true,
+      "requirement_id": "hardening:req:41396a64ea5f9a7c5783"
+    },
+    {
+      "case_id": "E5_STALE",
+      "ok": true,
+      "requirement_id": "hardening:req:c3adde76a35c7a2f0bc0"
+    },
+    {
+      "case_id": "E6_BENCHMARK_CALIBRATED",
+      "ok": true,
+      "requirement_id": "hardening:req:2360b9146747bf64084b"
+    },
+    {
+      "case_id": "E7_MODEL_CONFIDENCE_ONLY",
+      "ok": true,
+      "requirement_id": null
+    }
+  ],
+  "extract_mutation": false,
+  "gates": {
+    "authorization_escape_count_zero": true,
+    "bounded_ontology_slices_exact": true,
+    "decision_audit_chain_exact": true,
+    "evidence_requirements_request_only": true,
+    "historical_replay_exact": true,
+    "opaque_extract_socket_exact": true,
+    "persisted_scale_evidence_integrity": true,
+    "temporal_semantics_exact": true,
+    "version_skew_adversaries_exact": true
+  },
+  "hardening_authorizes_production": false,
+  "hardening_binds_extract": false,
+  "opaque_extract_socket": {
+    "accepted_binding_state": "UNBOUND",
+    "accepted_registration": "REGISTER_DESCRIPTOR_ONLY",
+    "extract_mutation": false,
+    "payload_accessed": false,
+    "payload_schema_defined": false,
+    "production_mutation": false,
+    "unaccepted_registration": "REJECT_BINDING"
+  },
+  "parent_contract_id": "semantic-control-hardening-contract-v1",
+  "production_mutation": false,
+  "replay_results": [
+    {
+      "authority_context": [
+        {
+          "authority_id": "lambda-ci-workload-policy-v1",
+          "authority_kind": "POLICY_ARTIFACT",
+          "authority_version": "epoch:3",
+          "observation_id": "historical-policy:R1_GPU_SMALL_HISTORICAL_ALLOW",
+          "source_id": "historical-pinned-workload-policy"
+        }
+      ],
+      "case_id": "R1_GPU_SMALL_HISTORICAL_ALLOW",
+      "current_state_used_for_decision": false,
+      "decision": "ALLOW",
+      "divergent_current_state_sha256": "a6661f38a7cc0209717633645c97d2681cb9c1e29e17a884492c6505d5c262c2",
+      "execution_receipt_id": null,
+      "expected_decision": "ALLOW",
+      "historical_input_sha256": "51a11a1286b8d79474d9b0b23d722053b09e248d4787e526ed64d873b0061f58",
+      "knowledge_checkpoint_ids": [
+        "workspace-control@91459f5f6afa0d71394d63155c2fe8dfdc65a4b7"
+      ],
+      "matches_expected": true,
+      "precondition_results": [
+        {
+          "evidence_ids": [
+            "historical-precondition:p:scope"
+          ],
+          "precondition_id": "p:scope",
+          "result": "PASS"
+        }
+      ],
+      "reasons": [
+        "authoritative policy permits the action class and all declared preconditions passed"
+      ],
+      "semantic_manifest_id": "history:epoch3:gpu-small"
+    },
+    {
+      "authority_context": [
+        {
+          "authority_id": "lambda-ci-workload-policy-v1",
+          "authority_kind": "POLICY_ARTIFACT",
+          "authority_version": "epoch:3",
+          "observation_id": "historical-policy:R2_GPU_HEAVY_HISTORICAL_DENY",
+          "source_id": "historical-pinned-workload-policy"
+        }
+      ],
+      "case_id": "R2_GPU_HEAVY_HISTORICAL_DENY",
+      "current_state_used_for_decision": false,
+      "decision": "DENY",
+      "divergent_current_state_sha256": "c5409c7f51630ee4a284177ec6eda8217b8074cca2a835ced5f85ebc06e504b9",
+      "execution_receipt_id": null,
+      "expected_decision": "DENY",
+      "historical_input_sha256": "d160903b10d929c5bce7b20b143d2f22f33e735ddebcf75735881718d9e96d18",
+      "knowledge_checkpoint_ids": [
+        "workspace-control@91459f5f6afa0d71394d63155c2fe8dfdc65a4b7"
+      ],
+      "matches_expected": true,
+      "precondition_results": [
+        {
+          "evidence_ids": [
+            "historical-precondition:p:scope"
+          ],
+          "precondition_id": "p:scope",
+          "result": "PASS"
+        }
+      ],
+      "reasons": [
+        "explicit authoritative policy denies the candidate action"
+      ],
+      "semantic_manifest_id": "history:epoch3:gpu-heavy"
+    },
+    {
+      "authority_context": [],
+      "case_id": "R3_MISSING_HISTORICAL_AUTHORITY_ABSTAINS",
+      "current_state_used_for_decision": false,
+      "decision": "ABSTAIN",
+      "divergent_current_state_sha256": "a687f99418f1fe1b8e0268f4cfc87d98c8a8c1c8bd51b4dcaed06090354e8715",
+      "execution_receipt_id": null,
+      "expected_decision": "ABSTAIN",
+      "historical_input_sha256": "8da71e0fb6203b885ea9e8f1b6f3b0ded841e7e78ef75ac95d1e686b6abbec42",
+      "knowledge_checkpoint_ids": [
+        "synthetic:missing-authority"
+      ],
+      "matches_expected": true,
+      "precondition_results": [
+        {
+          "evidence_ids": [
+            "historical-precondition:p:scope"
+          ],
+          "precondition_id": "p:scope",
+          "result": "PASS"
+        }
+      ],
+      "reasons": [
+        "no authoritative policy context permits the candidate action"
+      ],
+      "semantic_manifest_id": "history:missing-authority"
+    }
+  ],
+  "result_sha256": "3b14229dca3b2c06915a97bd820a21536ecfdfa55d944458e709e6b1460b98f6",
+  "scale_result_identity": {
+    "ci_job_id": 120731149942,
+    "ci_run_id": 40047074263,
+    "manifest_hashes": [
+      "e21cf045e20bf93119c55ebc89c3bceb3852d099b81cc14419889c09f0565e7a",
+      "18b63de0bed83501c15d1099b6e5d74d8ccf9496b31b13ad33419c8080b1abda",
+      "aa14d1a50a5f879f4a72878a66fd452b02bcd36d93f8a05ee7d006ca277f1ef0"
+    ],
+    "sizes": [
+      1000,
+      10000,
+      100000
+    ]
+  },
+  "schema_version": 1,
+  "slice_results": [
+    {
+      "case_id": "S1_WORKLOAD_AUTHORITY_DECISION",
+      "deterministic_key": "690786c0a386ae2a830731559cd1767552935e26c94fa8e0ade7283decd69361",
+      "observation_count": 7,
+      "ok": true
+    },
+    {
+      "case_id": "S2_SCIENTIFIC_CONTRADICTION",
+      "deterministic_key": "ec99dfc646a65b650ade4e592256f058c128ca7ee4dba0d0d461a925df210b40",
+      "observation_count": 3,
+      "ok": true
+    },
+    {
+      "case_id": "S3_HISTORICAL_REPLAY",
+      "deterministic_key": "590462a5d1e3b2f45e27ee45ca1d9f5cf3deb7000c0d3b83bd8c586248626e3c",
+      "observation_count": 5,
+      "ok": true
+    }
+  ],
+  "temporal_summary": {
+    "contradictions_preserved": true,
+    "global_truth_resolution": "NONE",
+    "supersession_matches_expected": true,
+    "unknown_coerced_to_false": false
+  },
+  "verdict": "HARDENING_PASS"
+}
