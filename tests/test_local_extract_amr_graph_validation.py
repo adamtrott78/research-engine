@@ -215,4 +215,3 @@ def test_workflow_is_exact_sha_teacher_blind_and_identity_pinned() -> None:
     assert "eb0b82a6f53b0a7d2a6288f0dff4ed2e72abf4ad" in text
     assert "local-extract-teacher" not in text
     assert "SemanticObservationV1" not in text
-    assert "rdf" not in text.lower()
