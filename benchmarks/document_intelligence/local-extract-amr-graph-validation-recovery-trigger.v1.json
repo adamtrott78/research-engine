@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "operation": "AMR_GRAPH_REDUNDANCY_CERTIFICATE_VALIDATION_V1_RECOVERY_TRIGGER",
+  "repaired_implementation_checkpoint": "8f03b818f415b33c3a3d0bd92d2c7396920013d6",
+  "prior_consumed_run": 40062934298,
+  "prior_scientific_state": "NOT_RUN",
+  "scientific_trigger_issued": false,
+  "purpose": "Inert same-repository PR anchor for one newly authorized exact-SHA external-only AMR graph certificate recovery execution after the packaging-only repair.",
+  "constraints": [
+    "Do not merge this trigger PR.",
+    "Do not issue the trigger before the owning workspace-control execution-authority checkpoint is merged.",
+    "Issue at most one recovery scientific trigger from this exact head.",
+    "Do not access EXTRACT teacher inputs.",
+    "Do not change frozen AMR scientific identities, gates, or Smatch semantics.",
+    "Do not change production EXTRACT or VERIFY."
+  ]
+}
