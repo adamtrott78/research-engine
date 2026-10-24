@@ -75,26 +75,44 @@ jobs:
         run: |
           set -Eeuo pipefail
           pydeps="$RUNNER_TEMP/amr-graph-pydeps"
-          mkdir -m 0700 "$pydeps"
+          source_root="$RUNNER_TEMP/amr-graph-sources"
+          amrlib_src="$source_root/amrlib"
+          smatch_src="$source_root/smatch"
+          mkdir -m 0700 "$pydeps" "$source_root"
 
           "$P5_EXPANDED_RUNTIME_PYTHON" -m pip install \
             --disable-pip-version-check --target "$pydeps" --no-deps \
-            "penman==1.3.1"
-          "$P5_EXPANDED_RUNTIME_PYTHON" -m pip install \
-            --disable-pip-version-check --target "$pydeps" --no-deps \
-            "git+https://github.com/snowblink14/smatch.git@1bcd49cc8535056aa1c941763580fc5a572f1204"
-          "$P5_EXPANDED_RUNTIME_PYTHON" -m pip install \
-            --disable-pip-version-check --target "$pydeps" --no-deps \
-            "git+https://github.com/bjascob/amrlib.git@38b29706ea982da5a5b081a04f00c93cc6cc1e9c"
+            "penman==1.3.1" "Unidecode==1.3.8"
 
-          PYTHONPATH="$pydeps" "$P5_EXPANDED_RUNTIME_PYTHON" - <<'PY'
+          git init -q "$smatch_src"
+          git -C "$smatch_src" remote add origin https://github.com/snowblink14/smatch.git
+          git -C "$smatch_src" fetch -q --depth=1 origin 1bcd49cc8535056aa1c941763580fc5a572f1204
+          git -C "$smatch_src" checkout -q --detach FETCH_HEAD
+          [[ "$(git -C "$smatch_src" rev-parse HEAD)" == "1bcd49cc8535056aa1c941763580fc5a572f1204" ]]
+
+          git init -q "$amrlib_src"
+          git -C "$amrlib_src" remote add origin https://github.com/bjascob/amrlib.git
+          git -C "$amrlib_src" fetch -q --depth=1 origin 38b29706ea982da5a5b081a04f00c93cc6cc1e9c
+          git -C "$amrlib_src" checkout -q --detach FETCH_HEAD
+          [[ "$(git -C "$amrlib_src" rev-parse HEAD)" == "38b29706ea982da5a5b081a04f00c93cc6cc1e9c" ]]
+          [[ "$(git -C "$amrlib_src" rev-parse HEAD:amrlib/models/parse_xfm/inference.py)" == "eee40d776dbcaa028a9a82d325565b48937b9cfb" ]]
+          [[ "$(git -C "$amrlib_src" rev-parse HEAD:amrlib/evaluate/smatch_enhanced.py)" == "0e040f26632ee16751240dbff28fa8d62c101ebb" ]]
+
+          PYTHONPATH="$smatch_src:$amrlib_src:$pydeps" \
+            "$P5_EXPANDED_RUNTIME_PYTHON" - <<'PY'
           import amrlib
+          import requests
           import smatch
+          from unidecode import unidecode
           assert amrlib.__version__ == "0.8.1"
           assert smatch.iteration_num == 5
+          assert unidecode("é") == "e"
           print("AMR_GRAPH_SOURCE_PREFLIGHT=PASS")
           PY
+
           echo "AMR_GRAPH_PYDEPS=$pydeps" >> "$GITHUB_ENV"
+          echo "AMR_GRAPH_AMRLIB_SRC=$amrlib_src" >> "$GITHUB_ENV"
+          echo "AMR_GRAPH_SMATCH_SRC=$smatch_src" >> "$GITHUB_ENV"
 
       - name: Download and verify exact external AMR assets
         shell: bash
@@ -175,7 +193,7 @@ jobs:
           [[ "$(git rev-parse HEAD)" == "$EXPECTED_SHA" ]]
           output="$RUNNER_TEMP/local-extract-amr-graph-certificate-validation.json"
 
-          PYTHONPATH="$PWD/src:$AMR_GRAPH_PYDEPS" \
+          PYTHONPATH="$PWD/src:$AMR_GRAPH_SMATCH_SRC:$AMR_GRAPH_AMRLIB_SRC:$AMR_GRAPH_PYDEPS" \
             "$P5_EXPANDED_RUNTIME_PYTHON" \
             benchmarks/document_intelligence/run_local_extract_amr_graph_validation.py \
             --design benchmarks/document_intelligence/local-extract-amr-graph-certificate-design.v1.json \
