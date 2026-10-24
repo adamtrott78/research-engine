@@ -1,0 +1,228 @@
+name: Local EXTRACT AMR Graph Certificate Validation
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  amr-graph-certificate-validation:
+    name: "${{ format('wc-admission-v1|workload=model-eval-local-extract-amr-graph-v1|pr={0}|request={1}', github.event.issue.number, github.event.comment.body) }}"
+    if: >-
+      github.event.issue.pull_request &&
+      github.actor == 'adamtrott78' &&
+      github.event.comment.author_association == 'OWNER' &&
+      startsWith(github.event.comment.body, '/lambda-ci-local-extract-amr-graph-certificate-validation ')
+    runs-on: lambda-research-engine-gpu
+    timeout-minutes: 90
+
+    steps:
+      - name: Verify exact PR head
+        id: gate
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          expected_sha="$(printf '%s\n' "$COMMENT_BODY" | awk '{print $2}')"
+          [[ "$expected_sha" =~ ^[0-9a-f]{40}$ ]] || exit 20
+          pr_json="$(
+            curl -fsSL \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$REPOSITORY/pulls/$PR_NUMBER"
+          )"
+          actual_sha="$(
+            python3 -c 'import json,sys; print(json.load(sys.stdin)["head"]["sha"])' \
+              <<<"$pr_json"
+          )"
+          [[ "$actual_sha" == "$expected_sha" ]]
+          echo "expected_sha=$expected_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Verify Lambda GPU runtime boundary
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$(id -un)" == "ci-research-engine" ]]
+          [[ -x "$P5_EXPANDED_RUNTIME_PYTHON" ]]
+          [[ ! -r /home/atrott ]]
+          [[ ! -r /var/lib/workspace-ci/controller/github-token ]]
+          "$P5_EXPANDED_RUNTIME_PYTHON" - <<'PY'
+          import torch
+          assert torch.cuda.is_available()
+          assert torch.cuda.device_count() >= 1
+          print("AMR_GRAPH_GPU_RUNTIME_PREFLIGHT=PASS")
+          PY
+
+      - name: Checkout exact validation SHA
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ steps.gate.outputs.expected_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          clean: true
+
+      - name: Install exact AMR scoring sources ephemerally
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          pydeps="$RUNNER_TEMP/amr-graph-pydeps"
+          mkdir -m 0700 "$pydeps"
+
+          "$P5_EXPANDED_RUNTIME_PYTHON" -m pip install \
+            --disable-pip-version-check --target "$pydeps" --no-deps \
+            "penman==1.3.1"
+          "$P5_EXPANDED_RUNTIME_PYTHON" -m pip install \
+            --disable-pip-version-check --target "$pydeps" --no-deps \
+            "git+https://github.com/snowblink14/smatch.git@1bcd49cc8535056aa1c941763580fc5a572f1204"
+          "$P5_EXPANDED_RUNTIME_PYTHON" -m pip install \
+            --disable-pip-version-check --target "$pydeps" --no-deps \
+            "git+https://github.com/bjascob/amrlib.git@38b29706ea982da5a5b081a04f00c93cc6cc1e9c"
+
+          PYTHONPATH="$pydeps" "$P5_EXPANDED_RUNTIME_PYTHON" - <<'PY'
+          import amrlib
+          import smatch
+          assert amrlib.__version__ == "0.8.1"
+          assert smatch.iteration_num == 5
+          print("AMR_GRAPH_SOURCE_PREFLIGHT=PASS")
+          PY
+          echo "AMR_GRAPH_PYDEPS=$pydeps" >> "$GITHUB_ENV"
+
+      - name: Download and verify exact external AMR assets
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          data_dir="$RUNNER_TEMP/amr-graph-validation-data"
+          model_root="$RUNNER_TEMP/amr-parser-model"
+          tokenizer_dir="$RUNNER_TEMP/bart-large-tokenizer"
+          parser_tar="$RUNNER_TEMP/model_parse_xfm_bart_large-v0_1_0.tar.gz"
+          mkdir -m 0700 "$data_dir" "$model_root" "$tokenizer_dir"
+
+          curl -fL --retry 3 --retry-delay 3 \
+            "https://github.com/bjascob/amrlib-models/releases/download/parse_xfm_bart_large-v0_1_0/model_parse_xfm_bart_large-v0_1_0.tar.gz" \
+            -o "$parser_tar"
+          [[ "$(stat -c '%s' "$parser_tar")" == "1506463657" ]]
+          [[ "$(md5sum "$parser_tar" | awk '{print $1}')" == "5633e5e6f8a4f4398ce64abab71c473a" ]]
+          tar -xzf "$parser_tar" -C "$model_root"
+
+          model_dir="$(
+            "$P5_EXPANDED_RUNTIME_PYTHON" - "$model_root" <<'PY'
+          import pathlib
+          import sys
+          root = pathlib.Path(sys.argv[1])
+          rows = sorted(path.parent for path in root.rglob("amrlib_meta.json"))
+          if len(rows) != 1:
+              raise SystemExit(f"expected exactly one parser metadata file, got {len(rows)}")
+          print(rows[0])
+          PY
+          )"
+
+          tokenizer_revision="22fa33834dccc11df99c4fc5fcc96c67f806dfdb"
+          for file in config.json merges.txt tokenizer.json tokenizer_config.json vocab.json; do
+            curl -fL --retry 3 --retry-delay 2 \
+              "https://huggingface.co/facebook/bart-large/resolve/$tokenizer_revision/$file" \
+              -o "$tokenizer_dir/$file"
+          done
+
+          curl -fsSL --retry 3 --retry-delay 2 \
+            "https://raw.githubusercontent.com/oriern/SPARK/71465f36c83cfef589facadcb014e70c0bad1b3b/derived_datasets/proposition_clustering.json" \
+            -o "$data_dir/spark-proposition-clustering.json"
+          curl -fsSL --retry 3 --retry-delay 2 \
+            "https://raw.githubusercontent.com/flipz357/AMR-World/802923ae6c7376a9930e93ce52cd6b9faf43c411/data/reference_amrs/amr-release-test-bio.txt" \
+            -o "$data_dir/amr-release-test-bio.txt"
+
+          "$P5_EXPANDED_RUNTIME_PYTHON" - \
+            "$data_dir/spark-proposition-clustering.json" \
+            "eb0b82a6f53b0a7d2a6288f0dff4ed2e72abf4ad" \
+            "$data_dir/amr-release-test-bio.txt" \
+            "7e816eb86104fa6c07d8eff9f9c6abc84bae2898" <<'PY'
+          import hashlib
+          import pathlib
+          import sys
+
+          for path_text, expected in ((sys.argv[1], sys.argv[2]), (sys.argv[3], sys.argv[4])):
+              path = pathlib.Path(path_text)
+              data = path.read_bytes()
+              actual = hashlib.sha1(
+                  f"blob {len(data)}\0".encode("ascii") + data
+              ).hexdigest()
+              assert actual == expected, (path, actual, expected)
+          print("AMR_GRAPH_EXTERNAL_BLOB_PREFLIGHT=PASS")
+          PY
+
+          echo "AMR_GRAPH_DATA_DIR=$data_dir" >> "$GITHUB_ENV"
+          echo "AMR_GRAPH_MODEL_DIR=$model_dir" >> "$GITHUB_ENV"
+          echo "AMR_GRAPH_PARSER_TAR=$parser_tar" >> "$GITHUB_ENV"
+          echo "AMR_GRAPH_TOKENIZER_DIR=$tokenizer_dir" >> "$GITHUB_ENV"
+
+      - name: Run frozen external-only AMR graph certificate validation
+        env:
+          EXPECTED_SHA: ${{ steps.gate.outputs.expected_sha }}
+          TOKENIZERS_PARALLELISM: "false"
+          HF_HUB_DISABLE_TELEMETRY: "1"
+          DO_NOT_TRACK: "1"
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$(git rev-parse HEAD)" == "$EXPECTED_SHA" ]]
+          output="$RUNNER_TEMP/local-extract-amr-graph-certificate-validation.json"
+
+          PYTHONPATH="$PWD/src:$AMR_GRAPH_PYDEPS" \
+            "$P5_EXPANDED_RUNTIME_PYTHON" \
+            benchmarks/document_intelligence/run_local_extract_amr_graph_validation.py \
+            --design benchmarks/document_intelligence/local-extract-amr-graph-certificate-design.v1.json \
+            --spark-json "$AMR_GRAPH_DATA_DIR/spark-proposition-clustering.json" \
+            --bio-amr "$AMR_GRAPH_DATA_DIR/amr-release-test-bio.txt" \
+            --parser-tar "$AMR_GRAPH_PARSER_TAR" \
+            --parser-model-dir "$AMR_GRAPH_MODEL_DIR" \
+            --tokenizer-dir "$AMR_GRAPH_TOKENIZER_DIR" \
+            --candidate-sha "$EXPECTED_SHA" \
+            --output "$output"
+
+          "$P5_EXPANDED_RUNTIME_PYTHON" - "$output" "$EXPECTED_SHA" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          report = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert report["candidate_sha"] == sys.argv[2]
+          assert report["amrlib"]["source_commit"] == "38b29706ea982da5a5b081a04f00c93cc6cc1e9c"
+          assert report["smatch"]["release_commit"] == "1bcd49cc8535056aa1c941763580fc5a572f1204"
+          assert report["parser_model"]["release_asset_size_bytes"] == 1506463657
+          assert report["parser_model"]["measured_md5"] == "5633e5e6f8a4f4398ce64abab71c473a"
+          assert report["tokenizer"]["revision"] == "22fa33834dccc11df99c4fc5fcc96c67f806dfdb"
+          assert report["external_data"]["bio_amr"]["mirror_git_blob_sha"] == "7e816eb86104fa6c07d8eff9f9c6abc84bae2898"
+          assert report["external_data"]["spark"]["git_blob_sha"] == "eb0b82a6f53b0a7d2a6288f0dff4ed2e72abf4ad"
+          assert report["bio_amr"]["example_count"] == 500
+          assert report["extract_teacher_accessed"] is False
+          assert report["extract_scientific_state_materialized"] is False
+          assert report["amr_certificate_used_in_extract"] is False
+          assert report["production_routing_changed"] is False
+          assert report["model_or_parser_training_executed"] is False
+          assert report["wave7b_started"] is False
+          assert report["semantic_control_or_ontology_in_extract"] is False
+          assert report["rdf_or_ontology_output_emitted"] is False
+          assert report["amr_graph_certificate_decision"] in {
+              "AMR_GRAPH_CERTIFICATE_VALIDATED",
+              "AMR_GRAPH_CERTIFICATE_PARTIAL",
+              "AMR_GRAPH_CERTIFICATE_REJECTED",
+          }
+          print("AMR_GRAPH_EXTERNAL_VALIDATION_RECEIPT=PASS")
+          PY
+
+      - name: Upload AMR graph validation report only
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: local-extract-amr-graph-certificate-validation
+          path: ${{ runner.temp }}/local-extract-amr-graph-certificate-validation.json
+          if-no-files-found: error
+          retention-days: 14
