@@ -1,0 +1,144 @@
+name: Local EXTRACT NLI Certificate Validation
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  nli-certificate-validation:
+    if: >-
+      github.event.issue.pull_request &&
+      github.actor == 'adamtrott78' &&
+      github.event.comment.author_association == 'OWNER' &&
+      startsWith(github.event.comment.body, '/local-extract-nli-certificate-validation ')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Verify exact PR head
+        id: gate
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          expected_sha="$(printf '%s\n' "$COMMENT_BODY" | awk '{print $2}')"
+          [[ "$expected_sha" =~ ^[0-9a-f]{40}$ ]]
+          pr_json="$(
+            curl -fsSL               -H "Accept: application/vnd.github+json"               -H "Authorization: Bearer $GH_TOKEN"               -H "X-GitHub-Api-Version: 2022-11-28"               "https://api.github.com/repos/$REPOSITORY/pulls/$PR_NUMBER"
+          )"
+          actual_sha="$(
+            python3 -c 'import json,sys; print(json.load(sys.stdin)["head"]["sha"])'               <<<"$pr_json"
+          )"
+          [[ "$actual_sha" == "$expected_sha" ]]
+          echo "expected_sha=$expected_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout exact validation SHA
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ steps.gate.outputs.expected_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          clean: true
+
+      - name: Install pinned inference dependencies
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 -m pip install --disable-pip-version-check             --index-url https://download.pytorch.org/whl/cpu             torch==2.5.1
+          python3 -m pip install --disable-pip-version-check             transformers==4.46.3             huggingface_hub==0.26.2             sentencepiece==0.2.0
+
+      - name: Download exact external validation assets
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          model_dir="$RUNNER_TEMP/nli-model"
+          data_dir="$RUNNER_TEMP/nli-validation-data"
+          mkdir -m 0700 "$model_dir" "$data_dir"
+
+          python3 - "$model_dir" <<'PY'
+          import pathlib
+          import sys
+          from huggingface_hub import snapshot_download
+
+          target = pathlib.Path(sys.argv[1])
+          snapshot_download(
+              repo_id="tasksource/deberta-small-long-nli",
+              revision="9d545db675cfad1e7d9c5c56351e19b4868dce65",
+              local_dir=target,
+              local_dir_use_symlinks=False,
+              allow_patterns=[
+                  "config.json",
+                  "model.safetensors",
+                  "tokenizer.json",
+                  "tokenizer_config.json",
+                  "special_tokens_map.json",
+                  "spm.model",
+                  "added_tokens.json",
+              ],
+          )
+          PY
+
+          [[ "$(sha256sum "$model_dir/model.safetensors" | awk '{print $1}')" ==             "9af30c7ad7235a2054300bc2df1d98149ad6008dd1ef06212be8b32b5d1b3458" ]]
+
+          curl -fsSL --retry 3 --retry-delay 2             "https://raw.githubusercontent.com/oriern/SPARK/71465f36c83cfef589facadcb014e70c0bad1b3b/derived_datasets/proposition_clustering.json"             -o "$data_dir/spark-proposition-clustering.json"
+
+          curl -fsSL --retry 3 --retry-delay 2             "https://huggingface.co/datasets/tasksource/scinli/resolve/f4fe43c66f7f501e0e1ec7191a8a4cb1dce31390/test.csv?download=true"             -o "$data_dir/scinli-test.csv"
+
+          echo "NLI_MODEL_DIR=$model_dir" >> "$GITHUB_ENV"
+          echo "NLI_DATA_DIR=$data_dir" >> "$GITHUB_ENV"
+
+      - name: Run frozen external-only NLI certificate validation
+        env:
+          EXPECTED_SHA: ${{ steps.gate.outputs.expected_sha }}
+          TOKENIZERS_PARALLELISM: "false"
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$(git rev-parse HEAD)" == "$EXPECTED_SHA" ]]
+          output="$RUNNER_TEMP/local-extract-nli-certificate-validation.json"
+
+          PYTHONPATH="$PWD/src" python3             benchmarks/document_intelligence/run_local_extract_nli_certificate_validation.py             --design benchmarks/document_intelligence/local-extract-semantic-certificate-generalization-design.v1.json             --model-dir "$NLI_MODEL_DIR"             --spark-json "$NLI_DATA_DIR/spark-proposition-clustering.json"             --scinli-csv "$NLI_DATA_DIR/scinli-test.csv"             --output "$output"             --max-length 1680             --batch-size 16
+
+          python3 - "$output" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          report = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert report["model"]["revision"] == (
+              "9d545db675cfad1e7d9c5c56351e19b4868dce65"
+          )
+          assert report["model"]["model_safetensors_sha256"] == (
+              "9af30c7ad7235a2054300bc2df1d98149ad6008dd1ef06212be8b32b5d1b3458"
+          )
+          assert report["extract_teacher_accessed"] is False
+          assert report["extract_scientific_state_materialized"] is False
+          assert report["production_routing_changed"] is False
+          assert report["model_training_executed"] is False
+          assert report["learned_certificate_used_in_extract"] is False
+          assert report["semantic_control_or_ontology_in_extract"] is False
+          assert report["rdf_or_ontology_output_emitted"] is False
+          assert report["nli_certificate_decision"] in {
+              "NLI_CERTIFICATE_VALIDATED",
+              "NLI_CERTIFICATE_PARTIAL",
+              "NLI_CERTIFICATE_REJECTED",
+          }
+          print("NLI_CERTIFICATE_EXTERNAL_VALIDATION_RECEIPT=PASS")
+          PY
+
+      - name: Upload validation report only
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: local-extract-nli-certificate-validation
+          path: ${{ runner.temp }}/local-extract-nli-certificate-validation.json
+          if-no-files-found: error
+          retention-days: 14
