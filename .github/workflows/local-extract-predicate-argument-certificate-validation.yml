@@ -1,0 +1,123 @@
+name: Local EXTRACT Predicate Argument Certificate Validation
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  predicate-argument-certificate-validation:
+    if: >-
+      github.event.issue.pull_request &&
+      github.actor == 'adamtrott78' &&
+      github.event.comment.author_association == 'OWNER' &&
+      startsWith(github.event.comment.body, '/local-extract-predicate-argument-certificate-validation ')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Verify exact PR head
+        id: gate
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          expected_sha="$(printf '%s\n' "$COMMENT_BODY" | awk '{print $2}')"
+          [[ "$expected_sha" =~ ^[0-9a-f]{40}$ ]]
+          pr_json="$(
+            curl -fsSL               -H "Accept: application/vnd.github+json"               -H "Authorization: Bearer $GH_TOKEN"               -H "X-GitHub-Api-Version: 2022-11-28"               "https://api.github.com/repos/$REPOSITORY/pulls/$PR_NUMBER"
+          )"
+          actual_sha="$(
+            python3 -c 'import json,sys; print(json.load(sys.stdin)["head"]["sha"])'               <<<"$pr_json"
+          )"
+          [[ "$actual_sha" == "$expected_sha" ]]
+          echo "expected_sha=$expected_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout exact validation SHA
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ steps.gate.outputs.expected_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          clean: true
+
+      - name: Install pinned dependency parser
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 -m pip install --disable-pip-version-check spacy==3.8.2
+          wheel="$RUNNER_TEMP/en_core_web_sm-3.8.0-py3-none-any.whl"
+          curl -fsSL --retry 3 --retry-delay 2             "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"             -o "$wheel"
+          [[ "$(sha256sum "$wheel" | awk '{print $1}')" ==             "1932429db727d4bff3deed6b34cfc05df17794f4a52eeb26cf8928f7c1a0fb85" ]]
+          python3 -m pip install --disable-pip-version-check "$wheel"
+
+      - name: Download exact external validation data
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          data_dir="$RUNNER_TEMP/predicate-argument-validation-data"
+          mkdir -m 0700 "$data_dir"
+
+          curl -fsSL --retry 3 --retry-delay 2             "https://raw.githubusercontent.com/oriern/SPARK/71465f36c83cfef589facadcb014e70c0bad1b3b/derived_datasets/proposition_clustering.json"             -o "$data_dir/spark-proposition-clustering.json"
+
+          curl -fsSL --retry 3 --retry-delay 2             "https://raw.githubusercontent.com/rubenkruiper/FOBIE/b49683fa2dced187d305abadcc36c55e2fb16c44/data/dev_set.json"             -o "$data_dir/fobie-dev.json"
+
+          curl -fsSL --retry 3 --retry-delay 2             "https://raw.githubusercontent.com/rubenkruiper/FOBIE/b49683fa2dced187d305abadcc36c55e2fb16c44/data/test_set.json"             -o "$data_dir/fobie-test.json"
+
+          echo "PREDICATE_ARGUMENT_DATA_DIR=$data_dir" >> "$GITHUB_ENV"
+
+      - name: Run frozen external-only predicate argument validation
+        env:
+          EXPECTED_SHA: ${{ steps.gate.outputs.expected_sha }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$(git rev-parse HEAD)" == "$EXPECTED_SHA" ]]
+          output="$RUNNER_TEMP/local-extract-predicate-argument-certificate-validation.json"
+
+          PYTHONPATH="$PWD/src" python3             benchmarks/document_intelligence/run_local_extract_predicate_argument_validation.py             --design benchmarks/document_intelligence/local-extract-predicate-argument-evidence-unit-design.v1.json             --spark-json "$PREDICATE_ARGUMENT_DATA_DIR/spark-proposition-clustering.json"             --fobie-dev-json "$PREDICATE_ARGUMENT_DATA_DIR/fobie-dev.json"             --fobie-test-json "$PREDICATE_ARGUMENT_DATA_DIR/fobie-test.json"             --output "$output"
+
+          python3 - "$output" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          report = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert report["parser"]["package"] == "spacy"
+          assert report["parser"]["package_version"] == "3.8.2"
+          assert report["parser"]["model"] == "en_core_web_sm"
+          assert report["parser"]["model_version"] == "3.8.0"
+          assert report["parser"]["model_wheel_sha256"] == (
+              "1932429db727d4bff3deed6b34cfc05df17794f4a52eeb26cf8928f7c1a0fb85"
+          )
+          assert report["extract_teacher_accessed"] is False
+          assert report["extract_scientific_state_materialized"] is False
+          assert report["predicate_argument_certificate_used_in_extract"] is False
+          assert report["production_routing_changed"] is False
+          assert report["model_or_parser_training_executed"] is False
+          assert report["wave7b_started"] is False
+          assert report["semantic_control_or_ontology_in_extract"] is False
+          assert report["rdf_or_ontology_output_emitted"] is False
+          assert report["predicate_argument_certificate_decision"] in {
+              "PREDICATE_ARGUMENT_CERTIFICATE_VALIDATED",
+              "PREDICATE_ARGUMENT_CERTIFICATE_PARTIAL",
+              "PREDICATE_ARGUMENT_CERTIFICATE_REJECTED",
+          }
+          print("PREDICATE_ARGUMENT_EXTERNAL_VALIDATION_RECEIPT=PASS")
+          PY
+
+      - name: Upload validation report only
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: local-extract-predicate-argument-certificate-validation
+          path: ${{ runner.temp }}/local-extract-predicate-argument-certificate-validation.json
+          if-no-files-found: error
+          retention-days: 14
