@@ -1,0 +1,168 @@
+name: Local EXTRACT Composed Acquisition Preservation
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+
+jobs:
+  composed-acquisition-preservation:
+    if: >-
+      github.event.issue.pull_request &&
+      github.actor == 'adamtrott78' &&
+      github.event.comment.author_association == 'OWNER' &&
+      startsWith(github.event.comment.body, '/local-extract-composed-acquisition-preservation ')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Verify exact PR head
+        id: gate
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          expected_sha="$(printf '%s\n' "$COMMENT_BODY" | awk '{print $2}')"
+          [[ "$expected_sha" =~ ^[0-9a-f]{40}$ ]] || exit 20
+          pr_json="$(
+            curl -fsSL \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$REPOSITORY/pulls/$PR_NUMBER"
+          )"
+          actual_sha="$(
+            python3 -c 'import json,sys; print(json.load(sys.stdin)["head"]["sha"])' \
+              <<<"$pr_json"
+          )"
+          [[ "$actual_sha" == "$expected_sha" ]]
+          echo "expected_sha=$expected_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout exact candidate SHA
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ steps.gate.outputs.expected_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          clean: true
+
+      - name: Recover exact facet planner scientific report
+        env:
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          artifact_zip="$RUNNER_TEMP/facet-planner-result.zip"
+          artifact_dir="$RUNNER_TEMP/facet-planner-result"
+          curl -fsSL \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPOSITORY/actions/artifacts/12577280307/zip" \
+            -o "$artifact_zip"
+          [[ "$(sha256sum "$artifact_zip" | awk '{print $1}')" == \
+            "90c2f198bcd7eb8ab51fc1f74a662e46c857ed68bf0f31c557f1d843d2996878" ]]
+          mkdir -m 0700 "$artifact_dir"
+          unzip -q "$artifact_zip" -d "$artifact_dir"
+          report="$artifact_dir/local-extract-facet-reserved-evidence-planner.json"
+          [[ "$(sha256sum "$report" | awk '{print $1}')" == \
+            "7ec84d93dde8814442a6079704773c48739e90fa3d8246514713129288998901" ]]
+          echo "FACET_REPORT=$report" >> "$GITHUB_ENV"
+
+      - name: Install exact PDF reader ephemerally
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          wheel="$RUNNER_TEMP/pypdf-6.21.1-py3-none-any.whl"
+          pydeps="$RUNNER_TEMP/composed-acquisition-preservation-pydeps"
+          url="https://files.pythonhosted.org/packages/85/e6/24c944e473c34e818cf1b98085796fcd780465ecfe17663f2bf8fee1958b/pypdf-6.21.1-py3-none-any.whl"
+          expected="553e2d42f5bb3bb2a785a7d3de8ef90bb7df74b5413eff5a7b4388007ea9254b"
+          curl -fsSL --retry 3 --retry-delay 2 "$url" -o "$wheel"
+          [[ "$(sha256sum "$wheel" | awk '{print $1}')" == "$expected" ]]
+          mkdir -m 0700 "$pydeps"
+          python3 -m zipfile -e "$wheel" "$pydeps"
+
+      - name: Run frozen composed acquisition preservation diagnostic
+        env:
+          EXPECTED_SHA: ${{ steps.gate.outputs.expected_sha }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$(git rev-parse HEAD)" == "$EXPECTED_SHA" ]]
+          pydeps="$RUNNER_TEMP/composed-acquisition-preservation-pydeps"
+          output="$RUNNER_TEMP/local-extract-composed-acquisition-preservation.json"
+          workdir="$RUNNER_TEMP/local-extract-composed-acquisition-preservation-work"
+
+          PYTHONPATH="$PWD/src:$pydeps" python3 \
+            benchmarks/document_intelligence/run_local_extract_composed_acquisition_preservation.py \
+            --fixture benchmarks/document_intelligence/local-extract-wave1-corpus.v1.json \
+            --support-fixture benchmarks/document_intelligence/local-extract-teacher-atom-support.v1.json \
+            --design benchmarks/document_intelligence/local-extract-composed-acquisition-preservation-design.v1.json \
+            --facet-report "$FACET_REPORT" \
+            --alignment-result benchmarks/document_intelligence/local-extract-proposition-alignment-preservation-result.v1.json \
+            --output "$output" \
+            --workdir "$workdir"
+
+          python3 - "$output" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          report = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert report["architecture_id"] == "COMPOSED_ACQUISITION_PRESERVATION_V1"
+          assert report["composition_operator_id"] == (
+              "EXACT_PLANNER28_THEN_VALIDATED_ALIGNMENT_SWAP_V1"
+          )
+          assert report["fixed_budget"] == 28
+          assert report["facet_report_sha256"] == (
+              "7ec84d93dde8814442a6079704773c48739e90fa3d8246514713129288998901"
+          )
+          assert report["qwen_model_calls"] == 0
+          assert report["external_model_downloads"] == 0
+          assert report["scientific_state_materialized"] is False
+          assert report["production_routing_changed"] is False
+          assert report["qwen_verify_changed"] is False
+          assert report["wave7b_started"] is False
+          assert report["semantic_control_or_ontology_output"] is False
+          assert report["rejected_mechanism_rescue"] is False
+          assert report["hard_safety"]["teacher_used_for_selection"] is False
+          assert report["hard_safety"]["teacher_used_only_for_posthoc_evaluation"] is True
+          assert report["hard_safety"]["new_query_generation_false"] is True
+          assert report["hard_safety"]["new_model_or_ranker_false"] is True
+          assert report["hard_safety"]["new_alignment_search_false"] is True
+          assert report["hard_safety"]["threshold_calibration_false"] is True
+          assert report["composition_decision"] in {
+              "COMPOSED_COMPLEMENTARITY_ROBUST",
+              "COMPOSED_COMPLEMENTARITY_FRAGILE",
+              "COMPOSITION_PARTIAL",
+              "COMPOSITION_NEGATIVE",
+              "COMPOSITION_COLLISION",
+              "INVALID_EXECUTION",
+          }
+          if report["composition_decision"] != "INVALID_EXECUTION":
+              assert report["hard_safety"]["facet_report_identity_pass"] is True
+              assert report["hard_safety"]["planner28_exact_count_pass"] is True
+              assert report["hard_safety"]["composed_exact_count_pass"] is True
+              assert report["hard_safety"]["all_selected_propositions_exactly_locatable"] is True
+              assert report["hard_safety"]["exact_alignment_swap_preconditions_pass"] is True
+          print("COMPOSED_ACQUISITION_PRESERVATION_RECEIPT=PASS")
+          PY
+
+      - name: Upload composed acquisition preservation report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: local-extract-composed-acquisition-preservation
+          path: ${{ runner.temp }}/local-extract-composed-acquisition-preservation.json
+          if-no-files-found: error
+          retention-days: 14
