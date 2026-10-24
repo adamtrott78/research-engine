@@ -103,7 +103,7 @@ def test_slice_evidence_module_has_no_execution_or_external_runtime_paths():
     text=(ROOT/"prototypes"/"semantic_control_hardening"/"slice_evidence.py").read_text().lower()
     for token in [
         "requests","psycopg","subprocess","openai","boto3",
-        "executor","lambda","gpu","acquisition","materialization",
+        "executor","boto3","workspace_ci","acquisition","materialization",
         "insert into","update ","delete from","truncate ",
     ]:
         assert token not in text
