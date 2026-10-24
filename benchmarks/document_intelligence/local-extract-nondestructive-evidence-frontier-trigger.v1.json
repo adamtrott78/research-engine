@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "operation": "NONDESTRUCTIVE_EVIDENCE_FRONTIER_DIAGNOSTIC_V1_TRIGGER",
+  "implementation_checkpoint": "e8b3814d3b0d02e45bbc2d1c8914fdeb04a1bf8e",
+  "design_checkpoint": "3f433e3e31fd8fac3edf86f65cef9628635652cf",
+  "design_blob": "ac3f4087b141fdfb59a15ca03d46001482d717d7",
+  "scientific_trigger_issued": false,
+  "purpose": "Inert same-repository exact-SHA anchor for one authorized execution of the reviewed frozen NONDESTRUCTIVE_EVIDENCE_FRONTIER_DIAGNOSTIC_V1.",
+  "constraints": [
+    "Do not merge this trigger PR.",
+    "Do not issue the scientific trigger before the owning workspace-control implementation/execution-authority checkpoint is merged.",
+    "Issue at most one scientific trigger from this exact head.",
+    "Do not change selector, diagnostic budgets 24/26/28/32, branch ordering, teacher-blind selection, evaluator, verdict interpretation, or stopping rule.",
+    "Do not add model/generation calls, semantic pairwise scores, threshold calibration, or post-result tuning.",
+    "Do not change production EXTRACT/VERIFY, start Wave 7B, or emit semantic-control/RDF/ontology output."
+  ]
+}
