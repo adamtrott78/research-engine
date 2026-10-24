@@ -1,0 +1,214 @@
+name: Lambda CI Local EXTRACT AMR Graph Certificate
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  local-extract-amr-graph:
+    name: "${{ format('wc-admission-v1|workload=model-eval-local-extract-amr-graph-v1|pr={0}|request={1}', github.event.issue.number, github.event.comment.body) }}"
+    if: >-
+      github.event.issue.pull_request &&
+      github.actor == 'adamtrott78' &&
+      github.event.comment.author_association == 'OWNER' &&
+      startsWith(github.event.comment.body, '/lambda-ci-local-extract-amr-graph ')
+    runs-on: lambda-research-engine-gpu
+    timeout-minutes: 90
+
+    steps:
+      - name: Verify exact PR head
+        id: gate
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          expected_sha="$(printf '%s\n' "$COMMENT_BODY" | awk '{print $2}')"
+          [[ "$expected_sha" =~ ^[0-9a-f]{40}$ ]] || exit 20
+          [[ "$(printf '%s\n' "$COMMENT_BODY" | awk '{print NF}')" == "2" ]] || exit 21
+          pr_json="$(
+            curl -fsSL               -H "Accept: application/vnd.github+json"               -H "Authorization: Bearer $GH_TOKEN"               -H "X-GitHub-Api-Version: 2022-11-28"               "https://api.github.com/repos/$REPOSITORY/pulls/$PR_NUMBER"
+          )"
+          actual_sha="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["head"]["sha"])' <<<"$pr_json")"
+          [[ "$actual_sha" == "$expected_sha" ]]
+          echo "expected_sha=$expected_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Prove existing GPU runtime binding
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          expected_runtime="/srv/workspace-ci/research-engine/expanded-runtimes/qwen35-vllm-cu129-image-native-sampler-v3/f67ff9a26690c55930232c915e59e826e3cca2dd89012de9e35a852032b38f74"
+          [[ "$(id -un)" == "ci-research-engine" ]]
+          [[ "${P5_EXPANDED_RUNTIME:-}" == "$expected_runtime" ]]
+          [[ "${P5_EXPANDED_RUNTIME_PYTHON:-}" == "$expected_runtime/bin/python" ]]
+          [[ -x "$P5_EXPANDED_RUNTIME_PYTHON" ]]
+          [[ -n "${CUDA_VISIBLE_DEVICES:-}" ]]
+          [[ ! -r /var/lib/workspace-ci/controller/github-token ]]
+          [[ ! -r /home/atrott ]]
+          "$P5_EXPANDED_RUNTIME_PYTHON" - <<'PY'
+          import torch
+          assert torch.cuda.is_available()
+          assert torch.cuda.device_count() >= 1
+          print("AMR_GPU_RUNTIME_PREFLIGHT=PASS")
+          PY
+
+      - name: Checkout exact candidate SHA
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ steps.gate.outputs.expected_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          clean: true
+
+      - name: Acquire pinned AMR sources and external corpora
+        id: acquire
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          root="$RUNNER_TEMP/amr-graph-validation"
+          amrlib_src="$root/amrlib"
+          smatch_src="$root/smatch"
+          mkdir -m 0700 -p "$root"
+
+          git init -q "$amrlib_src"
+          git -C "$amrlib_src" remote add origin https://github.com/bjascob/amrlib.git
+          git -C "$amrlib_src" fetch -q --depth=1 origin 38b29706ea982da5a5b081a04f00c93cc6cc1e9c
+          git -C "$amrlib_src" checkout -q --detach FETCH_HEAD
+          [[ "$(git -C "$amrlib_src" rev-parse HEAD)" == "38b29706ea982da5a5b081a04f00c93cc6cc1e9c" ]]
+          [[ "$(git -C "$amrlib_src" rev-parse HEAD:amrlib/models/parse_xfm/inference.py)" == "eee40d776dbcaa028a9a82d325565b48937b9cfb" ]]
+          [[ "$(git -C "$amrlib_src" rev-parse HEAD:amrlib/evaluate/smatch_enhanced.py)" == "0e040f26632ee16751240dbff28fa8d62c101ebb" ]]
+
+          git init -q "$smatch_src"
+          git -C "$smatch_src" remote add origin https://github.com/snowblink14/smatch.git
+          git -C "$smatch_src" fetch -q --depth=1 origin 1bcd49cc8535056aa1c941763580fc5a572f1204
+          git -C "$smatch_src" checkout -q --detach FETCH_HEAD
+          [[ "$(git -C "$smatch_src" rev-parse HEAD)" == "1bcd49cc8535056aa1c941763580fc5a572f1204" ]]
+
+          spark="$root/proposition_clustering.json"
+          bio="$root/amr-release-test-bio.txt"
+          curl -fsSL --retry 3 --retry-delay 2             "https://raw.githubusercontent.com/oriern/SPARK/71465f36c83cfef589facadcb014e70c0bad1b3b/derived_datasets/proposition_clustering.json"             -o "$spark"
+          curl -fsSL --retry 3 --retry-delay 2             "https://raw.githubusercontent.com/flipz357/AMR-World/802923ae6c7376a9930e93ce52cd6b9faf43c411/data/reference_amrs/amr-release-test-bio.txt"             -o "$bio"
+
+          python3 - "$spark" "$bio" <<'PY'
+          import hashlib, pathlib, sys
+          expected = {
+              pathlib.Path(sys.argv[1]): "eb0b82a6f53b0a7d2a6288f0dff4ed2e72abf4ad",
+              pathlib.Path(sys.argv[2]): "7e816eb86104fa6c07d8eff9f9c6abc84bae2898",
+          }
+          for path, want in expected.items():
+              data = path.read_bytes()
+              got = hashlib.sha1(
+                  f"blob {len(data)}\0".encode() + data
+              ).hexdigest()
+              assert got == want, (path, got, want)
+          print("AMR_EXTERNAL_BLOB_PREFLIGHT=PASS")
+          PY
+
+          {
+            echo "root=$root"
+            echo "amrlib_src=$amrlib_src"
+            echo "smatch_src=$smatch_src"
+            echo "spark=$spark"
+            echo "bio=$bio"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Acquire pinned parser model and tokenizer
+        id: model
+        env:
+          HF_HUB_DISABLE_TELEMETRY: "1"
+          DO_NOT_TRACK: "1"
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          root="${{ steps.acquire.outputs.root }}"
+          tarball="$root/model_parse_xfm_bart_large-v0_1_0.tar.gz"
+          model_extract="$root/model"
+          tokenizer_dir="$root/bart-large-tokenizer"
+          pydeps="$root/pydeps"
+          mkdir -m 0700 -p "$model_extract" "$tokenizer_dir" "$pydeps"
+
+          curl -fL --retry 3 --retry-delay 3             "https://github.com/bjascob/amrlib-models/releases/download/parse_xfm_bart_large-v0_1_0/model_parse_xfm_bart_large-v0_1_0.tar.gz"             -o "$tarball"
+          [[ "$(stat -c '%s' "$tarball")" == "1506463657" ]]
+          [[ "$(md5sum "$tarball" | awk '{print $1}')" == "5633e5e6f8a4f4398ce64abab71c473a" ]]
+
+          tar -xzf "$tarball" -C "$model_extract"
+          model_dir="$(dirname "$(find "$model_extract" -type f -name amrlib_meta.json -print -quit)")"
+          [[ -n "$model_dir" && -f "$model_dir/amrlib_meta.json" ]]
+
+          "$P5_EXPANDED_RUNTIME_PYTHON" -m pip install             --disable-pip-version-check --no-input --no-deps             --target "$pydeps"             "penman==1.2.2" "Unidecode==1.3.8"
+
+          PYTHONPATH="$pydeps" "$P5_EXPANDED_RUNTIME_PYTHON" - "$tokenizer_dir" <<'PY'
+          import pathlib, sys
+          from huggingface_hub import snapshot_download
+
+          revision = "22fa33834dccc11df99c4fc5fcc96c67f806dfdb"
+          target = pathlib.Path(sys.argv[1])
+          snapshot_download(
+              repo_id="facebook/bart-large",
+              revision=revision,
+              local_dir=str(target),
+              allow_patterns=["*.json", "*.txt"],
+          )
+          required = {"vocab.json", "merges.txt"}
+          present = {p.name for p in target.iterdir() if p.is_file()}
+          assert required <= present, present
+          print("AMR_TOKENIZER_ACQUISITION=PASS")
+          PY
+
+          {
+            echo "tarball=$tarball"
+            echo "model_dir=$model_dir"
+            echo "tokenizer_dir=$tokenizer_dir"
+            echo "pydeps=$pydeps"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Run frozen AMR graph certificate validation
+        env:
+          EXPECTED_SHA: ${{ steps.gate.outputs.expected_sha }}
+          TOKENIZERS_PARALLELISM: "false"
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+          HF_HUB_DISABLE_TELEMETRY: "1"
+          DO_NOT_TRACK: "1"
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$(git rev-parse HEAD)" == "$EXPECTED_SHA" ]]
+          output="$RUNNER_TEMP/local-extract-amr-graph-certificate-report.json"
+          PYTHONPATH="$PWD/src:${{ steps.acquire.outputs.smatch_src }}:${{ steps.acquire.outputs.amrlib_src }}:${{ steps.model.outputs.pydeps }}"             "$P5_EXPANDED_RUNTIME_PYTHON"             benchmarks/document_intelligence/run_local_extract_amr_graph_validation.py             --design benchmarks/document_intelligence/local-extract-amr-graph-certificate-design.v1.json             --model-dir "${{ steps.model.outputs.model_dir }}"             --parser-tarball "${{ steps.model.outputs.tarball }}"             --tokenizer-dir "${{ steps.model.outputs.tokenizer_dir }}"             --amrlib-source "${{ steps.acquire.outputs.amrlib_src }}"             --smatch-source "${{ steps.acquire.outputs.smatch_src }}"             --spark-json "${{ steps.acquire.outputs.spark }}"             --bio-amr "${{ steps.acquire.outputs.bio }}"             --output "$output"
+
+          "$P5_EXPANDED_RUNTIME_PYTHON" - "$output" <<'PY'
+          import json, pathlib, sys
+          report = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert report["amr_graph_certificate_decision"] in {
+              "AMR_GRAPH_CERTIFICATE_VALIDATED",
+              "AMR_GRAPH_CERTIFICATE_PARTIAL",
+              "AMR_GRAPH_CERTIFICATE_REJECTED",
+          }
+          assert report["operation"] == "AMR_GRAPH_REDUNDANCY_CERTIFICATE_VALIDATION_V1"
+          assert report["bio_amr"]["example_count"] == 500
+          assert report["parser"]["device"] == "cuda:0"
+          assert report["parser"]["batch_size"] == 8
+          assert report["parser"]["num_beams"] == 4
+          assert report["parser"]["deterministic_seed"] == 1729
+          assert report["smatch"]["iteration_num"] == 5
+          assert not any(report["hard_safety"].values())
+          print("AMR_GRAPH_CERTIFICATE_RECEIPT=PASS")
+          PY
+
+      - name: Upload AMR graph certificate evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: local-extract-amr-graph-certificate
+          path: ${{ runner.temp }}/local-extract-amr-graph-certificate-report.json
+          if-no-files-found: error
+          retention-days: 14
