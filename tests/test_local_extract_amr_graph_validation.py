@@ -103,6 +103,7 @@ def test_spark_invalid_graph_scores_zero() -> None:
     rows = [
         {
             "pair_id": "p1",
+            "topic": "topic",
             "left": "left",
             "right": "right",
             "label": 1,
@@ -120,6 +121,30 @@ def test_spark_invalid_graph_scores_zero() -> None:
     assert scores == [0.0]
     assert diagnostics["invalid_graph_text_count"] == 1
     assert diagnostics["valid_graph_text_fraction"] == 0.5
+
+
+def test_spark_seed_uses_canonical_topic_and_text_identity() -> None:
+    fake = _FakeSmatch()
+    rows = [
+        {
+            "pair_id": "already-hashed-id",
+            "topic": "topic",
+            "left": "left",
+            "right": "right",
+            "label": 1,
+        }
+    ]
+    score_spark_pairs(
+        rows,
+        graph_by_text={
+            "left": "(a / alpha)",
+            "right": "(b / beta)",
+        },
+        smatch_module=fake,
+    )
+    assert fake.random.seed_calls == [
+        pair_seed("topic\\0left\\0right")
+    ]
 
 
 def test_validation_verdict_obeys_frozen_gate_logic() -> None:
