@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "operation": "SALIENCE_STRATIFIED_RESERVATION_DIAGNOSTIC_V1_TRIGGER",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "implementation_sha": "d058ee664c3b8be765258abc626dc667589618b7",
+  "scientific_trigger_issued": false,
+  "constraints": [
+    "Inert exact-SHA anchor only.",
+    "Remain unmerged through durable scientific result checkpoint.",
+    "Exactly one scientific trigger may be issued after workspace-control authority is durable.",
+    "No design, selector, schedule, depth, budget, teacher-use, model, or production changes."
+  ]
+}
