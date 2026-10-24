@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "decision_id": "local-extract-nli-certificate-validation-result-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "design_merge_sha": "3bec68414a929ea82dc70e9c6729250bb566663f",
+  "validation_implementation_merge_sha": "f0699337f7ee5111d3945a0068a927c272b36f75",
+  "timeout_checkpoint_merge_sha": "21c436018c9f91787d03c22174f4c4dce61ae3cb",
+  "timeout_recovery_merge_sha": "315d73e3c2f17902d228430f8b13ece002d487c9",
+  "isolated_recovery_head_sha": "443a03ce84508859f18129aee3cad1bd703e295c",
+  "replacement_trigger": {
+    "pr": 217,
+    "head_sha": "1381e08e3b8eedb75c17f6d120b172a2c601babe",
+    "comment_id": 6378101069,
+    "replacement_run_count": 1
+  },
+  "prior_timeout_run": {
+    "run_id": 40044921709,
+    "conclusion": "cancelled",
+    "scientific_gate_consumed": false,
+    "result": "WORKFLOW_TIMEOUT_NO_REPORT"
+  },
+  "scientific_run": {
+    "run_id": 40049443488,
+    "job_id": 120738574807,
+    "conclusion": "success",
+    "artifact_id": 12544077187,
+    "artifact_zip_sha256": "4282b5434de94e84ce62b71b976ac377dac92e0c7a17f230366de03682ba29cb",
+    "report_sha256": "2e07359b7ca23c563134904f3dd1f8bb04116cfb1b4490f4855b6f28adba9333",
+    "scientific_gate_consumed": true
+  },
+  "model": {
+    "repository": "tasksource/deberta-small-long-nli",
+    "revision": "9d545db675cfad1e7d9c5c56351e19b4868dce65",
+    "model_safetensors_sha256": "9af30c7ad7235a2054300bc2df1d98149ad6008dd1ef06212be8b32b5d1b3458",
+    "config_sha256": "02840a52954942f5e6d487b2562a466ecb41a0f388e91678c061e1825f3772ee",
+    "max_length": 1680,
+    "batch_size": 16
+  },
+  "external_data": {
+    "spark": {
+      "repository": "oriern/SPARK",
+      "repository_commit": "71465f36c83cfef589facadcb014e70c0bad1b3b",
+      "git_blob_sha": "eb0b82a6f53b0a7d2a6288f0dff4ed2e72abf4ad",
+      "file_sha256": "32f97ed2de9294a53e086af6290412da6d25471f39770964666d53f3cf1cfb8d"
+    },
+    "scinli": {
+      "repository": "tasksource/scinli",
+      "revision": "f4fe43c66f7f501e0e1ec7191a8a4cb1dce31390",
+      "file": "test.csv",
+      "file_sha256": "961ebc4a55e4eef2bc22b615ec1d46f06299a3a6a9d9a614cb2120913ab8f2f3"
+    }
+  },
+  "nli_certificate_decision": "NLI_CERTIFICATE_REJECTED",
+  "rationale": "No safe SPARK calibration threshold exists.",
+  "spark": {
+    "calibration_topic_count": 49,
+    "heldout_topic_count": 49,
+    "calibration_positive_count": 589,
+    "calibration_negative_count": 2945,
+    "heldout_positive_count": 883,
+    "heldout_negative_count": 4415,
+    "selected_threshold": null,
+    "calibration_metrics": null,
+    "heldout_metrics": {
+      "threshold": null,
+      "tp": 0,
+      "fp": 0,
+      "tn": 4415,
+      "fn": 883,
+      "precision": 0,
+      "recall": 0,
+      "false_positive_rate": 0
+    },
+    "interpretation": "No threshold in the frozen grid 0.50..0.99 met the predeclared SPARK calibration requirement precision>=0.95 and recall>=0.05. Therefore the redundancy certificate fails before held-out SPARK threshold evaluation."
+  },
+  "scinli": {
+    "row_count": 4000,
+    "positive_count": 1000,
+    "negative_count": 3000,
+    "roc_auc": 0.7668863333333333,
+    "average_precision": 0.5087510151949022,
+    "gate_roc_auc_min": 0.65,
+    "gate_average_precision_min": 0.4,
+    "gate_pass": true,
+    "interpretation": "The model shows usable scientific-text entailment discrimination, but this does not override the failed redundancy-safety calibration."
+  },
+  "hard_safety": {
+    "extract_teacher_accessed": false,
+    "extract_scientific_state_materialized": false,
+    "learned_certificate_used_in_extract": false,
+    "production_routing_changed": false,
+    "model_training_executed": false,
+    "semantic_control_or_ontology_in_extract": false,
+    "rdf_or_ontology_output_emitted": false
+  },
+  "scientific_disposition": {
+    "primary": "LEARNED_MUTUAL_ENTAILMENT_CERTIFICATE_REJECTED",
+    "findings": [
+      "Scientific NLI discrimination is not sufficient evidence that mutual entailment is a safe proposition-redundancy certificate.",
+      "Under the frozen SPARK calibration split and threshold grid, no mutual-entailment threshold simultaneously achieved >=0.95 precision and >=0.05 recall.",
+      "Because calibration failed before threshold selection, no learned mutual-entailment certificate may enter EXTRACT and no EXTRACT teacher result may be used to tune it.",
+      "The accepted lexical DYNAMIC_SAME_PAGE_ALIGNMENT_SWAP_V1 / ALIGNMENT_AUGMENT_FEASIBLE checkpoint remains the strongest validated preservation result.",
+      "Per the frozen semantic-generalization design boundary, the next evidence-first family should reassess semantic-tuple coverage or another materially different evidence-unit representation rather than retuning NLI."
+    ],
+    "next_architecture_boundary": "OPEN_SEMANTIC_TUPLE_OR_DIFFERENT_EVIDENCE_UNIT_DESIGN",
+    "learned_nli_extract_experiment_authorized": false,
+    "nli_threshold_tuning_authorized": false,
+    "nli_rerun_authorized": false,
+    "semantic_tuple_research_authorized": true,
+    "production_promotion_authorized": false,
+    "wave7b_authorized": false
+  },
+  "coordination_boundary": {
+    "sibling_task": "workspace-semantic-control-hardening-v1",
+    "authority_over_extract": false,
+    "extract_integration_signal_ready": false,
+    "reason": "No genuinely accepted new EXTRACT architecture/output checkpoint was produced; the accepted lexical preservation checkpoint remains scientific evidence only and the learned NLI generalization was rejected."
+  }
+}
