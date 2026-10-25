@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "marker_id": "exact-provenance-binding-validation-trigger-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "scientific_effect": "NONE",
+  "purpose": "Hold an open same-repository pull request whose exact head SHA can be bound by the reviewer-mandated CPU implementation/contract validation before any scientific trigger.",
+  "implementation_main_sha": "15c2f98feb980f18fac255b74c6a39db5da4ef30",
+  "reviewed_design_blob": "09603c4d65114c75ad3e112a357ee45da384f63e",
+  "validation_workflow_blob": "948127a890245bff6856fa550b7fcdc6c949398c",
+  "model_execution_allowed": false,
+  "scientific_trigger_issued": false,
+  "sealed_acceptance_benchmark_accessed": false,
+  "acceptance_candidate_frozen": false
+}
