@@ -1,0 +1,491 @@
+{
+  "schema_version": 1,
+  "design_id": "local-extract-obligation-validity-microbenchmark-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "status": "FROZEN_DESIGN_ONLY",
+  "scientific_question": "Can a teacher-blind, source-grounded obligation-validity mechanism distinguish explicit fulfillment from merely related evidence and force fail-closed local incompleteness when fulfillment is unresolved, before any evidence-set admission logic is changed?",
+  "architecture_lineage": {
+    "preserved_positive_parent": "LOCAL_FIRST_ALLOCATION_FALLBACK_HYBRID_V1",
+    "parent_result": "HYBRID_COMPLEMENTARITY_REALIZED",
+    "downstream_sequence": [
+      "retrieve correct evidence with the preserved local-first allocation-fallback hybrid",
+      "validate whether evidence explicitly fulfills the atomic obligation",
+      "admit validated evidence without destroying established support",
+      "declare local complete only when validated obligation coverage is sufficient"
+    ],
+    "this_design_scope": "validate the second step only, plus a no-mutation completeness simulation; preservation-aware admission remains deferred until validity premise succeeds"
+  },
+  "mechanism_family_comparison": [
+    {
+      "id": "A_PROOF_CARRYING_EXPLICIT_SLOT_GROUNDING",
+      "mechanism": "For each atomic obligation, require a structured proof binding every mandatory semantic slot/relation to verbatim source spans. Missing, contradictory, or ambiguous required slots => not fulfilled.",
+      "strengths": [
+        "directly targets observed false-positive failure modes",
+        "auditable exact source spans",
+        "no similarity score or threshold",
+        "supports fail-closed semantics"
+      ],
+      "risks": [
+        "slot schema brittleness",
+        "local model may mislabel stage/relations even when spans are exact"
+      ],
+      "role_in_diagnostic": "PRIMARY_ARM"
+    },
+    {
+      "id": "B_HOLISTIC_TRI_STATE_SOURCE_GROUNDED_VERIFIER",
+      "mechanism": "Judge the complete obligation/evidence bundle as SUPPORTED_EXPLICITLY, NOT_SUPPORTED, or INSUFFICIENT_OR_AMBIGUOUS with exact source quotations; the third state fails closed.",
+      "strengths": [
+        "less schema brittle",
+        "tests whether source-grounded holistic judgment can resolve semantics without scores"
+      ],
+      "risks": [
+        "less decomposable/auditable than slot grounding",
+        "could still overgeneralize topical relatedness"
+      ],
+      "role_in_diagnostic": "COMPARATOR_ARM"
+    },
+    {
+      "id": "C_PRESERVATION_AWARE_EVIDENCE_SET_ADMISSION",
+      "mechanism": "Separate validity from set admission; prohibit a replacement if it destroys an already-established obligation unless independent support remains.",
+      "strengths": [
+        "directly addresses the observed e6.c repair -> e3.b regression"
+      ],
+      "risks": [
+        "cannot be interpreted cleanly until validity decisions themselves are trustworthy"
+      ],
+      "role_in_diagnostic": "DEFERRED_NEXT_PHASE_IF_VALIDITY_PASSES"
+    },
+    {
+      "id": "D_VALIDATED_OBLIGATION_COMPLETENESS_CONTROLLER",
+      "mechanism": "Derive completeness only from validated obligation states; unsupported or ambiguous obligations force fallback.",
+      "strengths": [
+        "directly blocks unsafe false-complete behavior",
+        "simple deterministic policy once validity states are trustworthy"
+      ],
+      "risks": [
+        "inherits verifier errors"
+      ],
+      "role_in_diagnostic": "SIMULATED_WITH_NO_EVIDENCE_SET_MUTATION"
+    }
+  ],
+  "selected_discriminating_experiment": {
+    "id": "OBLIGATION_VALIDITY_PRECISION_MICROBENCH_V1",
+    "scope": "single legacy development teacher paper arxiv:2403.04036 only; no sealed acceptance papers; no evidence-set mutation",
+    "purpose": "Discriminate source-grounded obligation-validity mechanisms before integrating any preservation-aware admission logic.",
+    "hypotheses": {
+      "H1_SLOT_GROUNDING_CAN_REJECT_RELATED_BUT_NONFULFILLING_EVIDENCE": "Proof-carrying slot grounding rejects the three known lexical false positives while accepting the four known true residual supports.",
+      "H2_TRI_STATE_VERIFIER_CAN_FAIL_CLOSED": "A holistic source-grounded tri-state verifier rejects or abstains on the same false positives and accepts the true supports without a similarity threshold.",
+      "H3_COMPLETENESS_CAN_BE_DERIVED_SAFELY_FROM_VALIDATED_STATES": "When the three false-positive cases are unresolved, local_complete remains false and fallback_required remains true; with four validated true supports, local_complete may become true.",
+      "H4_VALIDITY_CAN_BE_TESTED_WITHOUT_REOPENING_RETRIEVAL": "All focal evidence is already present at rank1/2 under frozen answer-free queries, so this diagnostic requires no new retrieval, query generation, reranking, or model scaling."
+    },
+    "frozen_inputs": {
+      "teacher_paper": "arxiv:2403.04036",
+      "teacher_pdf_sha256": "1097bdfabf6cd1b1e26ff9df58b6bb810e4bf74fbd3890ad20e86316d2ee0c91",
+      "corpus_fixture_path": "benchmarks/document_intelligence/local-extract-wave1-corpus.v1.json",
+      "corpus_fixture_blob": "c472329d560df3d7dccab2bf49bf94d6805faef2",
+      "prior_atomic_design_blob": "90bfc59edd2e91f03de3a1ec02fe51c4dd1085b9",
+      "prior_atomic_run_id": 40159749698,
+      "prior_atomic_artifact_id": 12586355512,
+      "prior_atomic_artifact_zip_sha256": "13609640e0d96c3d8f07c33bcdefcbf077bf1ca36304ffb0f5eaa58ac6173778",
+      "prior_atomic_report_sha256": "a5dd3dfe02118f3cc0aad03557e63a1fa0a38e3024aa16e9affc5c2ed331e605",
+      "prior_supported_atom_count": 9,
+      "frozen_control_atom_count": 7,
+      "local_model": {
+        "model_id": "qwen3.5-4b",
+        "repository": "Qwen/Qwen3.5-4B",
+        "revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+        "model_object_id": "6e28e2560c07e7dabab92c55dbfb6941d5a7a75c8068bdc7a98115d8dc62072c",
+        "runtime_tree_sha256": "b0cbb4efbe8673bdb421bad8036d29864bffe0687a9a654bbd95f54544659e63",
+        "runtime_manifest_sha256": "f67ff9a26690c55930232c915e59e826e3cca2dd89012de9e35a852032b38f74",
+        "temperature": 0,
+        "top_p": 1,
+        "seed": 0
+      },
+      "baseline_rescue_run_id": 40143476764,
+      "baseline_rescue_artifact_id": 12580076512,
+      "baseline_rescue_artifact_zip_sha256": "696fa26d942767844ddb24119ae98a503febac02da4e8f3dcbf2eeb021304b89",
+      "baseline_rescue_report_sha256": "e1a2f61f16cae4e957b10a9c24b475d5cb481afa9381084de65a1cd9c6568d23"
+    },
+    "runtime_obligations": [
+      {
+        "id": "method_training_label_source",
+        "generic_information_need": "During supervised classifier training, what labels are used and what data/domain supplies those labels?",
+        "mandatory_slots": [
+          "activity_stage",
+          "classifier_training_relation",
+          "device_label_use",
+          "label_source_domain"
+        ],
+        "accepted_stage_roles": [
+          "CLASSIFIER_TRAINING"
+        ],
+        "fail_closed_conditions": [
+          "pre-training without labels is not classifier training with labels",
+          "labels without explicit source-domain provenance are insufficient"
+        ],
+        "required_relation": "The classifier-training action explicitly uses device labels and those labels are explicitly sourced from the source domain."
+      },
+      {
+        "id": "method_testing_domain",
+        "generic_information_need": "During testing or evaluation, what data/domain is the trained classifier applied to?",
+        "mandatory_slots": [
+          "activity_stage",
+          "trained_classifier_or_model",
+          "application_or_prediction_relation",
+          "test_data_domain"
+        ],
+        "accepted_stage_roles": [
+          "TESTING",
+          "EVALUATION"
+        ],
+        "fail_closed_conditions": [
+          "generic discussion of domain shift is insufficient",
+          "mentioning source/target distributions without an explicit test/application relation is insufficient"
+        ],
+        "required_relation": "The trained classifier/model is explicitly applied to or predicts on target-domain data during testing/evaluation."
+      },
+      {
+        "id": "acquisition_receiver_sampling_configuration",
+        "generic_information_need": "What receiver or acquisition hardware captures the observations, and what sampling configuration or rate is used?",
+        "mandatory_slots": [
+          "acquisition_action",
+          "receiver_identity",
+          "sampling_rate"
+        ],
+        "accepted_stage_roles": [
+          "ACQUISITION"
+        ],
+        "fail_closed_conditions": [
+          "generic sampled RF signals are insufficient",
+          "receiver identity and sampling rate must both be explicit in the same evidence bundle"
+        ],
+        "required_relation": "The same acquisition event explicitly identifies the receiver/hardware and the sampling rate."
+      },
+      {
+        "id": "persistent_failure_followup",
+        "generic_information_need": "What persistent or repeated failure mode is observed, and what investigation or follow-up do the authors identify?",
+        "mandatory_slots": [
+          "failure_mode",
+          "persistence_or_repetition",
+          "follow_up_or_investigation"
+        ],
+        "accepted_stage_roles": [
+          "FAILURE_ANALYSIS",
+          "RESULT_INTERPRETATION"
+        ],
+        "fail_closed_conditions": [
+          "future-work language without an explicit persistent failure is insufficient",
+          "failure mention without explicit follow-up is insufficient"
+        ],
+        "required_relation": "The evidence explicitly links a persistent/repeated failure mode to an identified investigation or follow-up."
+      }
+    ],
+    "case_set": {
+      "runtime_label_visibility": "Expected labels, teacher atom IDs, legacy anchors, case IDs, and case role TRUE/FALSE are evaluation-only and may not appear in model prompts or deterministic runtime decision rules.",
+      "known_false_positive_cases": [
+        {
+          "case_id": "FP_TRAINING_PRETRAINING_NO_LABELS",
+          "obligation_id": "method_training_label_source",
+          "evidence_proposition_ids": [
+            "page:p2:s33"
+          ],
+          "expected_posthoc": "NOT_SUPPORTED"
+        },
+        {
+          "case_id": "FP_TESTING_GENERIC_DOMAIN_SHIFT",
+          "obligation_id": "method_testing_domain",
+          "evidence_proposition_ids": [
+            "page:p1:s10"
+          ],
+          "expected_posthoc": "NOT_SUPPORTED"
+        },
+        {
+          "case_id": "FP_ACQUISITION_GENERIC_RF_SAMPLING",
+          "obligation_id": "acquisition_receiver_sampling_configuration",
+          "evidence_proposition_ids": [
+            "page:p1:s09"
+          ],
+          "expected_posthoc": "NOT_SUPPORTED"
+        }
+      ],
+      "known_true_support_cases": [
+        {
+          "case_id": "TP_TRAINING_SOURCE_LABELS",
+          "obligation_id": "method_training_label_source",
+          "evidence_proposition_ids": [
+            "page:p4:s15"
+          ],
+          "expected_posthoc": "SUPPORTED_EXPLICITLY"
+        },
+        {
+          "case_id": "TP_TESTING_TARGET_DOMAIN",
+          "obligation_id": "method_testing_domain",
+          "evidence_proposition_ids": [
+            "page:p2:s35"
+          ],
+          "expected_posthoc": "SUPPORTED_EXPLICITLY"
+        },
+        {
+          "case_id": "TP_ACQUISITION_B210_45MSPS",
+          "obligation_id": "acquisition_receiver_sampling_configuration",
+          "evidence_proposition_ids": [
+            "page:p2:s17"
+          ],
+          "expected_posthoc": "SUPPORTED_EXPLICITLY"
+        },
+        {
+          "case_id": "TP_PERSISTENT_FAILURE_FOLLOWUP",
+          "obligation_id": "persistent_failure_followup",
+          "evidence_proposition_ids": [
+            "page:p6:s09"
+          ],
+          "expected_posthoc": "SUPPORTED_EXPLICITLY"
+        }
+      ],
+      "shallow_exposure_evidence": {
+        "method_training_label_source": [
+          {
+            "proposition_id": "page:p4:s15",
+            "rank": 1
+          },
+          {
+            "proposition_id": "page:p2:s34",
+            "rank": 2
+          }
+        ],
+        "method_testing_domain": [
+          {
+            "proposition_id": "page:p2:s35",
+            "rank": 1
+          }
+        ],
+        "acquisition_receiver_sampling_configuration": [
+          {
+            "proposition_id": "page:p2:s17",
+            "rank": 1
+          }
+        ],
+        "persistent_failure_followup": [
+          {
+            "proposition_id": "page:p6:s09",
+            "rank": 1
+          }
+        ]
+      }
+    },
+    "arm_a_proof_carrying_slot_grounding": {
+      "id": "PROOF_CARRYING_EXPLICIT_SLOT_GROUNDING_V1",
+      "input": [
+        "one frozen generic obligation",
+        "one frozen evidence bundle containing only authoritative proposition text and provenance"
+      ],
+      "model_output_contract": {
+        "stage_role": [
+          "PRETRAINING",
+          "CLASSIFIER_TRAINING",
+          "TESTING",
+          "EVALUATION",
+          "ACQUISITION",
+          "FAILURE_ANALYSIS",
+          "RESULT_INTERPRETATION",
+          "OTHER",
+          "AMBIGUOUS"
+        ],
+        "slot_bindings": "one record per mandatory slot with verbatim_span or null plus short relation statement",
+        "candidate_status": [
+          "SUPPORTED_EXPLICITLY",
+          "NOT_SUPPORTED",
+          "INSUFFICIENT_OR_AMBIGUOUS"
+        ],
+        "slot_binding_record": {
+          "slot_id": "must exactly equal one frozen mandatory slot id",
+          "verbatim_span": "exact source substring or null"
+        },
+        "relation_check": [
+          "EXPLICITLY_LINKED",
+          "NOT_LINKED",
+          "AMBIGUOUS"
+        ]
+      },
+      "deterministic_guard": [
+        "Every non-null verbatim_span must be an exact substring of the supplied authoritative evidence text after newline normalization only.",
+        "SUPPORTED_EXPLICITLY is permitted only when every mandatory slot is bound by an exact source span, stage_role is accepted for the obligation, and relation_check=EXPLICITLY_LINKED for that obligation's frozen required_relation.",
+        "Any missing slot, contradictory stage/role, non-exact quote, or ambiguous relation forces INSUFFICIENT_OR_AMBIGUOUS or NOT_SUPPORTED.",
+        "No numeric similarity score, learned threshold, teacher atom, expected page, case label, or legacy exact anchor participates in the decision."
+      ],
+      "model_calls_per_case": 1
+    },
+    "arm_b_holistic_tri_state_verifier": {
+      "id": "HOLISTIC_TRI_STATE_SOURCE_GROUNDED_VERIFIER_V1",
+      "input": [
+        "one frozen generic obligation",
+        "one frozen evidence bundle containing only authoritative proposition text and provenance"
+      ],
+      "model_output_contract": {
+        "candidate_status": [
+          "SUPPORTED_EXPLICITLY",
+          "NOT_SUPPORTED",
+          "INSUFFICIENT_OR_AMBIGUOUS"
+        ],
+        "supporting_quotes": "zero or more verbatim source substrings",
+        "rationale_constraint": "brief explanation limited to whether the supplied evidence explicitly establishes the obligation",
+        "missing_aspects": "list of unresolved obligation aspects; must be empty for SUPPORTED_EXPLICITLY"
+      },
+      "deterministic_guard": [
+        "SUPPORTED_EXPLICITLY requires at least one exact supporting quote from the supplied evidence and an empty missing_aspects list.",
+        "Any non-exact quote, explicit uncertainty, missing required aspect, or ambiguity forces INSUFFICIENT_OR_AMBIGUOUS or NOT_SUPPORTED.",
+        "No probability, similarity score, threshold, teacher atom, expected page, case label, or legacy exact anchor participates in the decision."
+      ],
+      "model_calls_per_case": 1
+    },
+    "completeness_simulation": {
+      "id": "VALIDATED_OBLIGATION_COMPLETENESS_SIM_V1",
+      "evidence_set_mutation": false,
+      "baseline_false_complete_state": {
+        "method_training_label_source": [
+          "page:p2:s33"
+        ],
+        "method_testing_domain": [
+          "page:p1:s10"
+        ],
+        "acquisition_receiver_sampling_configuration": [
+          "page:p1:s09"
+        ],
+        "persistent_failure_followup": [
+          "page:p6:s09"
+        ],
+        "required_outcome_for_any_safe_arm": {
+          "local_complete": false,
+          "fallback_required": true
+        }
+      },
+      "true_support_state": {
+        "method_training_label_source": [
+          "page:p4:s15"
+        ],
+        "method_testing_domain": [
+          "page:p2:s35"
+        ],
+        "acquisition_receiver_sampling_configuration": [
+          "page:p2:s17"
+        ],
+        "persistent_failure_followup": [
+          "page:p6:s09"
+        ],
+        "required_outcome_for_any_passing_arm": {
+          "local_complete": true,
+          "fallback_required": false
+        }
+      },
+      "rule": "local_complete=true iff every CORE obligation status is SUPPORTED_EXPLICITLY. NOT_SUPPORTED and INSUFFICIENT_OR_AMBIGUOUS both force fallback."
+    },
+    "preservation_controls": {
+      "selection_mutation_allowed": false,
+      "starting_evidence_set": "exact LOCAL_RESCUE_CONFIRMED 28-proposition development set used by the prior atomic diagnostic before its repair swap",
+      "required_invariants": [
+        "selected proposition identity and count remain unchanged during this diagnostic",
+        "prior supported atom retention remains 9/9 because admission is disabled",
+        "frozen control retention remains 7/7 because admission is disabled",
+        "page:p2:s16 remains present; no e6.c admission swap is attempted"
+      ],
+      "purpose": "Ensure the validity premise is measured independently of preservation-aware admission. A later design may mutate the evidence set only if this diagnostic succeeds.",
+      "baseline_identity": {
+        "run_id": 40143476764,
+        "artifact_id": 12580076512,
+        "artifact_zip_sha256": "696fa26d942767844ddb24119ae98a503febac02da4e8f3dcbf2eeb021304b89",
+        "report_sha256": "e1a2f61f16cae4e957b10a9c24b475d5cb481afa9381084de65a1cd9c6568d23"
+      },
+      "prior_supported_atom_ids": [
+        "e1.a",
+        "e2.a",
+        "e2.b",
+        "e3.a",
+        "e3.b",
+        "e4.a",
+        "e4.b",
+        "e6.a",
+        "e6.b"
+      ],
+      "frozen_control_atom_ids": [
+        "e2.a",
+        "e2.b",
+        "e3.a",
+        "e3.b",
+        "e4.a",
+        "e4.b",
+        "e6.b"
+      ]
+    },
+    "metrics": [
+      "per-arm false-positive rejection count out of 3",
+      "per-arm true-support acceptance count out of 4",
+      "per-arm unsafe-supported count on known false-positive cases",
+      "per-arm abstention count",
+      "exact-quote grounding pass/fail",
+      "slot completeness and stage-role correctness for Arm A",
+      "baseline false-complete state local_complete/fallback_required",
+      "true-support state local_complete/fallback_required",
+      "evidence-set identity invariant",
+      "prior supported retention 9/9 and frozen control retention 7/7",
+      "model call count, latency, peak VRAM/RAM where available"
+    ],
+    "scientific_gate": {
+      "per_arm_precision_first_pass": [
+        "reject_or_abstain_all_3_known_false_positives",
+        "accept_all_4_known_true_supports",
+        "zero_non_exact_supporting_quotes",
+        "baseline_false_complete_state_returns_incomplete_and_fallback",
+        "true_support_state_returns_complete_without_fallback",
+        "evidence_set_identity_unchanged",
+        "prior_supported_retention_9_of_9",
+        "frozen_control_retention_7_of_7"
+      ],
+      "no_partial_promotion": "A 2/3 false-positive rejection or 3/4 true-support acceptance is not a PASS. Precision-first safety requires every frozen focal case."
+    },
+    "outcome_partition": {
+      "INVALID_EXECUTION": "Any source identity, model identity, case-set secrecy, no-mutation boundary, exact-quote guard, or deterministic gate is violated.",
+      "BOTH_VALIDITY_MECHANISMS_CONFIRMED": "Both Arm A and Arm B satisfy every precision-first gate.",
+      "SLOT_GROUNDING_ONLY_CONFIRMED": "Arm A satisfies every precision-first gate and Arm B does not.",
+      "HOLISTIC_VERIFIER_ONLY_CONFIRMED": "Arm B satisfies every precision-first gate and Arm A does not.",
+      "VALIDITY_PREMISE_REJECTED": "Neither arm satisfies every precision-first gate."
+    },
+    "outcome_precedence": [
+      "INVALID_EXECUTION",
+      "BOTH_VALIDITY_MECHANISMS_CONFIRMED",
+      "SLOT_GROUNDING_ONLY_CONFIRMED",
+      "HOLISTIC_VERIFIER_ONLY_CONFIRMED",
+      "VALIDITY_PREMISE_REJECTED"
+    ],
+    "stopping_rule": "Exactly one valid frozen microbenchmark execution after independent design review. Stop on the first valid result. No prompt, slot schema, case set, model, decoding, verdict rule, quote guard, or completeness rule tuning after the result; no valid-result rerun."
+  },
+  "frozen_scientific_boundaries": {
+    "development_only": true,
+    "retrieval_changed": false,
+    "retrieval_depth_changed": false,
+    "query_generation_changed": false,
+    "reranker_changed": false,
+    "larger_model_introduced": false,
+    "evidence_set_mutation_allowed": false,
+    "preservation_aware_admission_implemented": false,
+    "rejected_pairwise_score_certificate_family_reopened": false,
+    "nli_certificate_reopened": false,
+    "predicate_argument_certificate_reopened": false,
+    "amr_graph_certificate_reopened": false,
+    "teacher_labels_visible_to_runtime": false,
+    "sealed_acceptance_benchmark_accessed": false,
+    "acceptance_candidate_frozen": false,
+    "production_routing_changed": false,
+    "qwen_verify_changed": false,
+    "wave7b_started": false,
+    "semantic_control_or_ontology_output": false
+  },
+  "interpretation_authority": {
+    "on_BOTH_VALIDITY_MECHANISMS_CONFIRMED": "Authorize a new reviewed preservation-aware admission design. Prefer the proof-carrying slot arm as the default candidate because it exposes auditable slot-level failure evidence; keep the holistic verifier as a bounded fallback/comparator. No acceptance freeze.",
+    "on_SLOT_GROUNDING_ONLY_CONFIRMED": "Authorize a new reviewed preservation-aware admission design using proof-carrying slot grounding as the validity gate. No acceptance freeze.",
+    "on_HOLISTIC_VERIFIER_ONLY_CONFIRMED": "Authorize a new reviewed preservation-aware admission design using the tri-state source-grounded verifier, with explicit abstention/fallback preserved. No acceptance freeze.",
+    "on_VALIDITY_PREMISE_REJECTED": "Do not integrate admission. Return to evidence-validity mechanism research; retrieval/ranker/model scaling remains unsupported by this result unless new evidence independently changes that premise.",
+    "acceptance_freeze_authority": "NONE",
+    "implementation_authority_before_review": "NONE"
+  },
+  "review_requirement": "Independent pre-implementation review of this exact design blob is mandatory. No implementation or scientific trigger before NO_BLOCKING_FINDING."
+}
