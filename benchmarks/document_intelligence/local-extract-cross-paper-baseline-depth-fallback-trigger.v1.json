@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "operation": "TIER1_BASELINE_DEPTH_FALLBACK_DIAGNOSTIC_V1_TRIGGER",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "implementation_sha": "5ab76baaa7f3be491780fc66f1d83104f70ef341",
+  "scientific_trigger_issued": false,
+  "constraints": [
+    "This PR is an inert exact-SHA trigger anchor only.",
+    "Do not merge this PR before the scientific result is durably checkpointed.",
+    "Exactly one /local-extract-cross-paper-baseline-depth-fallback <exact-head-sha> trigger may be issued after workspace-control authority is durable.",
+    "Do not alter the frozen top3 primary baseline, ranks4-12 same-tier fallback, tier1 roles, accepted-order traversal, budget28, corpus, invariants, metrics, verdict table, or stopping rule.",
+    "No recovery-arm execution, new query/model/semantic score, production EXTRACT/VERIFY change, Wave7B, or semantic-control/RDF/ontology output."
+  ]
+}
