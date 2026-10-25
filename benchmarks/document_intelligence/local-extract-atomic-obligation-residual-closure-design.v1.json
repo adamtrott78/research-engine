@@ -39,7 +39,14 @@
         "e1.c",
         "e3.c",
         "e6.c"
-      ]
+      ],
+      "corpus_fixture_path": "benchmarks/document_intelligence/local-extract-wave1-corpus.v1.json",
+      "corpus_fixture_blob": "c472329d560df3d7dccab2bf49bf94d6805faef2",
+      "teacher_pdf_sha256": "1097bdfabf6cd1b1e26ff9df58b6bb810e4bf74fbd3890ad20e86316d2ee0c91",
+      "teacher_pdf_total_pages": 6,
+      "baseline_rescue_artifact_zip_sha256": "696fa26d942767844ddb24119ae98a503febac02da4e8f3dcbf2eeb021304b89",
+      "automatic_intents_artifact_zip_sha256": "cd02b842ad44bbadab7aad661ff424cc6108f8047d260df5d0064fba2b4f35fb",
+      "automatic_generated_intents_sha256": "a5a970725c1f16a694633416ad9fbd98e58418c267891ac83b7783d8af218ebd"
     },
     "runtime_obligations": [
       {
@@ -138,7 +145,16 @@
       "deterministic_tie_break": [
         "bm25_rank_asc",
         "proposition_id_asc"
-      ]
+      ],
+      "normalization_and_witness_matching": {
+        "unicode_normalization": "NFKD",
+        "ascii_conversion": "encode ASCII with errors=ignore, decode ASCII",
+        "case_normalization": "lowercase",
+        "tokenization_regex": "[a-z0-9]+",
+        "witness_term_semantics": "Each witness string is a token prefix. A witness group is satisfied iff at least one normalized candidate token startswith at least one frozen prefix in that group. All groups for the obligation must be satisfied.",
+        "empty_or_unparseable_candidate": "ineligible",
+        "query_ranking_corpus_identity": "Use only propositions reconstructed from corpus_fixture_path at corpus_fixture_blob for teacher_paper whose acquired PDF sha256 equals teacher_pdf_sha256; fail closed on any identity mismatch."
+      }
     },
     "primary_budget28_selection": {
       "starting_set": "exact 28-proposition LOCAL_RESCUE_CONFIRMED selected set from run 40143476764",
@@ -165,7 +181,22 @@
         "latest original selected-set position",
         "proposition_id_desc"
       ],
-      "no_teacher_selection": true
+      "no_teacher_selection": true,
+      "protected_selection_origins": [
+        "salience_stratified_reservation",
+        "validated_alignment_swap",
+        "local_neighborhood_rescue"
+      ],
+      "evictable_selection_origins": [
+        "immutable_source_aware_core"
+      ],
+      "expected_starting_selection_origin_counts": {
+        "immutable_source_aware_core": 23,
+        "salience_stratified_reservation": 3,
+        "validated_alignment_swap": 1,
+        "local_neighborhood_rescue": 1
+      },
+      "unknown_selection_origin_action": "INVALID_EXECUTION"
     },
     "append_only_budget32_sensitivity": {
       "purpose": "Cause discrimination only; not a promotion candidate and not permission to increase the final architecture budget.",
@@ -248,7 +279,20 @@
       "SAFE_INCOMPLETENESS": "Completeness outcome is SAFE_INCOMPLETENESS_CONFIRMED with prior controls retained; mechanism root cause may independently be BUDGET_SELECTION_COLLISION or OBLIGATION_EXPOSURE_GAP.",
       "NONE": "Any invalid execution, preservation regression, unsafe false-complete, or other combination."
     },
-    "reporting_rule": "Always report mechanism_outcome and completeness_safety_outcome independently before deriving acceptance_boundary_evidence. Root-cause classification must never suppress or overwrite safe-incompleteness evidence."
+    "reporting_rule": "Compute mechanism_outcome using mechanism_outcome_precedence and completeness_safety_outcome using completeness_safety_outcome_precedence independently before deriving acceptance_boundary_evidence. Root-cause classification must never suppress or overwrite safe-incompleteness evidence.",
+    "mechanism_outcome_precedence": [
+      "INVALID_EXECUTION",
+      "PRESERVATION_REGRESSION",
+      "ATOMIC_RESIDUAL_CLOSURE_CONFIRMED",
+      "BUDGET_SELECTION_COLLISION",
+      "OBLIGATION_EXPOSURE_GAP"
+    ],
+    "completeness_safety_outcome_precedence": [
+      "INVALID_EXECUTION",
+      "UNSAFE_FALSE_COMPLETE",
+      "COMPLETE_WITH_CLOSURE",
+      "SAFE_INCOMPLETENESS_CONFIRMED"
+    ]
   },
   "frozen_scientific_boundaries": {
     "development_only": true,
@@ -270,5 +314,24 @@
     "on_PRESERVATION_REGRESSION": "Reject the proposed residual-closure selector as unsafe for existing supported evidence.",
     "on_UNSAFE_FALSE_COMPLETE": "Reject the completeness controller; acceptance freeze is blocked.",
     "acceptance_freeze_authority": "NONE"
+  },
+  "review_correction": {
+    "id": "atomic-obligation-residual-contract-correction-v1",
+    "source_review": "workspace-local-extract-independent-review-v1:atomic-obligation-residual-closure-design-review-v1:BLOCKING_FINDING",
+    "corrections": [
+      "Bind exact corpus fixture blob c472329d560df3d7dccab2bf49bf94d6805faef2 and teacher PDF sha256 1097bdfabf6cd1b1e26ff9df58b6bb810e4bf74fbd3890ad20e86316d2ee0c91.",
+      "Freeze NFKD -> ASCII(ignore) -> lowercase -> [a-z0-9]+ tokenization and token-prefix witness matching semantics.",
+      "Freeze exact protected selection_origin values salience_stratified_reservation, validated_alignment_swap, local_neighborhood_rescue; only immutable_source_aware_core is evictable, with expected starting counts 23/3/1/1 and unknown origins invalid.",
+      "Freeze mechanism and completeness within-axis precedence."
+    ],
+    "mechanism_family_changed": false,
+    "hypotheses_changed": false,
+    "core_obligations_changed": false,
+    "primary_budget_changed": false,
+    "diagnostic_budget32_changed": false,
+    "teacher_boundary_changed": false,
+    "source_fidelity_equivalence_sets_changed": false,
+    "implementation_started_before_correction": false,
+    "re_review_required": true
   }
 }
