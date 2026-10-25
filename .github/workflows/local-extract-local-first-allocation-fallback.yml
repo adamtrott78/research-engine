@@ -1,0 +1,147 @@
+name: Local EXTRACT Local-First Allocation Fallback Realization
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+
+jobs:
+  local-first-allocation-fallback-realization:
+    if: >-
+      github.event.issue.pull_request &&
+      github.actor == 'adamtrott78' &&
+      github.event.comment.author_association == 'OWNER' &&
+      startsWith(github.event.comment.body, '/local-extract-local-first-allocation-fallback ')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Verify exact PR head
+        id: gate
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          expected_sha="$(printf '%s\n' "$COMMENT_BODY" | awk '{print $2}')"
+          [[ "$expected_sha" =~ ^[0-9a-f]{40}$ ]] || exit 20
+          pr_json="$(
+            curl -fsSL \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$REPOSITORY/pulls/$PR_NUMBER"
+          )"
+          actual_sha="$(
+            python3 -c 'import json,sys; print(json.load(sys.stdin)["head"]["sha"])' \
+              <<<"$pr_json"
+          )"
+          [[ "$actual_sha" == "$expected_sha" ]]
+          echo "expected_sha=$expected_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout exact candidate SHA
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ steps.gate.outputs.expected_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          clean: true
+
+      - name: Recover exact corrected all-nine source report
+        env:
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          artifact_zip="$RUNNER_TEMP/corrected-all-nine.zip"
+          artifact_dir="$RUNNER_TEMP/corrected-all-nine"
+          curl -fsSL \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPOSITORY/actions/artifacts/12581733721/zip" \
+            -o "$artifact_zip"
+          [[ "$(sha256sum "$artifact_zip" | awk '{print $1}')" == \
+            "066bf732cece697fe241897ec90b83ebfb85c992d3c90eb44969cc2c7cdae3fc" ]]
+          mkdir -m 0700 "$artifact_dir"
+          unzip -q "$artifact_zip" -d "$artifact_dir"
+          report="$artifact_dir/local-extract-corrected-all-nine-recovery-comparison.json"
+          [[ "$(sha256sum "$report" | awk '{print $1}')" == \
+            "5f83398baba06cb2c96a51e9252ced763a760736e563a4994e7e4f09c60ff52e" ]]
+          echo "SOURCE_REPORT=$report" >> "$GITHUB_ENV"
+
+      - name: Run frozen local-first allocation-fallback realization
+        env:
+          EXPECTED_SHA: ${{ steps.gate.outputs.expected_sha }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$(git rev-parse HEAD)" == "$EXPECTED_SHA" ]]
+          output="$RUNNER_TEMP/local-extract-local-first-allocation-fallback-realization.json"
+
+          PYTHONPATH="$PWD/src" python3 \
+            benchmarks/document_intelligence/run_local_extract_local_first_allocation_fallback.py \
+            --design benchmarks/document_intelligence/local-extract-local-first-allocation-fallback-hybrid-design.v1.json \
+            --source-report "$SOURCE_REPORT" \
+            --output "$output"
+
+          python3 - "$output" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          report = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert report["architecture_id"] == "LOCAL_FIRST_ALLOCATION_FALLBACK_HYBRID_V1"
+          assert report["experiment_id"] == "LOCAL_FIRST_ALLOCATION_FALLBACK_REALIZATION_V1"
+          assert report["operator_id"] == "LOCAL_FIRST_ELIGIBILITY_FALLBACK_V1"
+          assert report["source_report_sha256"] == (
+              "5f83398baba06cb2c96a51e9252ced763a760736e563a4994e7e4f09c60ff52e"
+          )
+          assert report["qwen_model_calls"] == 0
+          assert report["external_model_downloads"] == 0
+          assert report["scientific_state_materialized"] is False
+          assert report["production_routing_changed"] is False
+          assert report["qwen_verify_changed"] is False
+          assert report["wave7b_started"] is False
+          assert report["semantic_control_or_ontology_output"] is False
+          assert report["sealed_acceptance_benchmark_accessed"] is False
+          assert report["acceptance_candidate_frozen"] is False
+          assert report["hybrid_realization_decision"] in {
+              "INVALID_EXECUTION",
+              "HYBRID_REGRESSION",
+              "HYBRID_COMPLEMENTARITY_REALIZED",
+              "HYBRID_COLLAPSES_TO_LOCAL",
+          }
+          if report["hybrid_realization_decision"] != "INVALID_EXECUTION":
+              hard = report["hard_safety"]
+              assert hard["source_report_sha256_pass"] is True
+              assert hard["source_counts_pass"] is True
+              assert hard["source_exact_totals_replayed_pass"] is True
+              assert hard["selection_trace_teacher_blind"] is True
+              assert hard["one_slot_budget_invariant_pass"] is True
+              assert hard["trace_case_counts_pass"] is True
+              assert hard["trace_cost_pass"] is True
+              assert hard["removed_proposition_used_for_selection"] is False
+              assert hard["exact_recovery_flags_used_for_selection"] is False
+              assert hard["historical_page_oracle_used_for_selection"] is False
+              assert hard["teacher_used_for_selection"] is False
+          print("LOCAL_FIRST_ALLOCATION_FALLBACK_REALIZATION_RECEIPT=PASS")
+          PY
+
+      - name: Upload local-first allocation-fallback realization report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: local-extract-local-first-allocation-fallback-realization
+          path: ${{ runner.temp }}/local-extract-local-first-allocation-fallback-realization.json
+          if-no-files-found: error
+          retention-days: 14
