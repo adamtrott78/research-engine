@@ -1,0 +1,204 @@
+name: Local EXTRACT Corrected All-Nine Recovery Comparison
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+
+jobs:
+  corrected-all-nine-recovery-comparison:
+    if: >-
+      github.event.issue.pull_request &&
+      github.actor == 'adamtrott78' &&
+      github.event.comment.author_association == 'OWNER' &&
+      startsWith(github.event.comment.body, '/local-extract-corrected-all-nine-recovery-comparison ')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Verify exact PR head
+        id: gate
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          expected_sha="$(printf '%s\n' "$COMMENT_BODY" | awk '{print $2}')"
+          [[ "$expected_sha" =~ ^[0-9a-f]{40}$ ]] || exit 20
+          pr_json="$(
+            curl -fsSL \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$REPOSITORY/pulls/$PR_NUMBER"
+          )"
+          actual_sha="$(
+            python3 -c 'import json,sys; print(json.load(sys.stdin)["head"]["sha"])' \
+              <<<"$pr_json"
+          )"
+          [[ "$actual_sha" == "$expected_sha" ]]
+          echo "expected_sha=$expected_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout exact candidate SHA
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ steps.gate.outputs.expected_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          clean: true
+
+      - name: Recover exact valid Wave 7A.3 generated intents
+        env:
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          artifact_zip="$RUNNER_TEMP/wave7a3-valid.zip"
+          artifact_dir="$RUNNER_TEMP/wave7a3-valid"
+          curl -fsSL \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPOSITORY/actions/artifacts/12533721500/zip" \
+            -o "$artifact_zip"
+          [[ "$(sha256sum "$artifact_zip" | awk '{print $1}')" == \
+            "cd02b842ad44bbadab7aad661ff424cc6108f8047d260df5d0064fba2b4f35fb" ]]
+          mkdir -m 0700 "$artifact_dir"
+          unzip -q "$artifact_zip" -d "$artifact_dir"
+          generated="$artifact_dir/local-extract-wave7a3-generated-intents.json"
+          [[ "$(sha256sum "$generated" | awk '{print $1}')" == \
+            "a5a970725c1f16a694633416ad9fbd98e58418c267891ac83b7783d8af218ebd" ]]
+          echo "GENERATED_INTENTS=$generated" >> "$GITHUB_ENV"
+
+      - name: Recover exact reviewed all-nine baseline
+        env:
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          artifact_zip="$RUNNER_TEMP/all-nine-baseline.zip"
+          artifact_dir="$RUNNER_TEMP/all-nine-baseline"
+          curl -fsSL \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPOSITORY/actions/artifacts/12582395555/zip" \
+            -o "$artifact_zip"
+          [[ "$(sha256sum "$artifact_zip" | awk '{print $1}')" == \
+            "e286a153c1c3f8173d080f15aa51e318e123d467b3d45ed1826807949b4006a5" ]]
+          mkdir -m 0700 "$artifact_dir"
+          unzip -q "$artifact_zip" -d "$artifact_dir"
+          report="$artifact_dir/local-extract-cross-paper-baseline-depth-fallback.json"
+          [[ "$(sha256sum "$report" | awk '{print $1}')" == \
+            "fd893f34870b8a52b899bbf2d8f495b7bc771a7573008d6fdf130db844a38d93" ]]
+          echo "ALL_NINE_BASELINE=$report" >> "$GITHUB_ENV"
+
+      - name: Install exact PDF reader ephemerally
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          wheel="$RUNNER_TEMP/pypdf-6.21.1-py3-none-any.whl"
+          pydeps="$RUNNER_TEMP/corrected-all-nine-recovery-pydeps"
+          url="https://files.pythonhosted.org/packages/85/e6/24c944e473c34e818cf1b98085796fcd780465ecfe17663f2bf8fee1958b/pypdf-6.21.1-py3-none-any.whl"
+          expected="553e2d42f5bb3bb2a785a7d3de8ef90bb7df74b5413eff5a7b4388007ea9254b"
+          curl -fsSL --retry 3 --retry-delay 2 "$url" -o "$wheel"
+          [[ "$(sha256sum "$wheel" | awk '{print $1}')" == "$expected" ]]
+          mkdir -m 0700 "$pydeps"
+          python3 -m zipfile -e "$wheel" "$pydeps"
+
+      - name: Run frozen corrected all-nine recovery comparison
+        env:
+          EXPECTED_SHA: ${{ steps.gate.outputs.expected_sha }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$(git rev-parse HEAD)" == "$EXPECTED_SHA" ]]
+          pydeps="$RUNNER_TEMP/corrected-all-nine-recovery-pydeps"
+          output="$RUNNER_TEMP/local-extract-corrected-all-nine-recovery-comparison.json"
+          workdir="$RUNNER_TEMP/local-extract-corrected-all-nine-recovery-work"
+
+          PYTHONPATH="$PWD/src:$pydeps" python3 \
+            benchmarks/document_intelligence/run_local_extract_corrected_all_nine_recovery_comparison.py \
+            --fixture benchmarks/document_intelligence/local-extract-wave1-corpus.v1.json \
+            --wave7a3-contract benchmarks/document_intelligence/local-extract-wave7a3-author-anchored-obligations.v1.json \
+            --design benchmarks/document_intelligence/local-extract-corrected-all-nine-recovery-comparison-design.v1.json \
+            --generated-intents "$GENERATED_INTENTS" \
+            --baseline-report "$ALL_NINE_BASELINE" \
+            --output "$output" \
+            --workdir "$workdir"
+
+          python3 - "$output" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          report = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert report["architecture_id"] == (
+              "CORRECTED_ALL_NINE_STRUCTURAL_RECOVERY_COMPARISON_V1"
+          )
+          assert report["experiment_id"] == (
+              "ALL_NINE_FIXED_BASELINE_RECOVERY_COMPARISON_V1"
+          )
+          assert report["paper_count"] == 9
+          assert report["generated_intents_sha256"] == (
+              "a5a970725c1f16a694633416ad9fbd98e58418c267891ac83b7783d8af218ebd"
+          )
+          assert report["all_nine_baseline_report_sha256"] == (
+              "fd893f34870b8a52b899bbf2d8f495b7bc771a7573008d6fdf130db844a38d93"
+          )
+          assert report["qwen_model_calls"] == 0
+          assert report["external_model_downloads"] == 0
+          assert report["scientific_state_materialized"] is False
+          assert report["production_routing_changed"] is False
+          assert report["qwen_verify_changed"] is False
+          assert report["wave7b_started"] is False
+          assert report["semantic_control_or_ontology_output"] is False
+          assert report["rejected_mechanism_rescue"] is False
+          assert report["cross_paper_recovery_decision"] in {
+              "INVALID_EXECUTION",
+              "COMPLEMENTARY_STRUCTURAL_RECOVERY",
+              "LOCAL_STRUCTURAL_ADVANTAGE",
+              "SURVIVING_ALLOCATION_ADVANTAGE",
+              "BOTH_STRUCTURALLY_WEAK",
+              "EQUIVALENT_STRUCTURAL_RECOVERY",
+          }
+          hard = report["hard_safety"]
+          assert hard["baseline_recomputation_for_selection"] is False
+          assert hard["teacher_used_for_selection"] is False
+          assert hard["teacher_used_for_stress_generation"] is False
+          assert hard["teacher_used_for_candidate_generation"] is False
+          assert hard["teacher_used_for_candidate_ranking"] is False
+          assert hard["historical_page_oracle_used_only_posthoc"] is True
+          assert hard["proposition_semantic_generalization_claim"] is False
+          assert hard["new_query_generation_false"] is True
+          assert hard["new_model_or_ranker_false"] is True
+          assert hard["recovery_arm_changed_false"] is True
+          if report["cross_paper_recovery_decision"] != "INVALID_EXECUTION":
+              assert report["valid_paper_count"] == 9
+              assert report["valid_stress_case_count"] == 36
+              assert hard["all_nine_baseline_report_identity_pass"] is True
+              assert hard["all_nine_baseline_expected_gate_pass"] is True
+              assert hard["all_nine_baselines_materialized"] is True
+              assert hard["all_baseline_propositions_locatable"] is True
+              assert hard["expected_stress_case_count_pass"] is True
+          print("CORRECTED_ALL_NINE_RECOVERY_COMPARISON_RECEIPT=PASS")
+          PY
+
+      - name: Upload corrected all-nine recovery comparison report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: local-extract-corrected-all-nine-recovery-comparison
+          path: ${{ runner.temp }}/local-extract-corrected-all-nine-recovery-comparison.json
+          if-no-files-found: error
+          retention-days: 14
