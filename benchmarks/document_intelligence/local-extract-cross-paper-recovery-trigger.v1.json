@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "operation": "LEAVE_ONE_RESERVATION_ORIGIN_OUT_COMPARISON_V1_TRIGGER",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "implementation_sha": "44fbf6107db2e554a5e276a1862c02c66ffd1ab9",
+  "scientific_trigger_issued": false,
+  "constraints": [
+    "This PR is an inert exact-SHA trigger anchor only.",
+    "Do not merge this PR before the scientific result is durably checkpointed.",
+    "Exactly one /local-extract-cross-paper-recovery-comparison <exact-head-sha> trigger may be issued after workspace-control authority is durable.",
+    "Do not alter the frozen nine-paper baseline, four origin-drop stresses per complete paper, radius1 arm, all-top12 allocation arm, rank-stratum definitions, budget28, page-oracle secondary role, verdict table, or stopping rule.",
+    "No new queries/models/semantic scores, production EXTRACT/VERIFY changes, Wave7B, or semantic-control/RDF/ontology output."
+  ]
+}
