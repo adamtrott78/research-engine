@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "operation": "LOCAL_FIRST_ALLOCATION_FALLBACK_REALIZATION_V1_TRIGGER",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "implementation_sha": "e1d7afd32aa73fed3326b5cc0c9af1324096226a",
+  "scientific_trigger_issued": false,
+  "constraints": [
+    "This PR is an inert exact-SHA trigger anchor only.",
+    "Do not merge this PR before the scientific result is durably checkpointed.",
+    "Exactly one /local-extract-local-first-allocation-fallback <exact-head-sha> trigger may be issued after workspace-control authority is durable.",
+    "Select the frozen local.chosen whenever non-null; invoke unchanged allocation fallback only when local.chosen is null; append at most one proposition at fixed budget28.",
+    "Do not use removed proposition identity, exact-recovery flags, teacher labels, historical evidence pages, semantic oracle data, cross-arm scores, thresholds, reranking, new queries, or extra slots to choose the action.",
+    "Do not inspect or use the sealed semantic acceptance benchmark and do not declare ACCEPTANCE_CANDIDATE_FROZEN.",
+    "No second valid scientific trigger or post-result tuning."
+  ]
+}
