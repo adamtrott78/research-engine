@@ -236,7 +236,10 @@
           "temperature": 0,
           "top_p": 1,
           "seed": 0,
-          "model_calls_per_case": 1
+          "model_calls_per_case": 1,
+          "max_output_tokens": 512,
+          "enable_thinking": false,
+          "prefix_caching": false
         }
       }
     },
@@ -269,7 +272,10 @@
           "temperature": 0,
           "top_p": 1,
           "seed": 0,
-          "model_calls_per_case": 1
+          "model_calls_per_case": 1,
+          "max_output_tokens": 512,
+          "enable_thinking": false,
+          "prefix_caching": false
         }
       }
     },
@@ -439,7 +445,29 @@
       ],
       "acceptance_freeze_authority": "NONE"
     },
-    "stopping_rule": "Exactly one valid frozen microbenchmark execution after independent design review. Stop on the first integrity-valid result. No prompt, visible-field, evidence-ID, parser, guard, pointer, completeness, model, decoding, case, or verdict tuning after the result. Ordinary bad verifier outputs do not authorize rerun."
+    "stopping_rule": "Exactly one valid frozen microbenchmark execution after independent design review. Stop on the first integrity-valid result. No prompt, visible-field, evidence-ID, parser, guard, pointer, completeness, model, decoding, case, or verdict tuning after the result. Ordinary bad verifier outputs do not authorize rerun.",
+    "shared_generation_runtime_contract": {
+      "implementation_lineage": "Reuse the already-validated vLLM/Qwen3.5-4B runtime envelope from OBLIGATION_VALIDITY_PRECISION_MICROBENCH_V1; these are execution settings, not tunable scientific variables.",
+      "tensor_parallel_size": 2,
+      "dtype": "bfloat16",
+      "max_model_len": 8192,
+      "max_num_seqs": 1,
+      "gpu_memory_utilization": 0.65,
+      "trust_remote_code": false,
+      "disable_log_stats": true,
+      "mm_processor_cache_gb": 0.25,
+      "enable_prefix_caching": false,
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "max_output_tokens": 512,
+      "temperature": 0,
+      "top_p": 1,
+      "seed": 0,
+      "model_calls_per_case": 1,
+      "total_model_calls": 14,
+      "post_review_tuning_allowed": false
+    }
   },
   "frozen_scientific_boundaries": {
     "development_only": true,
