@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "operation": "ATOMIC_OBLIGATION_RESIDUAL_CLOSURE_DIAGNOSTIC_V1_TRIGGER",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "implementation_sha": "1488b26a1fca63d56edd14c98bafdd55999799ad",
+  "design_blob": "90bfc59edd2e91f03de3a1ec02fe51c4dd1085b9",
+  "scientific_trigger_issued": false,
+  "constraints": [
+    "This PR is an inert exact-SHA trigger anchor only.",
+    "Do not merge this PR before the scientific result is durably checkpointed.",
+    "Exactly one /local-extract-atomic-obligation-residual-closure <exact-head-sha> trigger may be issued after workspace-control authority is durable.",
+    "Preserve exact primary budget28, diagnostic-only budget32, four answer-free CORE obligations, deterministic BM25 depth12, frozen token-prefix witness semantics, 23/3/1/1 starting origins, protected/evictable origin rules, original-position structural eviction, independent mechanism/completeness outcome axes, and stopping rule.",
+    "Teacher atoms, legacy anchors, expected pages, and source-fidelity equivalence sets are posthoc evaluation-only and must not influence runtime selection.",
+    "Do not inspect or use the sealed semantic acceptance benchmark and do not declare ACCEPTANCE_CANDIDATE_FROZEN.",
+    "No second valid scientific trigger or post-result tuning."
+  ]
+}
