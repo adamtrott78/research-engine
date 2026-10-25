@@ -1,0 +1,274 @@
+{
+  "schema_version": 1,
+  "design_id": "local-extract-atomic-obligation-residual-closure-design-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "status": "FROZEN_DESIGN_ONLY",
+  "selected_architecture": {
+    "id": "ATOMIC_OBLIGATION_COVERAGE_AND_COMPLETENESS_V1",
+    "purpose": "Test whether a teacher-blind explicit atomic scientific-obligation layer can close the known four-atom development residual at fixed primary evidence budget, or at minimum detect unresolved CORE obligations and fail closed to fallback."
+  },
+  "selected_discriminating_experiment": {
+    "id": "ATOMIC_OBLIGATION_RESIDUAL_CLOSURE_DIAGNOSTIC_V1",
+    "scope": "single legacy development teacher paper only; no acceptance papers",
+    "hypotheses": {
+      "H1_ATOMIC_OBLIGATION_COVERAGE_GAP": "The four residuals persist because automatic runtime obligations are too compound or incomplete; explicit generic lifecycle/failure obligations expose source support.",
+      "H2_FIXED_BUDGET_SELECTION_COLLISION": "The obligations are exposable, but fixed-budget integration loses needed evidence or preservation unless selection is reallocated.",
+      "H3_SAFE_INCOMPLETENESS_IS_POSSIBLE": "When a CORE obligation remains unsatisfied after selection, a teacher-blind completeness controller can detect that state and invoke fallback instead of claiming local completeness.",
+      "H4_LEGACY_ANCHOR_UNDERCOUNT": "Some source-faithful repeated/paraphrastic evidence is semantically sufficient even when the legacy exact-anchor evaluator marks the atom unsupported."
+    },
+    "frozen_inputs": {
+      "teacher_paper": "arxiv:2403.04036",
+      "teacher_atom_count": 13,
+      "audit_file": "workspace-control:architecture/extract-legacy-four-atom-residual-audit.v0.1.json",
+      "audit_blob": "75de54e56a810f6cf357fcfd393aac84e2052d53",
+      "teacher_oracle_file": "benchmarks/document_intelligence/local-extract-teacher-atom-support.v1.json",
+      "teacher_oracle_blob": "ed4aa8dad34db65af280f07de77c4b57df24a9fd",
+      "baseline_rescue_run_id": 40143476764,
+      "baseline_rescue_artifact_id": 12580076512,
+      "baseline_rescue_report_sha256": "e1a2f61f16cae4e957b10a9c24b475d5cb481afa9381084de65a1cd9c6568d23",
+      "automatic_intents_run_id": 40027366528,
+      "automatic_intents_artifact_id": 12533721500,
+      "automatic_intents_report_sha256": "a87c643b28b25f6581f0bf4dd356646e0bccd168a67ecbfaf58b662b4e0f8e35",
+      "exact_primary_budget": 28,
+      "diagnostic_append_only_budget": 32,
+      "per_obligation_bm25_depth": 12,
+      "expected_prior_supported_atom_count": 9,
+      "expected_frozen_control_count": 7,
+      "residual_atom_ids": [
+        "e1.b",
+        "e1.c",
+        "e3.c",
+        "e6.c"
+      ]
+    },
+    "runtime_obligations": [
+      {
+        "id": "method_training_label_source",
+        "core": true,
+        "generic_information_need": "During supervised classifier training, what labels are used and what data/domain supplies those labels?",
+        "bm25_query": "classifier training labels data domain source",
+        "witness_groups": [
+          [
+            "train",
+            "training",
+            "classifier"
+          ],
+          [
+            "label",
+            "labels"
+          ],
+          [
+            "source",
+            "domain"
+          ]
+        ]
+      },
+      {
+        "id": "method_testing_domain",
+        "core": true,
+        "generic_information_need": "During testing or evaluation, what data/domain is the trained classifier applied to?",
+        "bm25_query": "classifier testing evaluation data domain target",
+        "witness_groups": [
+          [
+            "test",
+            "testing",
+            "evaluation",
+            "applied"
+          ],
+          [
+            "target",
+            "domain",
+            "data"
+          ]
+        ]
+      },
+      {
+        "id": "acquisition_receiver_sampling_configuration",
+        "core": true,
+        "generic_information_need": "What receiver or acquisition hardware captures the observations, and what sampling configuration or rate is used?",
+        "bm25_query": "receiver acquisition hardware sampling rate samples",
+        "witness_groups": [
+          [
+            "receiver",
+            "hardware",
+            "radio",
+            "usrp",
+            "device"
+          ],
+          [
+            "sample",
+            "sampling",
+            "msps",
+            "rate"
+          ]
+        ],
+        "coupling_rule": "Prefer one proposition witnessing both hardware and sampling groups; otherwise the obligation remains incomplete in the primary one-proposition reservation."
+      },
+      {
+        "id": "persistent_failure_followup",
+        "core": true,
+        "generic_information_need": "What persistent or repeated failure mode is observed, and what investigation or follow-up do the authors identify?",
+        "bm25_query": "persistent consistent misclassification failure investigation further future",
+        "witness_groups": [
+          [
+            "misclass",
+            "failure",
+            "error",
+            "mistaken",
+            "consistent",
+            "persistent"
+          ],
+          [
+            "investigat",
+            "further",
+            "future",
+            "follow"
+          ]
+        ],
+        "coupling_rule": "Prefer one proposition witnessing both persistent failure and follow-up groups; otherwise the obligation remains incomplete in the primary one-proposition reservation."
+      }
+    ],
+    "runtime_candidate_generation": {
+      "corpus": "exact frozen proposition corpus for arxiv:2403.04036 from the already-reviewed development substrate",
+      "ranker": "unchanged deterministic BM25",
+      "depth_per_obligation": 12,
+      "model_calls": 0,
+      "new_model_downloads": 0,
+      "eligibility": "Candidate must satisfy at least one token from every frozen witness group for its obligation after lowercase ASCII normalization; no teacher atom, expected page, removed proposition, or source-fidelity equivalence set is visible here.",
+      "deterministic_tie_break": [
+        "bm25_rank_asc",
+        "proposition_id_asc"
+      ]
+    },
+    "primary_budget28_selection": {
+      "starting_set": "exact 28-proposition LOCAL_RESCUE_CONFIRMED selected set from run 40143476764",
+      "preserve_roles": [
+        "existing reservation-event selected propositions",
+        "existing alignment-preservation added proposition",
+        "existing local-rescue chosen proposition"
+      ],
+      "obligation_order": [
+        "method_training_label_source",
+        "method_testing_domain",
+        "acquisition_receiver_sampling_configuration",
+        "persistent_failure_followup"
+      ],
+      "operation": [
+        "Mark any obligation already witnessed by the frozen starting set as satisfied.",
+        "For each still-missing obligation in frozen order, choose its highest-ranked eligible BM25 witness not already selected.",
+        "If an addition is needed, evict exactly one unprotected selected proposition using the frozen structural-dispensability order.",
+        "Never exceed 28 selected propositions and never add more than one proposition for one obligation."
+      ],
+      "structural_dispensability_order": [
+        "fewest appearances across frozen pre-existing automatic intent top-12 rankings",
+        "worst best rank across those rankings",
+        "latest original selected-set position",
+        "proposition_id_desc"
+      ],
+      "no_teacher_selection": true
+    },
+    "append_only_budget32_sensitivity": {
+      "purpose": "Cause discrimination only; not a promotion candidate and not permission to increase the final architecture budget.",
+      "operation": "Append the same highest-ranked missing-obligation witnesses without eviction up to four propositions, maximum selected count 32.",
+      "interpretation": "If budget32 closes a residual that budget28 cannot, classify a fixed-budget selection collision rather than an exposure failure."
+    },
+    "completeness_controller": {
+      "id": "ATOMIC_CORE_OBLIGATION_COMPLETENESS_V1",
+      "teacher_blind": true,
+      "complete_iff": "Every frozen CORE runtime obligation has at least one selected eligible witness under its runtime witness groups.",
+      "incomplete_action": "LOCAL_INCOMPLETE_REQUIRE_FALLBACK",
+      "false_complete_definition": "Controller returns complete while posthoc source-fidelity evaluation shows one or more of the four mapped CORE residual facts absent.",
+      "runtime_does_not_see_posthoc_gold": true
+    },
+    "posthoc_evaluation_only": {
+      "legacy_exact_anchor_atoms": [
+        "e1.b",
+        "e1.c",
+        "e3.c",
+        "e6.c"
+      ],
+      "source_fidelity_equivalence_sets": {
+        "e1.b": [
+          "page:p2:s34",
+          "page:p4:s15"
+        ],
+        "e1.c": [
+          "page:p2:s35"
+        ],
+        "e3.c": [
+          "page:p2:s17"
+        ],
+        "e6.c": [
+          "page:p6:s15",
+          "page:p6:s09"
+        ]
+      },
+      "source_fidelity_sets_used_for_runtime_selection": false,
+      "prior_supported_atoms_must_be_retained": "all 9 atoms supported by the frozen LOCAL_RESCUE_CONFIRMED baseline, including all 7 frozen controls plus e1.a and e6.a",
+      "report_both": [
+        "legacy exact-anchor residual support count",
+        "source-fidelity residual support count",
+        "prior 9/9 retention count",
+        "frozen control 7/7 retention count"
+      ]
+    },
+    "metrics": [
+      "primary budget28 selected count",
+      "runtime CORE obligation witnesses satisfied out of 4",
+      "posthoc source-fidelity residual support out of 4",
+      "legacy exact-anchor residual support out of 4",
+      "prior supported atom retention out of 9",
+      "frozen control retention out of 7",
+      "number and identities of deterministic swaps",
+      "budget32 append-only source-fidelity residual support out of 4",
+      "completeness controller complete/incomplete decision",
+      "fallback-required boolean",
+      "legacy-anchor undercount atoms and supporting proposition IDs"
+    ],
+    "secondary_evaluator_outcome": {
+      "LEGACY_ANCHOR_UNDERCOUNT_CONFIRMED": "Source-fidelity support exceeds legacy exact-anchor support for at least one residual via only the predeclared equivalence sets.",
+      "NO_LEGACY_ANCHOR_UNDERCOUNT_OBSERVED": "Source-fidelity and legacy exact-anchor support counts are identical."
+    },
+    "stopping_rule": "Exactly one valid frozen diagnostic run. Stop on the first valid outcome; no post-result query, witness-group, obligation-order, eviction-order, budget, equivalence-set, or threshold tuning and no valid-result rerun.",
+    "mechanism_outcome_partition": {
+      "INVALID_EXECUTION": "Any frozen input identity, budget, ordering, teacher-blind boundary, or source-fidelity separation gate fails.",
+      "PRESERVATION_REGRESSION": "Primary budget28 loses any frozen control or any atom from the prior 9/9 supported set.",
+      "ATOMIC_RESIDUAL_CLOSURE_CONFIRMED": "Primary budget28 retains prior 9/9 and 7/7 controls and source-fidelity supports all four residual atoms.",
+      "BUDGET_SELECTION_COLLISION": "All four residuals are source-fidelity supported by append-only budget32, primary budget28 misses at least one, and no preservation regression occurred.",
+      "OBLIGATION_EXPOSURE_GAP": "At least one residual cannot be source-fidelity supported even by the frozen top-12 obligation candidates / append-only budget32 sensitivity."
+    },
+    "completeness_safety_outcome_partition": {
+      "INVALID_EXECUTION": "Any teacher-blind completeness boundary or frozen controller rule fails.",
+      "COMPLETE_WITH_CLOSURE": "All four runtime CORE obligations have selected eligible witnesses and posthoc source-fidelity supports all four residuals.",
+      "SAFE_INCOMPLETENESS_CONFIRMED": "At least one CORE obligation is unsatisfied or at least one source-fidelity residual remains absent, and the controller returns LOCAL_INCOMPLETE_REQUIRE_FALLBACK.",
+      "UNSAFE_FALSE_COMPLETE": "At least one source-fidelity residual remains absent but the controller returns complete."
+    },
+    "acceptance_boundary_evidence": {
+      "RESIDUAL_CLOSURE": "Mechanism outcome is ATOMIC_RESIDUAL_CLOSURE_CONFIRMED, completeness outcome is COMPLETE_WITH_CLOSURE, and no preservation regression exists.",
+      "SAFE_INCOMPLETENESS": "Completeness outcome is SAFE_INCOMPLETENESS_CONFIRMED with prior controls retained; mechanism root cause may independently be BUDGET_SELECTION_COLLISION or OBLIGATION_EXPOSURE_GAP.",
+      "NONE": "Any invalid execution, preservation regression, unsafe false-complete, or other combination."
+    },
+    "reporting_rule": "Always report mechanism_outcome and completeness_safety_outcome independently before deriving acceptance_boundary_evidence. Root-cause classification must never suppress or overwrite safe-incompleteness evidence."
+  },
+  "frozen_scientific_boundaries": {
+    "development_only": true,
+    "teacher_labels_used_for_runtime_selection": false,
+    "source_fidelity_equivalence_sets_used_for_runtime_selection": false,
+    "sealed_acceptance_benchmark_accessed": false,
+    "acceptance_candidate_frozen": false,
+    "production_routing_changed": false,
+    "qwen_verify_changed": false,
+    "wave7b_started": false,
+    "semantic_control_or_ontology_output": false,
+    "rejected_certificate_family_reopened": false
+  },
+  "interpretation_authority": {
+    "on_ATOMIC_RESIDUAL_CLOSURE_CONFIRMED": "Supports integrating this bounded atomic-obligation coverage mechanism into a later end-to-end development candidate. Does not by itself justify acceptance freeze or production promotion.",
+    "on_SAFE_INCOMPLETENESS_CONFIRMED": "Supports the safe-incompleteness branch of the pre-acceptance rule independently of whether the unresolved root cause is budget selection or obligation exposure; analogous missing CORE obligations force fallback rather than false local completion. Broader development validation is still required before acceptance freeze.",
+    "on_BUDGET_SELECTION_COLLISION": "Residual evidence is exposable but fixed-budget selection remains the mechanism bottleneck; next design may alter selection/allocation, not retriever/model family.",
+    "on_OBLIGATION_EXPOSURE_GAP": "The explicit obligation schema or witness logic is insufficient; revise obligation discovery/recognition rather than scaling rankers merely because 13/13 was not reached.",
+    "on_PRESERVATION_REGRESSION": "Reject the proposed residual-closure selector as unsafe for existing supported evidence.",
+    "on_UNSAFE_FALSE_COMPLETE": "Reject the completeness controller; acceptance freeze is blocked.",
+    "acceptance_freeze_authority": "NONE"
+  }
+}
