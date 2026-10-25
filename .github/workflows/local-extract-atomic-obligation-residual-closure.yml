@@ -1,0 +1,216 @@
+name: Local EXTRACT Atomic Obligation Residual Closure
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+
+jobs:
+  atomic-obligation-residual-closure:
+    if: >-
+      github.event.issue.pull_request &&
+      github.actor == 'adamtrott78' &&
+      github.event.comment.author_association == 'OWNER' &&
+      startsWith(github.event.comment.body, '/local-extract-atomic-obligation-residual-closure ')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Verify exact PR head
+        id: gate
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          expected_sha="$(printf '%s\n' "$COMMENT_BODY" | awk '{print $2}')"
+          [[ "$expected_sha" =~ ^[0-9a-f]{40}$ ]] || exit 20
+          pr_json="$(
+            curl -fsSL \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$REPOSITORY/pulls/$PR_NUMBER"
+          )"
+          actual_sha="$(
+            python3 -c 'import json,sys; print(json.load(sys.stdin)["head"]["sha"])' \
+              <<<"$pr_json"
+          )"
+          [[ "$actual_sha" == "$expected_sha" ]]
+          echo "expected_sha=$expected_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout exact candidate SHA
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ steps.gate.outputs.expected_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          clean: true
+
+      - name: Verify frozen repository inputs
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$(git hash-object benchmarks/document_intelligence/local-extract-atomic-obligation-residual-closure-design.v1.json)" == \
+            "90bfc59edd2e91f03de3a1ec02fe51c4dd1085b9" ]]
+          [[ "$(git hash-object benchmarks/document_intelligence/local-extract-wave1-corpus.v1.json)" == \
+            "c472329d560df3d7dccab2bf49bf94d6805faef2" ]]
+          [[ "$(git hash-object benchmarks/document_intelligence/local-extract-teacher-atom-support.v1.json)" == \
+            "ed4aa8dad34db65af280f07de77c4b57df24a9fd" ]]
+
+      - name: Recover exact neighborhood-rescue baseline
+        env:
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          artifact_zip="$RUNNER_TEMP/neighborhood-rescue.zip"
+          artifact_dir="$RUNNER_TEMP/neighborhood-rescue"
+          curl -fsSL \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPOSITORY/actions/artifacts/12580076512/zip" \
+            -o "$artifact_zip"
+          [[ "$(sha256sum "$artifact_zip" | awk '{print $1}')" == \
+            "696fa26d942767844ddb24119ae98a503febac02da4e8f3dcbf2eeb021304b89" ]]
+          mkdir -m 0700 "$artifact_dir"
+          unzip -q "$artifact_zip" -d "$artifact_dir"
+          report="$artifact_dir/local-extract-neighborhood-rescue.json"
+          [[ "$(sha256sum "$report" | awk '{print $1}')" == \
+            "e1a2f61f16cae4e957b10a9c24b475d5cb481afa9381084de65a1cd9c6568d23" ]]
+          echo "BASELINE_RESCUE_REPORT=$report" >> "$GITHUB_ENV"
+
+      - name: Recover exact Wave 7A.3 automatic intent artifact
+        env:
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          artifact_zip="$RUNNER_TEMP/wave7a3-valid.zip"
+          artifact_dir="$RUNNER_TEMP/wave7a3-valid"
+          curl -fsSL \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPOSITORY/actions/artifacts/12533721500/zip" \
+            -o "$artifact_zip"
+          [[ "$(sha256sum "$artifact_zip" | awk '{print $1}')" == \
+            "cd02b842ad44bbadab7aad661ff424cc6108f8047d260df5d0064fba2b4f35fb" ]]
+          mkdir -m 0700 "$artifact_dir"
+          unzip -q "$artifact_zip" -d "$artifact_dir"
+          generated="$artifact_dir/local-extract-wave7a3-generated-intents.json"
+          report="$artifact_dir/local-extract-wave7a3-report.json"
+          [[ "$(sha256sum "$generated" | awk '{print $1}')" == \
+            "a5a970725c1f16a694633416ad9fbd98e58418c267891ac83b7783d8af218ebd" ]]
+          [[ "$(sha256sum "$report" | awk '{print $1}')" == \
+            "a87c643b28b25f6581f0bf4dd356646e0bccd168a67ecbfaf58b662b4e0f8e35" ]]
+          echo "GENERATED_INTENTS=$generated" >> "$GITHUB_ENV"
+          echo "AUTOMATIC_REPORT=$report" >> "$GITHUB_ENV"
+
+      - name: Install exact PDF reader ephemerally
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          wheel="$RUNNER_TEMP/pypdf-6.21.1-py3-none-any.whl"
+          pydeps="$RUNNER_TEMP/atomic-obligation-pydeps"
+          url="https://files.pythonhosted.org/packages/85/e6/24c944e473c34e818cf1b98085796fcd780465ecfe17663f2bf8fee1958b/pypdf-6.21.1-py3-none-any.whl"
+          expected="553e2d42f5bb3bb2a785a7d3de8ef90bb7df74b5413eff5a7b4388007ea9254b"
+          curl -fsSL --retry 3 --retry-delay 2 "$url" -o "$wheel"
+          [[ "$(sha256sum "$wheel" | awk '{print $1}')" == "$expected" ]]
+          mkdir -m 0700 "$pydeps"
+          python3 -m zipfile -e "$wheel" "$pydeps"
+
+      - name: Run frozen atomic-obligation residual-closure diagnostic
+        env:
+          EXPECTED_SHA: ${{ steps.gate.outputs.expected_sha }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$(git rev-parse HEAD)" == "$EXPECTED_SHA" ]]
+          pydeps="$RUNNER_TEMP/atomic-obligation-pydeps"
+          output="$RUNNER_TEMP/local-extract-atomic-obligation-residual-closure.json"
+          workdir="$RUNNER_TEMP/local-extract-atomic-obligation-work"
+
+          PYTHONPATH="$PWD/src:$pydeps" python3 \
+            benchmarks/document_intelligence/run_local_extract_atomic_obligation_residual_closure.py \
+            --fixture benchmarks/document_intelligence/local-extract-wave1-corpus.v1.json \
+            --support-fixture benchmarks/document_intelligence/local-extract-teacher-atom-support.v1.json \
+            --design benchmarks/document_intelligence/local-extract-atomic-obligation-residual-closure-design.v1.json \
+            --generated-intents "$GENERATED_INTENTS" \
+            --automatic-report "$AUTOMATIC_REPORT" \
+            --baseline-rescue-report "$BASELINE_RESCUE_REPORT" \
+            --output "$output" \
+            --workdir "$workdir"
+
+          python3 - "$output" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          report = json.loads(pathlib.Path(sys.argv[1]).read_text())
+          assert report["architecture_id"] == (
+              "ATOMIC_OBLIGATION_COVERAGE_AND_COMPLETENESS_V1"
+          )
+          assert report["experiment_id"] == (
+              "ATOMIC_OBLIGATION_RESIDUAL_CLOSURE_DIAGNOSTIC_V1"
+          )
+          assert report["teacher_item_id"] == "arxiv:2403.04036"
+          assert report["teacher_pdf_sha256"] == (
+              "1097bdfabf6cd1b1e26ff9df58b6bb810e4bf74fbd3890ad20e86316d2ee0c91"
+          )
+          assert report["qwen_model_calls"] == 0
+          assert report["external_model_downloads"] == 0
+          assert report["scientific_state_materialized"] is False
+          assert report["production_routing_changed"] is False
+          assert report["qwen_verify_changed"] is False
+          assert report["wave7b_started"] is False
+          assert report["semantic_control_or_ontology_output"] is False
+          assert report["sealed_acceptance_benchmark_accessed"] is False
+          assert report["acceptance_candidate_frozen"] is False
+          assert report["mechanism_outcome"] in {
+              "INVALID_EXECUTION",
+              "PRESERVATION_REGRESSION",
+              "ATOMIC_RESIDUAL_CLOSURE_CONFIRMED",
+              "BUDGET_SELECTION_COLLISION",
+              "OBLIGATION_EXPOSURE_GAP",
+          }
+          assert report["completeness_safety_outcome"] in {
+              "INVALID_EXECUTION",
+              "COMPLETE_WITH_CLOSURE",
+              "SAFE_INCOMPLETENESS_CONFIRMED",
+              "UNSAFE_FALSE_COMPLETE",
+          }
+          assert report["acceptance_boundary_evidence"] in {
+              "RESIDUAL_CLOSURE",
+              "SAFE_INCOMPLETENESS",
+              "NONE",
+          }
+          hard = report["hard_safety"]
+          if report["mechanism_outcome"] != "INVALID_EXECUTION":
+              assert all(bool(value) for value in hard.values())
+              assert report["primary_budget28"]["selected_count"] == 28
+              assert report["append_only_budget32_sensitivity"][
+                  "selected_count"
+              ] <= 32
+          print("ATOMIC_OBLIGATION_RESIDUAL_CLOSURE_RECEIPT=PASS")
+          PY
+
+      - name: Upload atomic-obligation residual-closure report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: local-extract-atomic-obligation-residual-closure
+          path: ${{ runner.temp }}/local-extract-atomic-obligation-residual-closure.json
+          if-no-files-found: error
+          retention-days: 14
