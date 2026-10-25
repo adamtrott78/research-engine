@@ -313,7 +313,61 @@
         "Any missing slot, contradictory stage/role, non-exact quote, or ambiguous relation forces INSUFFICIENT_OR_AMBIGUOUS or NOT_SUPPORTED.",
         "No numeric similarity score, learned threshold, teacher atom, expected page, case label, or legacy exact anchor participates in the decision."
       ],
-      "model_calls_per_case": 1
+      "model_calls_per_case": 1,
+      "model_visible_obligation_fields": [
+        "generic_information_need",
+        "mandatory_slots",
+        "accepted_stage_roles",
+        "required_relation"
+      ],
+      "model_hidden_obligation_fields": [
+        "id",
+        "fail_closed_conditions"
+      ],
+      "prompt_contract": {
+        "template_id": "PROOF_CARRYING_EXPLICIT_SLOT_GROUNDING_PROMPT_V1",
+        "system_template": "You are a precision-first scientific evidence verifier. Judge only whether the supplied AUTHORITATIVE_PDF_TEXT evidence explicitly establishes the supplied obligation. Use only the supplied obligation fields and evidence text. Do not infer missing facts from topical relatedness, background knowledge, the paper as a whole, or likely author intent. Return exactly one JSON object matching the requested schema and no other text. Bind every mandatory slot to an exact verbatim span or null, classify the activity stage, and judge whether the required relation is explicitly linked.",
+        "user_template": "OBLIGATION_JSON\n{obligation_json}\n\nEVIDENCE_JSON\n{evidence_json}\n\nOUTPUT_SCHEMA_JSON\n{\"stage_role\":\"PRETRAINING|CLASSIFIER_TRAINING|TESTING|EVALUATION|ACQUISITION|FAILURE_ANALYSIS|RESULT_INTERPRETATION|OTHER|AMBIGUOUS\",\"slot_bindings\":[{\"slot_id\":\"<one mandatory slot id>\",\"verbatim_span\":\"<exact substring or null>\"}],\"relation_check\":\"EXPLICITLY_LINKED|NOT_LINKED|AMBIGUOUS\",\"candidate_status\":\"SUPPORTED_EXPLICITLY|NOT_SUPPORTED|INSUFFICIENT_OR_AMBIGUOUS\"}",
+        "obligation_json_serialization": {
+          "encoding": "UTF-8",
+          "form": "compact JSON object with keys in exactly model_visible_obligation_fields order",
+          "ensure_ascii": false,
+          "separators": [
+            ",",
+            ":"
+          ]
+        },
+        "evidence_json_serialization": {
+          "encoding": "UTF-8",
+          "exact_visible_object": {
+            "source_authority": "AUTHORITATIVE_PDF_TEXT",
+            "text": "<exact authoritative proposition text or exact concatenation of the frozen evidence bundle texts separated by a single newline>"
+          },
+          "hidden_from_model": [
+            "source_item_id",
+            "paper identity",
+            "page number",
+            "proposition_id",
+            "case_id",
+            "expected_posthoc",
+            "teacher atom ids",
+            "legacy anchors",
+            "rank",
+            "true/false case role"
+          ],
+          "ensure_ascii": false,
+          "separators": [
+            ",",
+            ":"
+          ]
+        },
+        "decoding": {
+          "temperature": 0,
+          "top_p": 1,
+          "seed": 0,
+          "model_calls_per_case": 1
+        }
+      }
     },
     "arm_b_holistic_tri_state_verifier": {
       "id": "HOLISTIC_TRI_STATE_SOURCE_GROUNDED_VERIFIER_V1",
@@ -336,7 +390,61 @@
         "Any non-exact quote, explicit uncertainty, missing required aspect, or ambiguity forces INSUFFICIENT_OR_AMBIGUOUS or NOT_SUPPORTED.",
         "No probability, similarity score, threshold, teacher atom, expected page, case label, or legacy exact anchor participates in the decision."
       ],
-      "model_calls_per_case": 1
+      "model_calls_per_case": 1,
+      "model_visible_obligation_fields": [
+        "generic_information_need",
+        "required_relation"
+      ],
+      "model_hidden_obligation_fields": [
+        "id",
+        "mandatory_slots",
+        "accepted_stage_roles",
+        "fail_closed_conditions"
+      ],
+      "prompt_contract": {
+        "template_id": "HOLISTIC_TRI_STATE_SOURCE_GROUNDED_VERIFIER_PROMPT_V1",
+        "system_template": "You are a precision-first scientific evidence verifier. Judge only whether the supplied AUTHORITATIVE_PDF_TEXT evidence explicitly establishes the supplied obligation. Use only the supplied obligation fields and evidence text. Do not infer missing facts from topical relatedness, background knowledge, the paper as a whole, or likely author intent. Return exactly one JSON object matching the requested schema and no other text. Decide whether the evidence explicitly establishes the complete obligation. If any required aspect is unresolved or ambiguous, use INSUFFICIENT_OR_AMBIGUOUS.",
+        "user_template": "OBLIGATION_JSON\n{obligation_json}\n\nEVIDENCE_JSON\n{evidence_json}\n\nOUTPUT_SCHEMA_JSON\n{\"candidate_status\":\"SUPPORTED_EXPLICITLY|NOT_SUPPORTED|INSUFFICIENT_OR_AMBIGUOUS\",\"supporting_quotes\":[\"<exact substring>\"],\"missing_aspects\":[\"<short unresolved aspect>\"],\"rationale\":\"<brief source-limited explanation>\"}",
+        "obligation_json_serialization": {
+          "encoding": "UTF-8",
+          "form": "compact JSON object with keys in exactly model_visible_obligation_fields order",
+          "ensure_ascii": false,
+          "separators": [
+            ",",
+            ":"
+          ]
+        },
+        "evidence_json_serialization": {
+          "encoding": "UTF-8",
+          "exact_visible_object": {
+            "source_authority": "AUTHORITATIVE_PDF_TEXT",
+            "text": "<exact authoritative proposition text or exact concatenation of the frozen evidence bundle texts separated by a single newline>"
+          },
+          "hidden_from_model": [
+            "source_item_id",
+            "paper identity",
+            "page number",
+            "proposition_id",
+            "case_id",
+            "expected_posthoc",
+            "teacher atom ids",
+            "legacy anchors",
+            "rank",
+            "true/false case role"
+          ],
+          "ensure_ascii": false,
+          "separators": [
+            ",",
+            ":"
+          ]
+        },
+        "decoding": {
+          "temperature": 0,
+          "top_p": 1,
+          "seed": 0,
+          "model_calls_per_case": 1
+        }
+      }
     },
     "completeness_simulation": {
       "id": "VALIDATED_OBLIGATION_COMPLETENESS_SIM_V1",
@@ -431,19 +539,20 @@
     ],
     "scientific_gate": {
       "per_arm_precision_first_pass": [
+        "all_7_cases_arm_case_contract_pass",
         "reject_or_abstain_all_3_known_false_positives",
         "accept_all_4_known_true_supports",
-        "zero_non_exact_supporting_quotes",
+        "zero_non_exact_supporting_quotes_or_spans",
         "baseline_false_complete_state_returns_incomplete_and_fallback",
         "true_support_state_returns_complete_without_fallback",
         "evidence_set_identity_unchanged",
         "prior_supported_retention_9_of_9",
         "frozen_control_retention_7_of_7"
       ],
-      "no_partial_promotion": "A 2/3 false-positive rejection or 3/4 true-support acceptance is not a PASS. Precision-first safety requires every frozen focal case."
+      "no_partial_promotion": "Any malformed/guard-failed case, 2/3 false-positive rejection, or 3/4 true-support acceptance is not a PASS. Precision-first safety requires every frozen focal case and every contract gate."
     },
     "outcome_partition": {
-      "INVALID_EXECUTION": "Any source identity, model identity, case-set secrecy, no-mutation boundary, exact-quote guard, or deterministic gate is violated.",
+      "INVALID_EXECUTION": "A frozen experiment-integrity invariant fails: wrong source/corpus/model/runtime identity; leakage of hidden/evaluation-only fields; prompt/template/decoding mismatch; forbidden few-shot/prior-case/extra-context/cross-case state; implementation failure to apply the frozen parser/guard/completeness rules; evidence-set mutation/no-mutation breach; or frozen case-set identity change. Ordinary bad verifier outputs never cause INVALID_EXECUTION.",
       "BOTH_VALIDITY_MECHANISMS_CONFIRMED": "Both Arm A and Arm B satisfy every precision-first gate.",
       "SLOT_GROUNDING_ONLY_CONFIRMED": "Arm A satisfies every precision-first gate and Arm B does not.",
       "HOLISTIC_VERIFIER_ONLY_CONFIRMED": "Arm B satisfies every precision-first gate and Arm A does not.",
@@ -456,7 +565,94 @@
       "HOLISTIC_VERIFIER_ONLY_CONFIRMED",
       "VALIDITY_PREMISE_REJECTED"
     ],
-    "stopping_rule": "Exactly one valid frozen microbenchmark execution after independent design review. Stop on the first valid result. No prompt, slot schema, case set, model, decoding, verdict rule, quote guard, or completeness rule tuning after the result; no valid-result rerun."
+    "stopping_rule": "Exactly one valid frozen microbenchmark execution after independent design review. Stop on the first integrity-valid result even if one or both arms emit malformed/guard-failed outputs or scientifically fail. No rerun authority arises from ordinary verifier output failure. No prompt, visible-field list, slot schema, case set, model, decoding, parser, guard, verdict rule, quote rule, or completeness rule tuning after the result.",
+    "stateless_case_isolation_contract": {
+      "case_execution_unit": "one arm x one frozen case = one independent model request",
+      "few_shot_examples": false,
+      "prior_case_outputs_visible": false,
+      "prior_case_prompts_visible": false,
+      "extra_paper_context_visible": false,
+      "extra_corpus_context_visible": false,
+      "cross_case_conversation_state": false,
+      "chat_history_reused": false,
+      "kv_cache_reused_across_cases": false,
+      "model_request_context": "exact system_template + exact user_template materialized only from that arm's frozen model-visible obligation fields and that case's frozen evidence text",
+      "case_order_semantics": "Case execution order may be deterministic for reporting but no case may influence another case's prompt, state, parsing, or verdict.",
+      "prompt_tuning_after_review": false,
+      "retry_on_bad_model_output": false,
+      "retry_on_scientific_failure": false
+    },
+    "model_output_and_guard_semantics": {
+      "parser_contract": {
+        "trim": "strip leading/trailing ASCII whitespace from the model response",
+        "accepted_form": "exactly one JSON object and no prefix/suffix text",
+        "schema_validation": "strict required-field/type/enum validation against the frozen arm output schema; unknown top-level fields are rejected",
+        "repair": "NONE",
+        "second_parse_attempt": false,
+        "model_retry": false
+      },
+      "ordinary_model_output_failure_semantics": {
+        "malformed_json": {
+          "effective_candidate_status": "INSUFFICIENT_OR_AMBIGUOUS",
+          "arm_case_contract_pass": false,
+          "invalid_execution": false
+        },
+        "schema_missing_or_unknown_fields": {
+          "effective_candidate_status": "INSUFFICIENT_OR_AMBIGUOUS",
+          "arm_case_contract_pass": false,
+          "invalid_execution": false
+        },
+        "invalid_enum_value": {
+          "effective_candidate_status": "INSUFFICIENT_OR_AMBIGUOUS",
+          "arm_case_contract_pass": false,
+          "invalid_execution": false
+        },
+        "non_exact_quote_or_span_attempt": {
+          "effective_candidate_status": "INSUFFICIENT_OR_AMBIGUOUS",
+          "arm_case_contract_pass": false,
+          "invalid_execution": false
+        },
+        "supported_with_missing_required_binding_or_missing_aspect": {
+          "effective_candidate_status": "INSUFFICIENT_OR_AMBIGUOUS",
+          "arm_case_contract_pass": false,
+          "invalid_execution": false
+        },
+        "contradictory_or_ambiguous_relation_or_stage": {
+          "effective_candidate_status": "INSUFFICIENT_OR_AMBIGUOUS",
+          "arm_case_contract_pass": true,
+          "invalid_execution": false,
+          "note": "A well-formed explicit abstention is a valid fail-closed scientific verdict. It can satisfy the false-positive reject-or-abstain criterion but cannot satisfy a true-support acceptance criterion."
+        }
+      },
+      "arm_pass_requires": [
+        "all seven cases have arm_case_contract_pass=true",
+        "all three frozen false-positive cases end NOT_SUPPORTED or INSUFFICIENT_OR_AMBIGUOUS",
+        "all four frozen true-support cases end SUPPORTED_EXPLICITLY",
+        "zero non-exact quote/span attempts",
+        "all completeness and preservation gates pass"
+      ],
+      "invalid_execution_reserved_for": [
+        "wrong frozen source/corpus/model/runtime identity",
+        "teacher/evaluation-only/case-role leakage into model-visible input or deterministic runtime decision rules",
+        "prompt/template or decoding mismatch from the frozen contract",
+        "few-shot/prior-case/extra-paper/extra-corpus/cross-case state leakage",
+        "implementation failure to execute or apply the frozen parser/guard/completeness rules",
+        "evidence-set mutation or no-mutation invariant violation",
+        "case-set identity/order membership changed from the frozen seven cases"
+      ],
+      "invalid_execution_not_caused_by": [
+        "malformed verifier JSON",
+        "missing verifier fields",
+        "unknown verifier fields",
+        "invalid verifier enum",
+        "non-exact quote/span attempt",
+        "missing slot binding",
+        "missing aspect",
+        "explicit ambiguity or abstention",
+        "scientifically wrong verifier verdict"
+      ],
+      "precedence": "First validate experiment-integrity invariants. If they pass, every ordinary model-output failure is scored under ordinary_model_output_failure_semantics and counts against that arm where arm_case_contract_pass=false. Only integrity failures produce INVALID_EXECUTION."
+    }
   },
   "frozen_scientific_boundaries": {
     "development_only": true,
@@ -487,5 +683,31 @@
     "acceptance_freeze_authority": "NONE",
     "implementation_authority_before_review": "NONE"
   },
-  "review_requirement": "Independent pre-implementation review of this exact design blob is mandatory. No implementation or scientific trigger before NO_BLOCKING_FINDING."
+  "review_requirement": "Independent pre-implementation review of this exact design blob is mandatory. No implementation or scientific trigger before NO_BLOCKING_FINDING.",
+  "review_correction": {
+    "corrected_from_commit": "b939ff0bbb52024f55b2f6e719aef331f6286d06",
+    "corrected_from_design_blob": "16100c540729a3c73a03778490b63846e6865030",
+    "reviewer_disposition": "BLOCKING_FINDING",
+    "correction_scope": [
+      "freeze exact model-visible obligation fields separately for Arm A and Arm B; fail_closed_conditions and all evaluation-only identifiers/labels remain hidden",
+      "freeze exact system/user prompt templates, serialization, evidence representation, decoding, and stateless case-isolation contract with no few-shot/prior-case/extra-context/cross-case state",
+      "freeze malformed-output/parser/guard semantics so ordinary bad verifier outputs fail closed and count against the arm but never create INVALID_EXECUTION or rerun authority"
+    ],
+    "unchanged_science": [
+      "3 false-positive cases",
+      "4 true-support cases",
+      "Qwen3.5-4B identity",
+      "source/corpus identities",
+      "both mechanism families",
+      "no evidence-set mutation",
+      "all-or-nothing precision-first gate",
+      "completeness simulation",
+      "one valid run only",
+      "acceptance_candidate_frozen=false",
+      "sealed holdout untouched",
+      "LOCAL_FIRST_ALLOCATION_FALLBACK_HYBRID_V1 positive lineage"
+    ],
+    "implementation_started": false,
+    "scientific_run_executed": false
+  }
 }
