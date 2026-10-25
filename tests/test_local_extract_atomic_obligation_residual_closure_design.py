@@ -90,7 +90,11 @@ def test_mechanism_and_completeness_outcomes_are_independent() -> None:
         "LOCAL_INCOMPLETE_REQUIRE_FALLBACK"
     )
     assert exp["reporting_rule"].startswith(
-        "Always report mechanism_outcome and completeness_safety_outcome independently"
+        "Compute mechanism_outcome using mechanism_outcome_precedence"
+    )
+    assert "completeness_safety_outcome_precedence" in exp["reporting_rule"]
+    assert "independently before deriving acceptance_boundary_evidence" in (
+        exp["reporting_rule"]
     )
 
 
