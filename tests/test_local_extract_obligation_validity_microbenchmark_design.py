@@ -198,3 +198,55 @@ def test_outcomes_do_not_authorize_acceptance_freeze() -> None:
         "VALIDITY_PREMISE_REJECTED",
     ]
     assert design["interpretation_authority"]["acceptance_freeze_authority"] == "NONE"
+
+
+def test_slot_stage_enum_and_required_relations_are_frozen() -> None:
+    exp = _design()["selected_discriminating_experiment"]
+    arm = exp["arm_a_proof_carrying_slot_grounding"]
+    assert arm["model_output_contract"]["stage_role"] == [
+        "PRETRAINING",
+        "CLASSIFIER_TRAINING",
+        "TESTING",
+        "EVALUATION",
+        "ACQUISITION",
+        "FAILURE_ANALYSIS",
+        "RESULT_INTERPRETATION",
+        "OTHER",
+        "AMBIGUOUS",
+    ]
+    assert arm["model_output_contract"]["relation_check"] == [
+        "EXPLICITLY_LINKED",
+        "NOT_LINKED",
+        "AMBIGUOUS",
+    ]
+    assert all("required_relation" in row for row in exp["runtime_obligations"])
+
+
+def test_exact_preservation_atom_and_baseline_identities_are_frozen() -> None:
+    p = _design()["selected_discriminating_experiment"]["preservation_controls"]
+    assert p["prior_supported_atom_ids"] == [
+        "e1.a",
+        "e2.a",
+        "e2.b",
+        "e3.a",
+        "e3.b",
+        "e4.a",
+        "e4.b",
+        "e6.a",
+        "e6.b",
+    ]
+    assert p["frozen_control_atom_ids"] == [
+        "e2.a",
+        "e2.b",
+        "e3.a",
+        "e3.b",
+        "e4.a",
+        "e4.b",
+        "e6.b",
+    ]
+    assert p["baseline_identity"] == {
+        "run_id": 40143476764,
+        "artifact_id": 12580076512,
+        "artifact_zip_sha256": "696fa26d942767844ddb24119ae98a503febac02da4e8f3dcbf2eeb021304b89",
+        "report_sha256": "e1a2f61f16cae4e957b10a9c24b475d5cb481afa9381084de65a1cd9c6568d23",
+    }
