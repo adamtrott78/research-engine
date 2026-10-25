@@ -1,0 +1,494 @@
+{
+  "schema_version": 1,
+  "design_id": "local-extract-exact-provenance-binding-microbenchmark-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "status": "FROZEN_DESIGN_ONLY",
+  "scientific_question": "Can the local verifier preserve correct obligation-fulfillment judgments while exact provenance is attached without regenerating source text, and can that provenance-bearing validity state still force fail-closed completeness before preservation-aware admission is introduced?",
+  "prior_result_basis": {
+    "prior_design_id": "local-extract-obligation-validity-microbenchmark-v1",
+    "prior_experiment_id": "OBLIGATION_VALIDITY_PRECISION_MICROBENCH_V1",
+    "reviewed_result_commit": "a901115fb572a0647e70f87c39309bcda60f1dee",
+    "run_id": 40166893479,
+    "job_id": 121089689701,
+    "artifact_id": 12588764634,
+    "artifact_zip_sha256": "b1c15ba161b5d291fecb5d6565256ef5d1a1a8bfe6960975ec6c8dfff5593814",
+    "report_sha256": "82a71963c19b47a2e05807997353bce9294103e570173e3371985a8968b480dc",
+    "frozen_outcome": "VALIDITY_PREMISE_REJECTED",
+    "reviewer_comment_id": 6395379857,
+    "reviewer_disposition": "NO_BLOCKING_FINDING",
+    "bounded_reviewer_interpretation": [
+      "The frozen negative outcome is valid and may not be rerun or cosmetically rescued.",
+      "Posthoc, non-verdict inspection found raw candidate_status direction correct on all 7/7 frozen cases.",
+      "Dominant observed failure is source-grounding / proof-carrying interface fidelity, especially regenerated quote/span mismatch against authoritative PDF line breaks/hyphenation.",
+      "A new reviewed experiment may separate semantic obligation judgment from exact provenance attachment using deterministic authoritative identifiers or pointer selection.",
+      "Retrieval/reranking/model scaling and reopening NLI, predicate-argument, or AMR certificate families are not justified."
+    ]
+  },
+  "architecture_lineage": {
+    "preserved_positive_parent": "LOCAL_FIRST_ALLOCATION_FALLBACK_HYBRID_V1",
+    "parent_result": "HYBRID_COMPLEMENTARITY_REALIZED",
+    "sequence": [
+      "retrieve candidate evidence with the preserved local-first allocation-fallback hybrid",
+      "judge whether one candidate evidence item explicitly fulfills one atomic obligation",
+      "attach exact provenance without regenerating source wording",
+      "later admit validated evidence without destroying established support",
+      "declare local complete only when validated obligation coverage is sufficient"
+    ],
+    "this_design_scope": "Test semantic validity plus exact provenance attachment only. Evidence-set mutation remains disabled; preservation-aware admission remains deferred until this premise passes."
+  },
+  "selected_discriminating_experiment": {
+    "id": "EXACT_PROVENANCE_BINDING_MICROBENCH_V1",
+    "scope": "same seven frozen development cases from arxiv:2403.04036; no sealed acceptance papers; no evidence-set mutation; no regenerated quote/span proof fields",
+    "purpose": "Discriminate whether the prior failure was specifically caused by proof-text regeneration by comparing deterministic runtime provenance attachment against model-selected opaque evidence pointers while preserving the same semantic obligation judgments.",
+    "hypotheses": {
+      "H1_SEMANTIC_VALIDITY_SURVIVES_REMOVING_QUOTE_REGENERATION": "With the same Qwen3.5-4B, same seven cases, and no quote/span proof generation, the verifier can still reject/abstain on all three known false positives and mark all four known true supports SUPPORTED_EXPLICITLY.",
+      "H2_DETERMINISTIC_ATTACHMENT_REMOVES_SOURCE_FIDELITY_FAILURE": "If semantic status is correct, the runtime can attach the candidate's exact authoritative proposition provenance deterministically without asking the model to reproduce source text.",
+      "H3_OPAQUE_POINTER_SELECTION_CAN_CARRY_EXACT_PROVENANCE": "A verifier can select an opaque per-request evidence identifier rather than regenerate source text, preserving exact provenance while remaining teacher-blind.",
+      "H4_COMPLETENESS_REMAINS_FAIL_CLOSED": "The three false-positive baseline cases remain incomplete/fallback, while the four true-support state becomes complete only when all four are explicitly supported."
+    },
+    "frozen_inputs": {
+      "teacher_paper": "arxiv:2403.04036",
+      "teacher_pdf_sha256": "1097bdfabf6cd1b1e26ff9df58b6bb810e4bf74fbd3890ad20e86316d2ee0c91",
+      "corpus_fixture_path": "benchmarks/document_intelligence/local-extract-wave1-corpus.v1.json",
+      "corpus_fixture_blob": "c472329d560df3d7dccab2bf49bf94d6805faef2",
+      "prior_validity_design_blob": "4f4238030b7b667e080c2f662646e5856deacb4f",
+      "prior_validity_report_sha256": "82a71963c19b47a2e05807997353bce9294103e570173e3371985a8968b480dc",
+      "baseline_rescue_run_id": 40143476764,
+      "baseline_rescue_artifact_id": 12580076512,
+      "baseline_rescue_artifact_zip_sha256": "696fa26d942767844ddb24119ae98a503febac02da4e8f3dcbf2eeb021304b89",
+      "baseline_rescue_report_sha256": "e1a2f61f16cae4e957b10a9c24b475d5cb481afa9381084de65a1cd9c6568d23",
+      "prior_supported_atom_count": 9,
+      "frozen_control_atom_count": 7,
+      "local_model": {
+        "model_id": "qwen3.5-4b",
+        "repository": "Qwen/Qwen3.5-4B",
+        "revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+        "model_object_id": "6e28e2560c07e7dabab92c55dbfb6941d5a7a75c8068bdc7a98115d8dc62072c",
+        "runtime_tree_sha256": "b0cbb4efbe8673bdb421bad8036d29864bffe0687a9a654bbd95f54544659e63",
+        "runtime_manifest_sha256": "f67ff9a26690c55930232c915e59e826e3cca2dd89012de9e35a852032b38f74",
+        "temperature": 0,
+        "top_p": 1,
+        "seed": 0
+      }
+    },
+    "runtime_obligations": [
+      {
+        "id": "method_training_label_source",
+        "generic_information_need": "During supervised classifier training, what labels are used and what data/domain supplies those labels?",
+        "required_relation": "The classifier-training action explicitly uses device labels and those labels are explicitly sourced from the source domain."
+      },
+      {
+        "id": "method_testing_domain",
+        "generic_information_need": "During testing or evaluation, what data/domain is the trained classifier applied to?",
+        "required_relation": "The trained classifier/model is explicitly applied to or predicts on target-domain data during testing/evaluation."
+      },
+      {
+        "id": "acquisition_receiver_sampling_configuration",
+        "generic_information_need": "What receiver or acquisition hardware captures the observations, and what sampling configuration or rate is used?",
+        "required_relation": "The same acquisition event explicitly identifies the receiver/hardware and the sampling rate."
+      },
+      {
+        "id": "persistent_failure_followup",
+        "generic_information_need": "What persistent or repeated failure mode is observed, and what investigation or follow-up do the authors identify?",
+        "required_relation": "The evidence explicitly links a persistent/repeated failure mode to an identified investigation or follow-up."
+      }
+    ],
+    "case_set": {
+      "runtime_label_visibility": "Expected labels, obligation IDs, teacher atom IDs, legacy anchors, case IDs, proposition/page/rank metadata, and TRUE/FALSE case roles are evaluation-only. Runtime sees only the frozen model-visible obligation fields plus one opaque evidence handle E0 and its authoritative text.",
+      "opaque_evidence_id_contract": "Every independent arm x case request uses the literal opaque handle E0. E0 is reused across all cases and carries no page, rank, proposition, label, or teacher information. Runtime keeps a hidden one-to-one mapping from E0 to that case's exact proposition_id.",
+      "known_false_positive_cases": [
+        {
+          "case_id": "FP_TRAINING_PRETRAINING_NO_LABELS",
+          "obligation_id": "method_training_label_source",
+          "evidence_proposition_ids": [
+            "page:p2:s33"
+          ],
+          "expected_posthoc": "NOT_SUPPORTED"
+        },
+        {
+          "case_id": "FP_TESTING_GENERIC_DOMAIN_SHIFT",
+          "obligation_id": "method_testing_domain",
+          "evidence_proposition_ids": [
+            "page:p1:s10"
+          ],
+          "expected_posthoc": "NOT_SUPPORTED"
+        },
+        {
+          "case_id": "FP_ACQUISITION_GENERIC_RF_SAMPLING",
+          "obligation_id": "acquisition_receiver_sampling_configuration",
+          "evidence_proposition_ids": [
+            "page:p1:s09"
+          ],
+          "expected_posthoc": "NOT_SUPPORTED"
+        }
+      ],
+      "known_true_support_cases": [
+        {
+          "case_id": "TP_TRAINING_SOURCE_LABELS",
+          "obligation_id": "method_training_label_source",
+          "evidence_proposition_ids": [
+            "page:p4:s15"
+          ],
+          "expected_posthoc": "SUPPORTED_EXPLICITLY"
+        },
+        {
+          "case_id": "TP_TESTING_TARGET_DOMAIN",
+          "obligation_id": "method_testing_domain",
+          "evidence_proposition_ids": [
+            "page:p2:s35"
+          ],
+          "expected_posthoc": "SUPPORTED_EXPLICITLY"
+        },
+        {
+          "case_id": "TP_ACQUISITION_B210_45MSPS",
+          "obligation_id": "acquisition_receiver_sampling_configuration",
+          "evidence_proposition_ids": [
+            "page:p2:s17"
+          ],
+          "expected_posthoc": "SUPPORTED_EXPLICITLY"
+        },
+        {
+          "case_id": "TP_PERSISTENT_FAILURE_FOLLOWUP",
+          "obligation_id": "persistent_failure_followup",
+          "evidence_proposition_ids": [
+            "page:p6:s09"
+          ],
+          "expected_posthoc": "SUPPORTED_EXPLICITLY"
+        }
+      ]
+    },
+    "shared_prompt_and_evidence_contract": {
+      "model_visible_obligation_fields": [
+        "generic_information_need",
+        "required_relation"
+      ],
+      "model_hidden_fields": [
+        "obligation id",
+        "case id",
+        "expected_posthoc",
+        "teacher atom ids",
+        "legacy anchors",
+        "proposition_id",
+        "page number",
+        "retrieval rank",
+        "TRUE/FALSE case role",
+        "prior raw model outputs",
+        "prior verifier outcomes"
+      ],
+      "evidence_json_serialization": {
+        "encoding": "UTF-8",
+        "exact_visible_object": {
+          "source_authority": "AUTHORITATIVE_PDF_TEXT",
+          "evidence_id": "E0",
+          "text": "<exact authoritative proposition text>"
+        },
+        "ensure_ascii": false,
+        "separators": [
+          ",",
+          ":"
+        ]
+      },
+      "obligation_json_serialization": {
+        "encoding": "UTF-8",
+        "form": "compact JSON object with keys in exactly model_visible_obligation_fields order",
+        "ensure_ascii": false,
+        "separators": [
+          ",",
+          ":"
+        ]
+      },
+      "forbidden_model_proof_fields": [
+        "supporting_quotes",
+        "verbatim_span",
+        "source_quote",
+        "source_text",
+        "page_number",
+        "proposition_id",
+        "character_offsets"
+      ],
+      "rationale_semantics": "rationale is diagnostic prose only; runtime never treats rationale text as provenance, never exact-matches it, and never derives a pointer from it."
+    },
+    "arm_a_deterministic_attachment": {
+      "id": "TRI_STATE_DETERMINISTIC_PROVENANCE_ATTACHMENT_V1",
+      "mechanism": "Model judges semantic obligation fulfillment only. Runtime deterministically attaches the already-known exact proposition identity for opaque candidate E0 iff the guarded status is SUPPORTED_EXPLICITLY.",
+      "model_output_contract": {
+        "candidate_status": [
+          "SUPPORTED_EXPLICITLY",
+          "NOT_SUPPORTED",
+          "INSUFFICIENT_OR_AMBIGUOUS"
+        ],
+        "missing_aspects": "list of unresolved obligation aspects; must be empty for SUPPORTED_EXPLICITLY",
+        "rationale": "brief source-limited explanation; never used as provenance"
+      },
+      "deterministic_guard": [
+        "Strict JSON object; required fields only; no repair and no retry.",
+        "SUPPORTED_EXPLICITLY requires missing_aspects=[]; otherwise fail closed to INSUFFICIENT_OR_AMBIGUOUS with arm_case_contract_pass=false.",
+        "Any forbidden source-proof field or unknown top-level field is a contract failure and fails closed.",
+        "If effective status is SUPPORTED_EXPLICITLY, runtime attaches E0 and resolves E0 through the hidden one-to-one mapping to the exact frozen proposition_id.",
+        "If effective status is NOT_SUPPORTED or INSUFFICIENT_OR_AMBIGUOUS, runtime attaches no provenance pointer.",
+        "No generated source substring, newline normalization, fuzzy matching, lexical similarity, score, or threshold participates in provenance attachment."
+      ],
+      "prompt_contract": {
+        "template_id": "TRI_STATE_DETERMINISTIC_PROVENANCE_ATTACHMENT_PROMPT_V1",
+        "system_template": "You are a precision-first scientific evidence verifier. Judge only whether the supplied AUTHORITATIVE_PDF_TEXT evidence explicitly establishes the supplied obligation. Use only the supplied obligation fields and evidence. Do not infer missing facts from topical relatedness, background knowledge, the paper as a whole, or likely author intent. Do not quote or reproduce source text as proof. Return exactly one JSON object matching the requested schema and no other text. If any required aspect is unresolved or ambiguous, use INSUFFICIENT_OR_AMBIGUOUS.",
+        "user_template": "OBLIGATION_JSON\n{obligation_json}\n\nEVIDENCE_JSON\n{evidence_json}\n\nOUTPUT_SCHEMA_JSON\n{\"candidate_status\":\"SUPPORTED_EXPLICITLY|NOT_SUPPORTED|INSUFFICIENT_OR_AMBIGUOUS\",\"missing_aspects\":[\"<short unresolved aspect>\"],\"rationale\":\"<brief source-limited explanation>\"}",
+        "decoding": {
+          "temperature": 0,
+          "top_p": 1,
+          "seed": 0,
+          "model_calls_per_case": 1,
+          "max_output_tokens": 512,
+          "enable_thinking": false,
+          "prefix_caching": false
+        }
+      }
+    },
+    "arm_b_opaque_pointer_selection": {
+      "id": "TRI_STATE_OPAQUE_EVIDENCE_POINTER_V1",
+      "mechanism": "Model judges semantic obligation fulfillment and, only when explicitly supported, selects the opaque candidate handle E0. Runtime resolves E0 to exact proposition provenance; the model never regenerates source text.",
+      "model_output_contract": {
+        "candidate_status": [
+          "SUPPORTED_EXPLICITLY",
+          "NOT_SUPPORTED",
+          "INSUFFICIENT_OR_AMBIGUOUS"
+        ],
+        "supporting_evidence_ids": "[] or exactly [\"E0\"]",
+        "missing_aspects": "list of unresolved obligation aspects; must be empty for SUPPORTED_EXPLICITLY",
+        "rationale": "brief source-limited explanation; never used as provenance"
+      },
+      "deterministic_guard": [
+        "Strict JSON object; required fields only; no repair and no retry.",
+        "SUPPORTED_EXPLICITLY requires supporting_evidence_ids exactly [\"E0\"] and missing_aspects=[].",
+        "NOT_SUPPORTED and INSUFFICIENT_OR_AMBIGUOUS require supporting_evidence_ids=[].",
+        "Unknown IDs, duplicate IDs, missing E0 on support, E0 on non-support, forbidden source-proof fields, or unknown top-level fields fail closed with arm_case_contract_pass=false.",
+        "Runtime resolves a valid E0 pointer through the hidden one-to-one mapping to the exact frozen proposition_id.",
+        "No generated source substring, newline normalization, fuzzy matching, lexical similarity, score, or threshold participates in provenance attachment."
+      ],
+      "prompt_contract": {
+        "template_id": "TRI_STATE_OPAQUE_EVIDENCE_POINTER_PROMPT_V1",
+        "system_template": "You are a precision-first scientific evidence verifier. Judge only whether the supplied AUTHORITATIVE_PDF_TEXT evidence explicitly establishes the supplied obligation. Use only the supplied obligation fields and evidence. Do not infer missing facts from topical relatedness, background knowledge, the paper as a whole, or likely author intent. Do not quote or reproduce source text as proof. If the obligation is explicitly supported, identify the supplied evidence only by its opaque evidence_id. Return exactly one JSON object matching the requested schema and no other text. If any required aspect is unresolved or ambiguous, use INSUFFICIENT_OR_AMBIGUOUS.",
+        "user_template": "OBLIGATION_JSON\n{obligation_json}\n\nEVIDENCE_JSON\n{evidence_json}\n\nOUTPUT_SCHEMA_JSON\n{\"candidate_status\":\"SUPPORTED_EXPLICITLY|NOT_SUPPORTED|INSUFFICIENT_OR_AMBIGUOUS\",\"supporting_evidence_ids\":[\"E0\"],\"missing_aspects\":[\"<short unresolved aspect>\"],\"rationale\":\"<brief source-limited explanation>\"}\nFor NOT_SUPPORTED or INSUFFICIENT_OR_AMBIGUOUS, supporting_evidence_ids must be [].",
+        "decoding": {
+          "temperature": 0,
+          "top_p": 1,
+          "seed": 0,
+          "model_calls_per_case": 1,
+          "max_output_tokens": 512,
+          "enable_thinking": false,
+          "prefix_caching": false
+        }
+      }
+    },
+    "parser_and_failure_semantics": {
+      "trim": "strip leading/trailing ASCII whitespace from model response",
+      "accepted_form": "exactly one JSON object and no prefix/suffix text",
+      "schema_validation": "strict required-field/type/enum validation for the selected arm; unknown top-level fields rejected",
+      "repair": "NONE",
+      "second_parse_attempt": false,
+      "model_retry": false,
+      "ordinary_fail_closed_cases": [
+        "malformed JSON",
+        "missing required field",
+        "unknown field",
+        "invalid enum",
+        "non-empty missing_aspects with SUPPORTED_EXPLICITLY",
+        "forbidden generated source-proof field",
+        "Arm B unknown/duplicate/missing/misplaced evidence pointer"
+      ],
+      "ordinary_failure_effect": {
+        "effective_candidate_status": "INSUFFICIENT_OR_AMBIGUOUS",
+        "arm_case_contract_pass": false,
+        "invalid_execution": false
+      },
+      "invalid_execution_reserved_for": [
+        "wrong frozen source/corpus/model/runtime identity",
+        "teacher/evaluation-only leakage into model-visible input or deterministic runtime decisions",
+        "prompt/template/decoding mismatch",
+        "forbidden few-shot/prior-case/extra-paper/extra-corpus/cross-case state",
+        "implementation failure to execute the frozen parser/guard/provenance/completeness rules",
+        "hidden E0->proposition mapping mismatch",
+        "evidence-set mutation",
+        "frozen seven-case membership change"
+      ]
+    },
+    "stateless_case_isolation_contract": {
+      "case_execution_unit": "one arm x one frozen case = one independent model request",
+      "total_model_calls": 14,
+      "few_shot_examples": false,
+      "prior_case_outputs_visible": false,
+      "prior_case_prompts_visible": false,
+      "prior_validity_run_outputs_visible": false,
+      "extra_paper_context_visible": false,
+      "extra_corpus_context_visible": false,
+      "cross_case_conversation_state": false,
+      "chat_history_reused": false,
+      "kv_cache_reused_across_cases": false,
+      "prompt_tuning_after_review": false,
+      "retry_on_bad_model_output": false,
+      "retry_on_scientific_failure": false
+    },
+    "completeness_simulation": {
+      "id": "EXACT_PROVENANCE_VALIDATED_OBLIGATION_COMPLETENESS_SIM_V1",
+      "evidence_set_mutation": false,
+      "baseline_false_complete_state": {
+        "method_training_label_source": [
+          "page:p2:s33"
+        ],
+        "method_testing_domain": [
+          "page:p1:s10"
+        ],
+        "acquisition_receiver_sampling_configuration": [
+          "page:p1:s09"
+        ],
+        "persistent_failure_followup": [
+          "page:p6:s09"
+        ],
+        "required_outcome_for_any_safe_arm": {
+          "local_complete": false,
+          "fallback_required": true
+        }
+      },
+      "true_support_state": {
+        "method_training_label_source": [
+          "page:p4:s15"
+        ],
+        "method_testing_domain": [
+          "page:p2:s35"
+        ],
+        "acquisition_receiver_sampling_configuration": [
+          "page:p2:s17"
+        ],
+        "persistent_failure_followup": [
+          "page:p6:s09"
+        ],
+        "required_outcome_for_any_passing_arm": {
+          "local_complete": true,
+          "fallback_required": false
+        }
+      },
+      "rule": "local_complete=true iff every CORE obligation has effective candidate_status=SUPPORTED_EXPLICITLY and exact provenance attachment is valid for that support. Any unsupported, ambiguous, contract-failed, or provenance-invalid obligation forces fallback."
+    },
+    "preservation_controls": {
+      "selection_mutation_allowed": false,
+      "starting_evidence_set": "exact LOCAL_RESCUE_CONFIRMED 28-proposition development set used before the prior atomic repair swap",
+      "required_invariants": [
+        "selected proposition identity and count remain unchanged",
+        "prior supported atom retention remains 9/9",
+        "frozen control retention remains 7/7",
+        "page:p2:s16 remains present",
+        "no admission swap is attempted"
+      ],
+      "prior_supported_atom_ids": [
+        "e1.a",
+        "e2.a",
+        "e2.b",
+        "e3.a",
+        "e3.b",
+        "e4.a",
+        "e4.b",
+        "e6.a",
+        "e6.b"
+      ],
+      "frozen_control_atom_ids": [
+        "e2.a",
+        "e2.b",
+        "e3.a",
+        "e3.b",
+        "e4.a",
+        "e4.b",
+        "e6.b"
+      ]
+    },
+    "scientific_gate": {
+      "shared_per_arm_requirements": [
+        "all_7_cases_arm_case_contract_pass",
+        "reject_or_abstain_all_3_known_false_positives",
+        "accept_all_4_known_true_supports",
+        "exact_provenance_attached_for_all_4_true_supports",
+        "zero_provenance_attached_for_all_3_false_positive_cases",
+        "baseline_false_complete_state_returns_incomplete_and_fallback",
+        "true_support_state_returns_complete_without_fallback",
+        "evidence_set_identity_unchanged",
+        "prior_supported_retention_9_of_9",
+        "frozen_control_retention_7_of_7"
+      ],
+      "arm_a_extra_requirement": "deterministic_attachment_resolves_E0_to_the_exact_frozen_proposition_id_on_every_supported_case",
+      "arm_b_extra_requirement": "model_pointer_is_exactly_E0_on_every_supported_case_and_empty_on_every_non_supported_case",
+      "no_partial_promotion": "Any contract-failed case, 2/3 false-positive rejection, 3/4 true-support acceptance, or provenance-binding error is not a PASS."
+    },
+    "outcome_partition": {
+      "INVALID_EXECUTION": "A frozen experiment-integrity invariant fails. Ordinary verifier/output failure never grants rerun authority.",
+      "BOTH_EXACT_PROVENANCE_INTERFACES_CONFIRMED": "Both deterministic attachment and model-selected opaque pointer arms satisfy every frozen semantic, provenance, completeness, and preservation gate.",
+      "DETERMINISTIC_ATTACHMENT_ONLY_CONFIRMED": "Arm A satisfies every gate and Arm B does not.",
+      "OPAQUE_POINTER_ONLY_CONFIRMED": "Arm B satisfies every gate and Arm A does not.",
+      "EXACT_PROVENANCE_BINDING_PREMISE_REJECTED": "Neither arm satisfies every frozen gate."
+    },
+    "outcome_precedence": [
+      "INVALID_EXECUTION",
+      "BOTH_EXACT_PROVENANCE_INTERFACES_CONFIRMED",
+      "DETERMINISTIC_ATTACHMENT_ONLY_CONFIRMED",
+      "OPAQUE_POINTER_ONLY_CONFIRMED",
+      "EXACT_PROVENANCE_BINDING_PREMISE_REJECTED"
+    ],
+    "interpretation_authority": {
+      "on_BOTH_EXACT_PROVENANCE_INTERFACES_CONFIRMED": "Authorize a new independently reviewed preservation-aware admission design. Prefer deterministic runtime provenance attachment as the simpler default; retain opaque pointer selection only if a later multi-candidate design needs model choice. No acceptance freeze.",
+      "on_DETERMINISTIC_ATTACHMENT_ONLY_CONFIRMED": "Authorize a new independently reviewed preservation-aware admission design using deterministic runtime provenance attachment. Do not use model pointer selection. No acceptance freeze.",
+      "on_OPAQUE_POINTER_ONLY_CONFIRMED": "Authorize a new independently reviewed preservation-aware admission design using the passing opaque-pointer contract, while recording prompt/interface sensitivity. No acceptance freeze.",
+      "on_EXACT_PROVENANCE_BINDING_PREMISE_REJECTED": "Do not integrate preservation-aware admission. Return to validity/provenance mechanism research without reopening retrieval/ranker/model scaling or rejected certificate families absent new evidence.",
+      "pass_does_not_establish": [
+        "automatic obligation-generation quality",
+        "cross-paper semantic generalization",
+        "multi-candidate pointer selection quality",
+        "preservation-aware admission safety",
+        "production promotion",
+        "acceptance readiness"
+      ],
+      "acceptance_freeze_authority": "NONE"
+    },
+    "stopping_rule": "Exactly one valid frozen microbenchmark execution after independent design review. Stop on the first integrity-valid result. No prompt, visible-field, evidence-ID, parser, guard, pointer, completeness, model, decoding, case, or verdict tuning after the result. Ordinary bad verifier outputs do not authorize rerun.",
+    "shared_generation_runtime_contract": {
+      "implementation_lineage": "Reuse the already-validated vLLM/Qwen3.5-4B runtime envelope from OBLIGATION_VALIDITY_PRECISION_MICROBENCH_V1; these are execution settings, not tunable scientific variables.",
+      "tensor_parallel_size": 2,
+      "dtype": "bfloat16",
+      "max_model_len": 8192,
+      "max_num_seqs": 1,
+      "gpu_memory_utilization": 0.65,
+      "trust_remote_code": false,
+      "disable_log_stats": true,
+      "mm_processor_cache_gb": 0.25,
+      "enable_prefix_caching": false,
+      "chat_template_kwargs": {
+        "enable_thinking": false
+      },
+      "max_output_tokens": 512,
+      "temperature": 0,
+      "top_p": 1,
+      "seed": 0,
+      "model_calls_per_case": 1,
+      "total_model_calls": 14,
+      "post_review_tuning_allowed": false
+    }
+  },
+  "frozen_scientific_boundaries": {
+    "development_only": true,
+    "retrieval_changed": false,
+    "retrieval_depth_changed": false,
+    "query_generation_changed": false,
+    "reranker_changed": false,
+    "larger_model_introduced": false,
+    "evidence_set_mutation_allowed": false,
+    "preservation_aware_admission_implemented": false,
+    "regenerated_quote_or_span_proof_allowed": false,
+    "nli_certificate_reopened": false,
+    "predicate_argument_certificate_reopened": false,
+    "amr_graph_certificate_reopened": false,
+    "teacher_labels_visible_to_runtime": false,
+    "sealed_acceptance_benchmark_accessed": false,
+    "acceptance_candidate_frozen": false,
+    "production_routing_changed": false,
+    "qwen_verify_changed": false,
+    "wave7b_started": false,
+    "semantic_control_or_ontology_output": false
+  },
+  "review_requirement": "Independent pre-implementation review of this exact design blob is mandatory. No implementation, trigger, or scientific execution before reviewer NO_BLOCKING_FINDING."
+}
