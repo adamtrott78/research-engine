@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "marker_id": "obligation-validity-microbenchmark-v1-trigger",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "scientific_effect": "NONE",
+  "purpose": "Hold an open pull request whose exact head SHA can be bound by the owner-only issue-comment trigger for exactly one reviewed development run.",
+  "implementation_base_sha": "4d6a3bf003499a34ea0d076e55c724aaf1735c42",
+  "reviewed_design_blob": "4f4238030b7b667e080c2f662646e5856deacb4f",
+  "frozen_experiment": "OBLIGATION_VALIDITY_PRECISION_MICROBENCH_V1",
+  "production_routing_changed": false,
+  "qwen_verify_changed": false,
+  "wave7b_started": false,
+  "sealed_acceptance_benchmark_accessed": false,
+  "acceptance_candidate_frozen": false
+}
