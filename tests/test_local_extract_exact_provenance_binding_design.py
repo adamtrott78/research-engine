@@ -252,3 +252,44 @@ def test_outcome_partition_has_no_acceptance_authority() -> None:
     assert "preservation-aware admission" in auth[
         "on_BOTH_EXACT_PROVENANCE_INTERFACES_CONFIRMED"
     ]
+
+
+def test_generation_runtime_envelope_is_frozen() -> None:
+    x = _design()["selected_discriminating_experiment"]
+    runtime = x["shared_generation_runtime_contract"]
+    assert runtime == {
+        "implementation_lineage": (
+            "Reuse the already-validated vLLM/Qwen3.5-4B runtime envelope from "
+            "OBLIGATION_VALIDITY_PRECISION_MICROBENCH_V1; these are execution "
+            "settings, not tunable scientific variables."
+        ),
+        "tensor_parallel_size": 2,
+        "dtype": "bfloat16",
+        "max_model_len": 8192,
+        "max_num_seqs": 1,
+        "gpu_memory_utilization": 0.65,
+        "trust_remote_code": False,
+        "disable_log_stats": True,
+        "mm_processor_cache_gb": 0.25,
+        "enable_prefix_caching": False,
+        "chat_template_kwargs": {"enable_thinking": False},
+        "max_output_tokens": 512,
+        "temperature": 0,
+        "top_p": 1,
+        "seed": 0,
+        "model_calls_per_case": 1,
+        "total_model_calls": 14,
+        "post_review_tuning_allowed": False,
+    }
+    for arm_key in (
+        "arm_a_deterministic_attachment",
+        "arm_b_opaque_pointer_selection",
+    ):
+        decoding = x[arm_key]["prompt_contract"]["decoding"]
+        assert decoding["temperature"] == 0
+        assert decoding["top_p"] == 1
+        assert decoding["seed"] == 0
+        assert decoding["model_calls_per_case"] == 1
+        assert decoding["max_output_tokens"] == 512
+        assert decoding["enable_thinking"] is False
+        assert decoding["prefix_caching"] is False
