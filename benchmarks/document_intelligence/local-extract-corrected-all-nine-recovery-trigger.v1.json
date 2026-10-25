@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "operation": "ALL_NINE_FIXED_BASELINE_RECOVERY_COMPARISON_V1_TRIGGER",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "implementation_sha": "1766cc6d11c9e65265a90579342fbac4888d0274",
+  "scientific_trigger_issued": false,
+  "constraints": [
+    "This PR is an inert exact-SHA trigger anchor only.",
+    "Do not merge this PR before the scientific result is durably checkpointed.",
+    "Exactly one /local-extract-corrected-all-nine-recovery-comparison <exact-head-sha> trigger may be issued after workspace-control authority is durable.",
+    "Do not alter exact reviewed all-nine baseline artifact, 36 stress origins, radius1 local arm, global surviving-intent top12 arm, rank-stratum definition, ranking rules, budget28, metrics, interpretation, or stopping rule.",
+    "Do not inspect or use the sealed semantic acceptance benchmark.",
+    "No second valid scientific trigger or post-result tuning."
+  ]
+}
