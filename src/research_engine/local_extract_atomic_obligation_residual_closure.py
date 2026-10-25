@@ -169,9 +169,10 @@ def _eviction_candidate(
     selected: list[dict[str, Any]],
     structural_stats: dict[str, dict[str, int | None]],
     evictable_origins: set[str],
+    starting_positions: dict[str, int] | None = None,
 ) -> dict[str, Any] | None:
     candidates: list[dict[str, Any]] = []
-    for position, row in enumerate(selected, start=1):
+    for current_position, row in enumerate(selected, start=1):
         if str(row.get("selection_origin")) not in evictable_origins:
             continue
         pid = str(row["proposition_id"])
@@ -179,10 +180,15 @@ def _eviction_candidate(
         appearance_count = int(stats.get("appearance_count") or 0)
         best_rank_raw = stats.get("best_rank")
         best_rank = int(best_rank_raw) if best_rank_raw is not None else 13
+        original_position = (
+            int(starting_positions[pid])
+            if starting_positions is not None and pid in starting_positions
+            else current_position
+        )
         candidates.append(
             {
                 "row": row,
-                "position": position,
+                "position": original_position,
                 "appearance_count": appearance_count,
                 "best_rank": best_rank,
             }
@@ -254,19 +260,48 @@ def _runtime_primary_selection(
     if set(order) != set(by_id):
         raise RuntimeError("frozen obligation order does not match obligations")
 
+    starting_positions = {
+        str(row["proposition_id"]): position
+        for position, row in enumerate(starting_selected, start=1)
+    }
+    initially_satisfied = {
+        obligation_id: _selected_witness(
+            selected=starting_selected,
+            obligation=dict(by_id[obligation_id]),
+        )
+        for obligation_id in order
+    }
+    missing_order = [
+        obligation_id
+        for obligation_id in order
+        if initially_satisfied[obligation_id] is None
+    ]
+
     evictable = {
         str(value) for value in selection_cfg["evictable_selection_origins"]
     }
-    actions: list[dict[str, Any]] = []
+    actions: list[dict[str, Any]] = [
+        {
+            "obligation_id": obligation_id,
+            "action": "BASELINE_SATISFIED",
+            "selected_witness_proposition_id": str(
+                initially_satisfied[obligation_id]["proposition_id"]
+            ),
+            "added_proposition_id": None,
+            "evicted_proposition_id": None,
+        }
+        for obligation_id in order
+        if initially_satisfied[obligation_id] is not None
+    ]
 
-    for obligation_id in order:
+    for obligation_id in missing_order:
         obligation = dict(by_id[obligation_id])
         already = _selected_witness(selected=selected, obligation=obligation)
         if already is not None:
             actions.append(
                 {
                     "obligation_id": obligation_id,
-                    "action": "ALREADY_SATISFIED",
+                    "action": "SATISFIED_BY_PRIOR_SWAP",
                     "selected_witness_proposition_id": str(
                         already["proposition_id"]
                     ),
@@ -306,6 +341,7 @@ def _runtime_primary_selection(
             selected=selected,
             structural_stats=structural_stats,
             evictable_origins=evictable,
+            starting_positions=starting_positions,
         )
         if eviction is None:
             actions.append(
@@ -397,16 +433,34 @@ def _runtime_append_sensitivity(
 ) -> dict[str, Any]:
     selected = [dict(row) for row in starting_selected]
     by_id = {str(row["id"]): row for row in obligations}
-    actions: list[dict[str, Any]] = []
+    order = [str(value) for value in selection_cfg["obligation_order"]]
+    initially_satisfied = {
+        obligation_id: _selected_witness(
+            selected=starting_selected,
+            obligation=dict(by_id[obligation_id]),
+        )
+        for obligation_id in order
+    }
+    actions: list[dict[str, Any]] = [
+        {
+            "obligation_id": obligation_id,
+            "action": "BASELINE_SATISFIED",
+            "added_proposition_id": None,
+        }
+        for obligation_id in order
+        if initially_satisfied[obligation_id] is not None
+    ]
 
-    for obligation_id in selection_cfg["obligation_order"]:
-        obligation = dict(by_id[str(obligation_id)])
+    for obligation_id in (
+        value for value in order if initially_satisfied[value] is None
+    ):
+        obligation = dict(by_id[obligation_id])
         witness = _selected_witness(selected=selected, obligation=obligation)
         if witness is not None:
             actions.append(
                 {
-                    "obligation_id": str(obligation_id),
-                    "action": "ALREADY_SATISFIED",
+                    "obligation_id": obligation_id,
+                    "action": "SATISFIED_BY_PRIOR_APPEND",
                     "added_proposition_id": None,
                 }
             )
@@ -414,7 +468,7 @@ def _runtime_append_sensitivity(
         if len(selected) >= maximum_budget:
             actions.append(
                 {
-                    "obligation_id": str(obligation_id),
+                    "obligation_id": obligation_id,
                     "action": "BUDGET_CEILING",
                     "added_proposition_id": None,
                 }
@@ -423,14 +477,14 @@ def _runtime_append_sensitivity(
         selected_ids = {str(row["proposition_id"]) for row in selected}
         eligible = [
             row
-            for row in obligation_rankings[str(obligation_id)]
+            for row in obligation_rankings[obligation_id]
             if bool(row["eligible_witness"])
             and str(row["proposition_id"]) not in selected_ids
         ]
         if not eligible:
             actions.append(
                 {
-                    "obligation_id": str(obligation_id),
+                    "obligation_id": obligation_id,
                     "action": "NO_ELIGIBLE_TOP12_CANDIDATE",
                     "added_proposition_id": None,
                 }
@@ -445,11 +499,11 @@ def _runtime_append_sensitivity(
         )
         added = dict(candidate)
         added["selection_origin"] = ATOMIC_APPEND_ORIGIN
-        added["atomic_obligation_id"] = str(obligation_id)
+        added["atomic_obligation_id"] = obligation_id
         selected.append(added)
         actions.append(
             {
-                "obligation_id": str(obligation_id),
+                "obligation_id": obligation_id,
                 "action": "APPEND",
                 "added_proposition_id": str(candidate["proposition_id"]),
                 "added_bm25_rank": int(candidate["bm25_rank"]),
