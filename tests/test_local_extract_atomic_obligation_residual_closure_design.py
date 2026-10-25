@@ -73,15 +73,24 @@ def test_posthoc_equivalence_sets_are_evaluation_only() -> None:
     }
 
 
-def test_outcome_partition_contains_safe_fallback_and_false_complete() -> None:
+def test_mechanism_and_completeness_outcomes_are_independent() -> None:
     exp = _design()["selected_discriminating_experiment"]
-    outcomes = exp["outcome_partition"]
-    assert "ATOMIC_RESIDUAL_CLOSURE_CONFIRMED" in outcomes
-    assert "SAFE_INCOMPLETENESS_CONFIRMED" in outcomes
-    assert "UNSAFE_FALSE_COMPLETE" in outcomes
-    assert "PRESERVATION_REGRESSION" in outcomes
+    mechanism = exp["mechanism_outcome_partition"]
+    completeness = exp["completeness_safety_outcome_partition"]
+    boundary = exp["acceptance_boundary_evidence"]
+    assert "ATOMIC_RESIDUAL_CLOSURE_CONFIRMED" in mechanism
+    assert "BUDGET_SELECTION_COLLISION" in mechanism
+    assert "OBLIGATION_EXPOSURE_GAP" in mechanism
+    assert "PRESERVATION_REGRESSION" in mechanism
+    assert "SAFE_INCOMPLETENESS_CONFIRMED" in completeness
+    assert "UNSAFE_FALSE_COMPLETE" in completeness
+    assert "RESIDUAL_CLOSURE" in boundary
+    assert "SAFE_INCOMPLETENESS" in boundary
     assert exp["completeness_controller"]["incomplete_action"] == (
         "LOCAL_INCOMPLETE_REQUIRE_FALLBACK"
+    )
+    assert exp["reporting_rule"].startswith(
+        "Always report mechanism_outcome and completeness_safety_outcome independently"
     )
 
 
