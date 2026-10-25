@@ -152,16 +152,19 @@ def test_preservation_controls_are_no_mutation_invariants() -> None:
 def test_precision_first_gate_has_no_partial_promotion() -> None:
     gate = _design()["selected_discriminating_experiment"]["scientific_gate"]
     assert gate["per_arm_precision_first_pass"] == [
+        "all_7_cases_arm_case_contract_pass",
         "reject_or_abstain_all_3_known_false_positives",
         "accept_all_4_known_true_supports",
-        "zero_non_exact_supporting_quotes",
+        "zero_non_exact_supporting_quotes_or_spans",
         "baseline_false_complete_state_returns_incomplete_and_fallback",
         "true_support_state_returns_complete_without_fallback",
         "evidence_set_identity_unchanged",
         "prior_supported_retention_9_of_9",
         "frozen_control_retention_7_of_7",
     ]
-    assert gate["no_partial_promotion"].startswith("A 2/3 false-positive rejection")
+    assert gate["no_partial_promotion"].startswith(
+        "Any malformed/guard-failed case"
+    )
 
 
 def test_model_identity_is_exact_and_no_new_download_is_implied() -> None:
@@ -250,3 +253,133 @@ def test_exact_preservation_atom_and_baseline_identities_are_frozen() -> None:
         "artifact_zip_sha256": "696fa26d942767844ddb24119ae98a503febac02da4e8f3dcbf2eeb021304b89",
         "report_sha256": "e1a2f61f16cae4e957b10a9c24b475d5cb481afa9381084de65a1cd9c6568d23",
     }
+
+
+def test_reviewer_correction_freezes_arm_specific_visible_fields() -> None:
+    exp = _design()["selected_discriminating_experiment"]
+    a = exp["arm_a_proof_carrying_slot_grounding"]
+    b = exp["arm_b_holistic_tri_state_verifier"]
+    assert a["model_visible_obligation_fields"] == [
+        "generic_information_need",
+        "mandatory_slots",
+        "accepted_stage_roles",
+        "required_relation",
+    ]
+    assert b["model_visible_obligation_fields"] == [
+        "generic_information_need",
+        "required_relation",
+    ]
+    assert "fail_closed_conditions" in a["model_hidden_obligation_fields"]
+    assert "fail_closed_conditions" in b["model_hidden_obligation_fields"]
+    assert "mandatory_slots" in b["model_hidden_obligation_fields"]
+    for arm in (a, b):
+        prompt_text = json.dumps(arm["prompt_contract"]).lower()
+        assert "fail_closed_conditions" not in prompt_text
+        assert "case_id" in json.dumps(
+            arm["prompt_contract"]["evidence_json_serialization"]["hidden_from_model"]
+        )
+
+
+def test_exact_prompt_templates_and_stateless_isolation_are_frozen() -> None:
+    exp = _design()["selected_discriminating_experiment"]
+    a = exp["arm_a_proof_carrying_slot_grounding"]["prompt_contract"]
+    b = exp["arm_b_holistic_tri_state_verifier"]["prompt_contract"]
+    assert a["template_id"] == "PROOF_CARRYING_EXPLICIT_SLOT_GROUNDING_PROMPT_V1"
+    assert b["template_id"] == "HOLISTIC_TRI_STATE_SOURCE_GROUNDED_VERIFIER_PROMPT_V1"
+    assert a["user_template"].startswith("OBLIGATION_JSON\n{obligation_json}")
+    assert b["user_template"].startswith("OBLIGATION_JSON\n{obligation_json}")
+    assert a["evidence_json_serialization"]["exact_visible_object"] == {
+        "source_authority": "AUTHORITATIVE_PDF_TEXT",
+        "text": "<exact authoritative proposition text or exact concatenation of the frozen evidence bundle texts separated by a single newline>",
+    }
+    assert b["evidence_json_serialization"]["exact_visible_object"] == (
+        a["evidence_json_serialization"]["exact_visible_object"]
+    )
+    isolation = exp["stateless_case_isolation_contract"]
+    assert isolation["few_shot_examples"] is False
+    assert isolation["prior_case_outputs_visible"] is False
+    assert isolation["extra_paper_context_visible"] is False
+    assert isolation["extra_corpus_context_visible"] is False
+    assert isolation["cross_case_conversation_state"] is False
+    assert isolation["chat_history_reused"] is False
+    assert isolation["kv_cache_reused_across_cases"] is False
+    assert isolation["prompt_tuning_after_review"] is False
+    assert isolation["retry_on_bad_model_output"] is False
+
+
+def test_bad_model_output_fails_closed_and_counts_against_arm() -> None:
+    sem = _design()["selected_discriminating_experiment"][
+        "model_output_and_guard_semantics"
+    ]
+    bad = sem["ordinary_model_output_failure_semantics"]
+    for key in (
+        "malformed_json",
+        "schema_missing_or_unknown_fields",
+        "invalid_enum_value",
+        "non_exact_quote_or_span_attempt",
+        "supported_with_missing_required_binding_or_missing_aspect",
+    ):
+        assert bad[key]["effective_candidate_status"] == (
+            "INSUFFICIENT_OR_AMBIGUOUS"
+        )
+        assert bad[key]["arm_case_contract_pass"] is False
+        assert bad[key]["invalid_execution"] is False
+    assert bad["contradictory_or_ambiguous_relation_or_stage"][
+        "arm_case_contract_pass"
+    ] is True
+    assert sem["parser_contract"]["repair"] == "NONE"
+    assert sem["parser_contract"]["second_parse_attempt"] is False
+    assert sem["parser_contract"]["model_retry"] is False
+
+
+def test_invalid_execution_is_integrity_only_not_bad_output() -> None:
+    exp = _design()["selected_discriminating_experiment"]
+    sem = exp["model_output_and_guard_semantics"]
+    invalid = " ".join(sem["invalid_execution_reserved_for"]).lower()
+    ordinary = " ".join(sem["invalid_execution_not_caused_by"]).lower()
+    assert "wrong frozen source/corpus/model/runtime identity" in invalid
+    assert "leakage" in invalid
+    assert "implementation failure" in invalid
+    assert "evidence-set mutation" in invalid
+    for term in (
+        "malformed verifier json",
+        "non-exact quote/span attempt",
+        "missing slot binding",
+        "explicit ambiguity",
+        "scientifically wrong verifier verdict",
+    ):
+        assert term in ordinary
+    assert "Ordinary bad verifier outputs never cause INVALID_EXECUTION" in (
+        exp["outcome_partition"]["INVALID_EXECUTION"]
+    )
+    assert "No rerun authority arises from ordinary verifier output failure" in (
+        exp["stopping_rule"]
+    )
+
+
+def test_review_correction_preserves_exact_science() -> None:
+    design = _design()
+    correction = design["review_correction"]
+    assert correction["corrected_from_commit"] == (
+        "b939ff0bbb52024f55b2f6e719aef331f6286d06"
+    )
+    assert correction["corrected_from_design_blob"] == (
+        "16100c540729a3c73a03778490b63846e6865030"
+    )
+    assert correction["reviewer_disposition"] == "BLOCKING_FINDING"
+    assert correction["implementation_started"] is False
+    assert correction["scientific_run_executed"] is False
+    assert correction["unchanged_science"] == [
+        "3 false-positive cases",
+        "4 true-support cases",
+        "Qwen3.5-4B identity",
+        "source/corpus identities",
+        "both mechanism families",
+        "no evidence-set mutation",
+        "all-or-nothing precision-first gate",
+        "completeness simulation",
+        "one valid run only",
+        "acceptance_candidate_frozen=false",
+        "sealed holdout untouched",
+        "LOCAL_FIRST_ALLOCATION_FALLBACK_HYBRID_V1 positive lineage",
+    ]
