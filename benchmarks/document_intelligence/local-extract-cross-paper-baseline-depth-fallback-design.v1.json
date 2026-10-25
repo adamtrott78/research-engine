@@ -1,0 +1,257 @@
+{
+  "schema_version": 1,
+  "design_id": "local-extract-cross-paper-baseline-depth-fallback-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "status": "DESIGN_ONLY_REVIEW_REQUIRED_NO_IMPLEMENTATION_AUTHORIZED",
+  "selected_architecture": {
+    "id": "TIER1_DEPTH_FALLBACK_BASELINE_V1",
+    "mechanism_families": [
+      "baseline_construction",
+      "within_intent_depth_extension",
+      "structural_coverage"
+    ],
+    "summary": "Preserve the exact teacher-blind top3 tier1 reservation baseline on papers where it already completes. Only for an incomplete paper, continue the same existing tier1 method/contribution intents through ranks4-12 in the same deterministic visit order until the fourth unique reservation event is found or all frozen candidates are exhausted."
+  },
+  "scientific_question": "Is the nine-paper baseline failure on arxiv:2501.15391 caused only by top3 candidate exhaustion within the already-selected teacher-blind tier1 intents, or does the tier1 role set itself lack enough unique evidence to instantiate four matched reservation origins?",
+  "problem_model": {
+    "established": [
+      "The reviewed cross-paper run 40146681400 returned INSUFFICIENT_BASELINE_GENERALIZATION because arxiv:2501.15391 produced baseline_selected_count=27 and baseline_event_count=3; all other eight papers completed 28/4.",
+      "The failing paper has exactly three accepted source-aware method intents and zero accepted author-anchored contribution intents. Its author anchor roles are problem, result, and limitation_or_future_work.",
+      "Every other paper has at least one contribution-role author intent and completed the frozen baseline.",
+      "The original baseline scans only the top3 candidates of tier1 source method and author contribution intents, alternating source then author in accepted order and revisiting rounds until no unseen candidate remains.",
+      "The frozen recovery comparison cannot authorize any recovery-family preference until all nine teacher-blind baselines are complete.",
+      "The observed 3 local versus 1 allocation exact recoveries on the eight valid papers are diagnostic only and cannot be used to tune this baseline repair."
+    ],
+    "residual_hypotheses": [
+      {
+        "id": "H1_SHALLOW_DEPTH_EXHAUSTION",
+        "statement": "The failing paper has enough unique candidates under the same teacher-blind tier1 method intents, but the top3 reservation scan is too shallow after the 24-proposition core absorbs or duplicates many candidates.",
+        "predicted_observation": "Continuing only the incomplete paper's existing tier1 intents into ranks4-12 yields a fourth unique reservation event and a complete 28/4 baseline without changing any of the eight previously complete baselines."
+      },
+      {
+        "id": "H2_TIER1_ROLE_COVERAGE_INSUFFICIENT",
+        "statement": "The absence of author contribution intents leaves too little structurally diverse tier1 evidence even when the same remaining intents are scanned through top12.",
+        "predicted_observation": "arxiv:2501.15391 remains below 28/4 after exhaustive top12 scan of the existing tier1 intents."
+      },
+      {
+        "id": "H3_BASELINE_IDENTITY_REGRESSION",
+        "statement": "A fallback implementation that changes already-complete papers would confound the diagnostic and invalidate comparability.",
+        "predicted_observation": "Any previously complete paper's top3 baseline selected set or four reservation events differs despite fallback being intended only for incomplete papers."
+      }
+    ]
+  },
+  "frozen_evidence": {
+    "source_cross_paper_run_id": 40146681400,
+    "source_cross_paper_artifact_id": 12581042417,
+    "source_cross_paper_artifact_zip_sha256": "319b95290eaf50943393b670cbec7e9a7fe01956556ae7e1e0c6fbf61149d34d",
+    "source_cross_paper_report_sha256": "1a0eed000053f064ec0f247ae3bc3f93583db9b2787d1ae8ec95362206a02db1",
+    "generated_intents_artifact_id": 12533721500,
+    "generated_intents_sha256": "a5a970725c1f16a694633416ad9fbd98e58418c267891ac83b7783d8af218ebd",
+    "failing_paper": {
+      "item_id": "arxiv:2501.15391",
+      "baseline_selected_count": 27,
+      "baseline_event_count": 3,
+      "baseline_reason": "BASELINE_SELECTED:27;EVENTS:3",
+      "source_method_intent_count": 3,
+      "author_contribution_intent_count": 0,
+      "author_anchor_roles": [
+        "problem",
+        "result",
+        "limitation_or_future_work"
+      ],
+      "observed_reservation_events": [
+        {
+          "frontier_rank": 25,
+          "generator_id": "QWEN35_SOURCE_AWARE_INTENTS_V1",
+          "intent_index": 0,
+          "bm25_rank": 1,
+          "proposition_id": "page:p1:s11"
+        },
+        {
+          "frontier_rank": 26,
+          "generator_id": "QWEN35_SOURCE_AWARE_INTENTS_V1",
+          "intent_index": 2,
+          "bm25_rank": 1,
+          "proposition_id": "page:p3:s11"
+        },
+        {
+          "frontier_rank": 27,
+          "generator_id": "QWEN35_SOURCE_AWARE_INTENTS_V1",
+          "intent_index": 2,
+          "bm25_rank": 3,
+          "proposition_id": "page:p4:s16"
+        }
+      ]
+    },
+    "other_papers_complete_count": 8
+  },
+  "mechanism_family_comparison": [
+    {
+      "id": "SAME_TIER1_DEPTH_FALLBACK",
+      "role": "SELECTED_FIRST_DIAGNOSTIC",
+      "mechanisms": [
+        "within_intent_depth_extension",
+        "teacher_blind_unique_candidate_scan"
+      ],
+      "rationale": "Smallest change: no new semantic role, query, model, budget, or recovery mechanism. It directly tests whether top3 saturation alone caused the 27/3 baseline."
+    },
+    {
+      "id": "AUTHOR_ROLE_FALLBACK",
+      "role": "NEXT_IF_DEPTH_FALLBACK_NEGATIVE",
+      "mechanisms": [
+        "role_substitution",
+        "author_anchor_coverage"
+      ],
+      "rationale": "Could address the zero-contribution condition, but choosing problem/result/limitation as substitutes introduces a new structural role policy and should not be added unless same-tier1 depth is insufficient."
+    },
+    {
+      "id": "ALL_INTENT_BASELINE",
+      "role": "DEFERRED",
+      "mechanisms": [
+        "broader_intent_pool",
+        "global_structural_coverage"
+      ],
+      "rationale": "Using dataset/evaluation/robustness or non-contribution author intents would broaden the baseline family and blur the matched-origin interpretation. It is larger than the current residual requires."
+    },
+    {
+      "id": "BUDGET_INCREASE",
+      "role": "REJECTED_FOR_THIS_DIAGNOSTIC",
+      "mechanisms": [
+        "larger_evidence_budget"
+      ],
+      "rationale": "The matched experiment requires a fixed 24-core plus four-origin budget28 baseline. Increasing budget would not answer whether four teacher-blind origins can be instantiated under the intended comparison."
+    },
+    {
+      "id": "RECOVERY_RULE_TUNING",
+      "role": "INELIGIBLE",
+      "mechanisms": [
+        "radius_change",
+        "allocation_depth_change",
+        "ranking_change"
+      ],
+      "rationale": "The frozen result grants no recovery-family authority because the baseline gate failed; recovery mechanisms must remain untouched until a valid all-nine baseline exists."
+    }
+  ],
+  "selected_discriminating_experiment": {
+    "id": "TIER1_BASELINE_DEPTH_FALLBACK_DIAGNOSTIC_V1",
+    "implementation_scope": "nine_paper_baseline_only_deterministic_teacher_blind_replay",
+    "purpose": "Determine whether the incomplete arxiv:2501.15391 baseline can be completed using only deeper ranks from the exact same tier1 intents while preserving all eight previously complete baselines bit-for-bit at the selected-set/event level.",
+    "new_generation_calls": 0,
+    "new_model_downloads": 0,
+    "new_model_training": false,
+    "production_routing_changed": false,
+    "scientific_state_materialized": false,
+    "frozen_inputs": {
+      "corpus_fixture": "benchmarks/document_intelligence/local-extract-wave1-corpus.v1.json",
+      "paper_count": 9,
+      "generated_intents_artifact_id": 12533721500,
+      "generated_intents_sha256": "a5a970725c1f16a694633416ad9fbd98e58418c267891ac83b7783d8af218ebd",
+      "source_generator": "QWEN35_SOURCE_AWARE_INTENTS_V1",
+      "author_generator": "QWEN35_AUTHOR_ANCHORED_OBLIGATIONS_V1",
+      "retriever": "BM25_DIRECT",
+      "core_budget": 24,
+      "total_budget": 28,
+      "primary_reservation_depth": 3,
+      "fallback_max_depth": 12,
+      "required_reservation_event_count": 4,
+      "source_cross_paper_report_sha256": "1a0eed000053f064ec0f247ae3bc3f93583db9b2787d1ae8ec95362206a02db1",
+      "teacher_use": "No teacher labels, teacher anti-leak filters, removed-proposition identities, recovery-arm outcomes, or historical evidence pages may influence baseline candidate generation, ranking, fallback activation, or selection."
+    },
+    "baseline_operator": {
+      "id": "TOP3_THEN_SAME_TIER1_DEPTH4_12_IF_INCOMPLETE_V1",
+      "steps": [
+        "Recompute the exact original teacher-blind 24-proposition source-aware RRF core for each paper.",
+        "Run the exact original tier1 reservation stream using source facet=method and author anchor_role=contribution intents, exact accepted order, source-then-author alternation, and candidate ranks1-3.",
+        "If the paper reaches exactly 28 selected propositions and four reservation events, freeze that original baseline unchanged and do not evaluate fallback candidates for selection.",
+        "Only if the original baseline is incomplete, continue the same tier1 intents in the same visit order using only candidate ranks4-12, skipping propositions already in the 24-core or prior reservation events.",
+        "Append at most one unseen proposition per visited intent per fallback round, preserving the same source-then-author alternation and accepted-order semantics.",
+        "Stop as soon as exactly four reservation events/28 selected propositions are reached, or when every existing tier1 intent has no unseen candidate through rank12.",
+        "Do not add new intents, roles, queries, models, semantic scores, teacher filters, or recovery arms."
+      ],
+      "complete_paper_identity_requirement": "All eight papers that completed under the original top3 baseline must preserve exactly the same ordered 28 proposition IDs and the same ordered four reservation events.",
+      "failing_paper_only_expected_change": "arxiv:2501.15391 may append one new fourth event from ranks4-12 if available; its first three events must remain exactly the same.",
+      "no_post_result_depth_or_role_change": true
+    },
+    "metrics": {
+      "primary": [
+        "complete_paper_count",
+        "complete_paper_ids",
+        "failing_paper_selected_count",
+        "failing_paper_event_count",
+        "fallback_event_added",
+        "fallback_event_generator_id",
+        "fallback_event_intent_index",
+        "fallback_event_bm25_rank",
+        "fallback_event_proposition_id"
+      ],
+      "invariance": [
+        "eight_previously_complete_baselines_selected_identity_pass",
+        "eight_previously_complete_baselines_event_identity_pass",
+        "failing_paper_original_three_event_prefix_identity_pass"
+      ],
+      "provenance": [
+        "all selected propositions exactly locatable",
+        "generated-intent artifact identity",
+        "corpus PDF SHA/page-count identity",
+        "teacher_used_for_baseline_or_fallback=false"
+      ],
+      "cost": [
+        "fallback_candidate_count_examined",
+        "fallback_raw_source_chars_examined"
+      ]
+    },
+    "frozen_interpretation": {
+      "DEPTH_FALLBACK_COMPLETES_ALL_NINE": [
+        "All nine papers reach exactly 28 selected propositions and four reservation events.",
+        "All eight previously complete baselines remain selected-set/event identical to the original run.",
+        "arxiv:2501.15391 preserves its original three-event prefix and obtains exactly one fourth event from ranks4-12 of an existing tier1 intent.",
+        "Interpretation: the baseline failure was shallow-depth exhaustion, not missing role coverage. A later corrected cross-paper recovery comparison may use this teacher-blind fallback baseline after its own frozen design/review."
+      ],
+      "DEPTH_FALLBACK_STILL_INCOMPLETE": [
+        "All identity/safety checks pass, but arxiv:2501.15391 remains below 28 selected propositions/four reservation events after exhausting ranks4-12 of the exact existing tier1 intents.",
+        "Interpretation: same-role depth is insufficient; next compare teacher-blind author-role fallback policies. Do not widen depth beyond12 post hoc."
+      ],
+      "BASELINE_IDENTITY_REGRESSION": [
+        "Any of the eight originally complete papers changes its selected proposition identity/order or reservation-event identity/order, or the failing paper's original three-event prefix changes.",
+        "Interpretation: the fallback operator is not isolated to the residual and is rejected."
+      ],
+      "INVALID_EXECUTION": [
+        "Any artifact/PDF identity, provenance, fixed-budget, exact-intent-order, teacher-boundary, or replay check fails.",
+        "Interpretation: no scientific verdict; repair only unchanged mechanics with fresh one-shot authority."
+      ]
+    },
+    "interpretation_priority": [
+      "INVALID_EXECUTION",
+      "BASELINE_IDENTITY_REGRESSION",
+      "DEPTH_FALLBACK_COMPLETES_ALL_NINE",
+      "DEPTH_FALLBACK_STILL_INCOMPLETE"
+    ],
+    "stopping_rule": "Exactly one valid execution after independent design review. Stop at the first frozen verdict. No change to top3 primary schedule, ranks4-12 fallback ceiling, tier1 role definitions, accepted-order traversal, budget28, corpus, metrics, or interpretation after seeing the result.",
+    "pass_authority": {
+      "DEPTH_FALLBACK_COMPLETES_ALL_NINE": "Authorize design of a corrected cross-paper structural recovery comparison using this exact teacher-blind baseline fallback, with the original recovery arms unchanged. Do not directly rerun the old comparison without a new frozen design/review.",
+      "DEPTH_FALLBACK_STILL_INCOMPLETE": "Authorize only a teacher-blind role-coverage baseline design comparison. Do not tune depth past12 or choose recovery mechanisms.",
+      "BASELINE_IDENTITY_REGRESSION": "Reject this fallback operator and repair/redesign baseline isolation before further science.",
+      "INVALID_EXECUTION": "No scientific authority."
+    }
+  },
+  "hard_boundaries": {
+    "teacher_used_for_selection": false,
+    "teacher_used_for_baseline": false,
+    "teacher_used_for_fallback": false,
+    "recovery_outcomes_used_for_selection": false,
+    "removed_propositions_used_for_selection": false,
+    "historical_page_oracle_used_for_selection": false,
+    "new_query_generation": false,
+    "new_model_or_ranker": false,
+    "pairwise_semantic_similarity": false,
+    "threshold_calibration": false,
+    "recovery_arm_changed": false,
+    "production_standard_codex_extract_changed": false,
+    "accepted_qwen_verify_changed": false,
+    "wave7b_started": false,
+    "semantic_control_or_ontology_output": false,
+    "implementation_authorized_before_independent_review": false
+  },
+  "reviewer_boundary": "Independent reviewer must audit this exact frozen baseline-only design before implementation. Routine implementation/CI/trigger mechanics do not require reviewer stops unless the frozen science changes. A genuine result requires post-result review before any corrected recovery-comparison design.",
+  "next_safe_action": "Run normal CI on this design-only artifact and merge only if clean. Then checkpoint exact design in workspace-control and obtain independent review before implementing TIER1_BASELINE_DEPTH_FALLBACK_DIAGNOSTIC_V1."
+}
