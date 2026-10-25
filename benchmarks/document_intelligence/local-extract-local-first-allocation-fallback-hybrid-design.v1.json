@@ -1,0 +1,219 @@
+{
+  "schema_version": 1,
+  "design_id": "local-extract-local-first-allocation-fallback-hybrid-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "status": "DESIGN_ONLY_REVIEW_REQUIRED_NO_IMPLEMENTATION_AUTHORIZED",
+  "acceptance_candidate_frozen": false,
+  "sealed_acceptance_benchmark_accessed": false,
+  "selected_architecture": {
+    "id": "LOCAL_FIRST_ALLOCATION_FALLBACK_HYBRID_V1",
+    "mechanism_families": [
+      "local_context_recovery",
+      "surviving_intent_allocation",
+      "deterministic_failover",
+      "fixed_budget_structural_recovery"
+    ],
+    "summary": "At a one-slot origin-drop recovery boundary, choose the frozen radius-1 local rescue candidate whenever at least one eligible local candidate exists; invoke the unchanged global surviving-intent allocation arm only when the local eligible set is empty."
+  },
+  "scientific_question": "Can the complementary local and allocation capabilities observed across the complete 36-case development trace be realized by an executable teacher-blind one-slot failover policy, while preserving all local exact recoveries, capturing the allocation-only recovery, and avoiding global allocation search on cases where local rescue is available?",
+  "problem_model": {
+    "established": [
+      "Corrected all-nine run 40151063835 returned COMPLEMENTARY_STRUCTURAL_RECOVERY with all 9 papers/36 stresses valid.",
+      "The local arm has 3 exact recoveries, all local-only; the allocation arm has 1 exact recovery, allocation-only; both_exact=0 and neither=32.",
+      "The sole allocation-only exact recovery is SHALLOW_FRONTIER; depth-extension exact recoveries=0.",
+      "Local eligible candidate exists in 31/36 stresses; the five local-empty stresses include the one allocation-only exact recovery.",
+      "Trace-derived lazy local-first cost is 272 candidate rows / 46,569 raw candidate chars with allocation invoked on 5/36 stresses, versus 923 / 161,192 for allocation on all stresses.",
+      "Independent post-result review accepts complementarity but forbids oracle union, removed-proposition-aware arbitration, teacher-informed arbitration, and acceptance freeze."
+    ],
+    "residual_hypotheses": [
+      {
+        "id": "H1_FAILOVER_REALIZES_COMPLEMENTARITY",
+        "statement": "The complementary arm capability is realizable without oracle arbitration because the allocation-only exact recovery occurs in a case with no eligible local candidate.",
+        "predicted_observation": "The exact local-first/fallback operator preserves all 3 local exact recoveries and captures the 1 allocation-only recovery for hybrid_exact_recovery_count=4."
+      },
+      {
+        "id": "H2_FAILOVER_COLLAPSES_TO_LOCAL",
+        "statement": "The fallback condition does not actually expose the allocation-only capability under executable replay.",
+        "predicted_observation": "All 3 local exact recoveries are preserved but the allocation-only exact recovery is missed, yielding hybrid_exact_recovery_count=3."
+      },
+      {
+        "id": "H3_FAILOVER_REGRESSES_LOCAL",
+        "statement": "Serializing the two arms changes or corrupts local recovery behavior despite the frozen trace inputs.",
+        "predicted_observation": "At least one of the three known local exact recoveries is no longer selected by the hybrid."
+      }
+    ]
+  },
+  "frozen_evidence": {
+    "corrected_all_nine_result": {
+      "run_id": 40151063835,
+      "artifact_id": 12581733721,
+      "artifact_zip_sha256": "066bf732cece697fe241897ec90b83ebfb85c992d3c90eb44969cc2c7cdae3fc",
+      "report_sha256": "5f83398baba06cb2c96a51e9252ced763a760736e563a4994e7e4f09c60ff52e",
+      "verdict": "COMPLEMENTARY_STRUCTURAL_RECOVERY",
+      "paper_count": 9,
+      "stress_count": 36,
+      "local_exact_recovery_count": 3,
+      "allocation_exact_recovery_count": 1,
+      "local_only_exact_recovery_count": 3,
+      "allocation_only_exact_recovery_count": 1,
+      "both_exact_recovery_count": 0,
+      "neither_exact_recovery_count": 32,
+      "allocation_depth_exact_recovery_count": 0
+    },
+    "trace_summary": {
+      "local_eligible_case_count": 31,
+      "local_empty_case_count": 5,
+      "local_first_fallback_invocation_count": 5,
+      "local_first_trace_exact_recovery_count": 4,
+      "local_first_candidate_count": 272,
+      "local_first_candidate_raw_source_chars": 46569,
+      "local_first_selected_raw_source_chars": 6101,
+      "allocation_everywhere_candidate_count": 923,
+      "allocation_everywhere_candidate_raw_source_chars": 161192
+    }
+  },
+  "mechanism_family_comparison": [
+    {
+      "id": "LOCAL_FIRST_ALLOCATION_FALLBACK",
+      "role": "SELECTED",
+      "rationale": "It is the smallest executable policy that preserves the cheaper/more-effective local arm and invokes allocation only in the exact structural condition that exposes its unique known capability: no eligible local candidate. It adds no learned score, threshold, query, model, or extra evidence slot."
+    },
+    {
+      "id": "ALLOCATION_FIRST_LOCAL_FALLBACK",
+      "role": "REJECTED_FOR_NEXT_DIAGNOSTIC",
+      "rationale": "Allocation produces a candidate in all 36 frozen stresses, so local fallback would never execute; the policy collapses to the allocation-only arm with only one exact recovery and much higher candidate-search cost."
+    },
+    {
+      "id": "UNION_WITH_CROSS_ARM_RERANK",
+      "role": "DEFERRED",
+      "rationale": "Requires a new cross-arm comparability/ranking rule not yet justified by evidence and risks introducing a fresh scoring problem when simple structural failover can realize the observed complementarity."
+    },
+    {
+      "id": "TWO_SLOT_LOCAL_PLUS_ALLOCATION",
+      "role": "DEFERRED",
+      "rationale": "Would change the fixed one-slot budget28 recovery contract to budget29 and confound mechanism realization with additional evidence capacity."
+    }
+  ],
+  "selected_discriminating_experiment": {
+    "id": "LOCAL_FIRST_ALLOCATION_FALLBACK_REALIZATION_V1",
+    "implementation_scope": "deterministic_replay_of_exact_corrected_all_nine_report",
+    "purpose": "Verify that the exact teacher-blind local-first/fallback policy is an executable realization of the observed complementary arm capabilities and quantify its lazy search cost before any end-to-end selector integration.",
+    "new_generation_calls": 0,
+    "new_model_downloads": 0,
+    "new_model_training": false,
+    "production_routing_changed": false,
+    "scientific_state_materialized": false,
+    "frozen_inputs": {
+      "corrected_report_artifact_id": 12581733721,
+      "corrected_report_artifact_zip_sha256": "066bf732cece697fe241897ec90b83ebfb85c992d3c90eb44969cc2c7cdae3fc",
+      "corrected_report_sha256": "5f83398baba06cb2c96a51e9252ced763a760736e563a4994e7e4f09c60ff52e",
+      "expected_paper_count": 9,
+      "expected_stress_count": 36,
+      "expected_source_verdict": "COMPLEMENTARY_STRUCTURAL_RECOVERY",
+      "recovery_budget_after_stress": 1,
+      "fixed_total_budget": 28,
+      "teacher_use": "Removed proposition identity and exact-recovery flags are evaluation-only. They may not select the hybrid arm or candidate."
+    },
+    "hybrid_operator": {
+      "id": "LOCAL_FIRST_ELIGIBILITY_FALLBACK_V1",
+      "steps": [
+        "For each exact source-report stress, verify the source local and allocation results are from the frozen reviewed arms.",
+        "If source local.chosen is not null, select exactly source local.chosen and mark selected_arm=LOCAL.",
+        "If source local.chosen is null, select exactly source allocation.chosen when non-null and mark selected_arm=ALLOCATION_FALLBACK; otherwise select nothing.",
+        "Append at most one proposition. The recovered evidence-set budget remains 28 when a candidate exists and 27 when neither arm supplies a candidate.",
+        "Do not inspect removed_proposition_id, exact-recovery booleans, historical evidence pages, teacher labels, or any semantic oracle until after selected_arm and selected proposition are fixed.",
+        "After action is fixed, score structural exact recovery against removed_proposition_id and aggregate costs."
+      ],
+      "local_eligibility_threshold": null,
+      "cross_arm_score": false,
+      "allocation_invoked_only_if_local_empty": true,
+      "new_candidate_generation": false,
+      "reranking": false,
+      "two_slot_union": false
+    },
+    "controls": [
+      "Frozen local arm exact recovery=3/36.",
+      "Frozen allocation arm exact recovery=1/36.",
+      "Frozen allocation-everywhere candidate cost=923 rows / 161,192 raw chars.",
+      "Oracle union upper bound of known top-choice capabilities=4/36 is evaluation context only and may not choose actions."
+    ],
+    "metrics": {
+      "primary": [
+        "hybrid_exact_recovery_count",
+        "known_local_exact_recoveries_preserved_count",
+        "known_allocation_only_recoveries_captured_count",
+        "hybrid_local_selected_case_count",
+        "hybrid_allocation_fallback_case_count",
+        "hybrid_no_candidate_case_count"
+      ],
+      "cost": [
+        "hybrid_candidate_count_examined",
+        "hybrid_candidate_raw_source_chars_examined",
+        "hybrid_selected_raw_source_chars",
+        "candidate_count_ratio_vs_allocation_everywhere",
+        "candidate_char_ratio_vs_allocation_everywhere"
+      ],
+      "safety": [
+        "source report exact identity",
+        "9 papers / 36 stresses exact identity",
+        "one-slot budget invariant",
+        "removed proposition and exact flags excluded from selection",
+        "no teacher/historical-page data used for selection"
+      ]
+    },
+    "frozen_interpretation": {
+      "HYBRID_COMPLEMENTARITY_REALIZED": [
+        "All safety/identity checks pass.",
+        "All three source local exact recoveries remain exact under LOCAL selection.",
+        "The source allocation-only exact recovery is selected under ALLOCATION_FALLBACK.",
+        "hybrid_exact_recovery_count == 4.",
+        "Interpretation: the complementary structural capabilities are realizable by a simple teacher-blind failover policy; authorize end-to-end development integration and semantic/provenance/fallback validation, not acceptance promotion."
+      ],
+      "HYBRID_COLLAPSES_TO_LOCAL": [
+        "All three source local exact recoveries are preserved but the source allocation-only exact recovery is not captured.",
+        "Interpretation: failover does not realize the observed complementarity; reject this hybrid and revisit a non-oracle cross-arm arbitration design."
+      ],
+      "HYBRID_REGRESSION": [
+        "At least one source local exact recovery is lost under the hybrid action.",
+        "Interpretation: serial failover is not behaviorally equivalent to the frozen local arm; reject the operator."
+      ],
+      "INVALID_EXECUTION": [
+        "Any exact report identity, stress count, action-before-evaluation, one-slot budget, or no-teacher/no-oracle selection check fails.",
+        "Interpretation: no hybrid verdict; repair only unchanged replay mechanics with fresh explicit authority."
+      ]
+    },
+    "interpretation_priority": [
+      "INVALID_EXECUTION",
+      "HYBRID_REGRESSION",
+      "HYBRID_COMPLEMENTARITY_REALIZED",
+      "HYBRID_COLLAPSES_TO_LOCAL"
+    ],
+    "stopping_rule": "Exactly one valid realization execution after independent design review. No changes to source report, local-first condition, selected arm actions, one-slot budget, metrics, or verdicts after seeing the result.",
+    "pass_authority": {
+      "HYBRID_COMPLEMENTARITY_REALIZED": "Authorize end-to-end development integration of LOCAL_FIRST_ALLOCATION_FALLBACK_HYBRID_V1 into the selected evidence architecture, followed by legacy semantic/provenance/fallback/VERIFY/resource validation before any ACCEPTANCE_CANDIDATE_FROZEN declaration.",
+      "HYBRID_COLLAPSES_TO_LOCAL": "Reject local-first failover as the hybrid realization and compare a new teacher-blind cross-arm arbitration family.",
+      "HYBRID_REGRESSION": "Reject the hybrid operator; preserve component-arm evidence and diagnose implementation/interaction before further architecture selection.",
+      "INVALID_EXECUTION": "No scientific authority."
+    }
+  },
+  "hard_boundaries": {
+    "teacher_used_for_selection": false,
+    "removed_proposition_used_for_selection": false,
+    "exact_recovery_flags_used_for_selection": false,
+    "historical_page_oracle_used_for_selection": false,
+    "new_query_generation": false,
+    "new_model_or_ranker": false,
+    "pairwise_semantic_similarity": false,
+    "threshold_calibration": false,
+    "two_slot_budget_increase": false,
+    "production_standard_codex_extract_changed": false,
+    "accepted_qwen_verify_changed": false,
+    "wave7b_started": false,
+    "semantic_control_or_ontology_output": false,
+    "sealed_acceptance_benchmark_accessed": false,
+    "acceptance_candidate_frozen": false,
+    "implementation_authorized_before_independent_review": false
+  },
+  "reviewer_boundary": "Independent reviewer must audit this exact hybrid realization design before implementation. A valid realization result requires post-result review before end-to-end integration design. The sealed acceptance benchmark remains off-limits.",
+  "next_safe_action": "Run normal CI on this design-only artifact and merge only if clean. Then checkpoint exact design in workspace-control and obtain independent review before implementing LOCAL_FIRST_ALLOCATION_FALLBACK_REALIZATION_V1."
+}
