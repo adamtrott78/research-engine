@@ -100,3 +100,56 @@ def test_no_acceptance_authority() -> None:
         design["interpretation_authority"]["acceptance_freeze_authority"]
         == "NONE"
     )
+
+
+def test_review_correction_freezes_exact_corpus_and_matcher() -> None:
+    design = _design()
+    exp = design["selected_discriminating_experiment"]
+    frozen = exp["frozen_inputs"]
+    assert frozen["corpus_fixture_path"] == (
+        "benchmarks/document_intelligence/local-extract-wave1-corpus.v1.json"
+    )
+    assert frozen["corpus_fixture_blob"] == (
+        "c472329d560df3d7dccab2bf49bf94d6805faef2"
+    )
+    assert frozen["teacher_pdf_sha256"] == (
+        "1097bdfabf6cd1b1e26ff9df58b6bb810e4bf74fbd3890ad20e86316d2ee0c91"
+    )
+    matcher = exp["runtime_candidate_generation"][
+        "normalization_and_witness_matching"
+    ]
+    assert matcher["unicode_normalization"] == "NFKD"
+    assert matcher["tokenization_regex"] == "[a-z0-9]+"
+    assert "token prefix" in matcher["witness_term_semantics"]
+
+
+def test_review_correction_freezes_protected_origins_and_precedence() -> None:
+    exp = _design()["selected_discriminating_experiment"]
+    selection = exp["primary_budget28_selection"]
+    assert selection["protected_selection_origins"] == [
+        "salience_stratified_reservation",
+        "validated_alignment_swap",
+        "local_neighborhood_rescue",
+    ]
+    assert selection["evictable_selection_origins"] == [
+        "immutable_source_aware_core"
+    ]
+    assert selection["expected_starting_selection_origin_counts"] == {
+        "immutable_source_aware_core": 23,
+        "salience_stratified_reservation": 3,
+        "validated_alignment_swap": 1,
+        "local_neighborhood_rescue": 1,
+    }
+    assert exp["mechanism_outcome_precedence"] == [
+        "INVALID_EXECUTION",
+        "PRESERVATION_REGRESSION",
+        "ATOMIC_RESIDUAL_CLOSURE_CONFIRMED",
+        "BUDGET_SELECTION_COLLISION",
+        "OBLIGATION_EXPOSURE_GAP",
+    ]
+    assert exp["completeness_safety_outcome_precedence"] == [
+        "INVALID_EXECUTION",
+        "UNSAFE_FALSE_COMPLETE",
+        "COMPLETE_WITH_CLOSURE",
+        "SAFE_INCOMPLETENESS_CONFIRMED",
+    ]
