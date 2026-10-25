@@ -1,0 +1,286 @@
+{
+  "schema_version": 1,
+  "design_id": "local-extract-corrected-all-nine-recovery-comparison-v1",
+  "task_id": "research-engine-local-extract-redesign-v1",
+  "status": "DESIGN_ONLY_REVIEW_REQUIRED_NO_IMPLEMENTATION_AUTHORIZED",
+  "selected_architecture": {
+    "id": "CORRECTED_ALL_NINE_STRUCTURAL_RECOVERY_COMPARISON_V1",
+    "mechanism_families": [
+      "fixed_baseline_stress",
+      "local_context_recovery",
+      "surviving_intent_allocation",
+      "structural_exact_recovery"
+    ],
+    "summary": "Re-run the previously reviewed radius-1 neighborhood versus global surviving-intent allocation comparison over all 36 matched origin-drop stresses, but bind selection to the exact reviewed nine-paper baseline artifact produced by DEPTH_FALLBACK_COMPLETES_ALL_NINE rather than reconstructing an incomplete top3-only baseline."
+  },
+  "scientific_question": "With a complete teacher-blind matched 28/4 baseline now frozen for all nine papers, do radius-1 local source-neighborhood rescue and global surviving-intent allocation recover complementary, local-only, allocation-only, equivalent, or no structural origin-drop cases under the unchanged one-slot recovery rules?",
+  "problem_model": {
+    "established": [
+      "The original cross-paper comparison run 40146681400 was scientifically gated as INSUFFICIENT_BASELINE_GENERALIZATION because arxiv:2501.15391 instantiated only 27 selected propositions and three tier1 reservation events.",
+      "The baseline-only run 40148614485 returned DEPTH_FALLBACK_COMPLETES_ALL_NINE: all nine papers now have 28 selected propositions and four reservation events; eight prior complete baselines are unchanged and arxiv:2501.15391 preserves its original three-event prefix plus one rank5 source-method event.",
+      "Independent review accepted the all-nine baseline result and authorized a newly frozen corrected comparison, not a direct rerun of the incomplete experiment.",
+      "The two recovery arms from the original design remain independently reviewed and unchanged: RADIUS1_SURVIVING_PATH_RESCUE_V1 and GLOBAL_SURVIVING_INTENT_ALLOCATION_V1.",
+      "The prior incomplete 8-paper counts (local exact=3, allocation exact=1) are diagnostic-only negative/partial evidence and may not tune this design."
+    ],
+    "residual_hypotheses": [
+      {
+        "id": "H1_COMPLEMENTARY_STRUCTURAL_RECOVERY",
+        "statement": "Local adjacency and surviving-intent allocation reconstruct different origin-dropped reservations across the complete 36-case stress set.",
+        "predicted_observation": "local_only_exact_recovery_count > 0 and allocation_only_exact_recovery_count > 0."
+      },
+      {
+        "id": "H2_LOCAL_STRUCTURAL_ADVANTAGE",
+        "statement": "Radius-1 local source structure recovers dropped reservations that global surviving-intent allocation does not, with no reciprocal allocation-only recoveries.",
+        "predicted_observation": "local_only_exact_recovery_count > 0 and allocation_only_exact_recovery_count == 0."
+      },
+      {
+        "id": "H3_SURVIVING_ALLOCATION_ADVANTAGE",
+        "statement": "Global surviving-intent allocation recovers dropped reservations unavailable to radius-1 local rescue, with no reciprocal local-only recoveries.",
+        "predicted_observation": "allocation_only_exact_recovery_count > 0 and local_only_exact_recovery_count == 0."
+      },
+      {
+        "id": "H4_EQUIVALENT_OR_WEAK",
+        "statement": "The two bounded static recovery families either recover exactly the same cases or recover none.",
+        "predicted_observation": "Either both_exact_recovery_count > 0 with both exclusive counts zero, or both arm exact-recovery totals are zero."
+      }
+    ]
+  },
+  "frozen_evidence": {
+    "incomplete_comparison": {
+      "run_id": 40146681400,
+      "artifact_id": 12581042417,
+      "report_sha256": "1a0eed000053f064ec0f247ae3bc3f93583db9b2787d1ae8ec95362206a02db1",
+      "verdict": "INSUFFICIENT_BASELINE_GENERALIZATION",
+      "role": "Historical diagnostic only. Its mechanism counts cannot tune or determine the corrected verdict."
+    },
+    "all_nine_baseline": {
+      "run_id": 40148614485,
+      "artifact_id": 12582395555,
+      "artifact_zip_sha256": "e286a153c1c3f8173d080f15aa51e318e123d467b3d45ed1826807949b4006a5",
+      "report_sha256": "fd893f34870b8a52b899bbf2d8f495b7bc771a7573008d6fdf130db844a38d93",
+      "verdict": "DEPTH_FALLBACK_COMPLETES_ALL_NINE",
+      "paper_count": 9,
+      "fixed_selected_count": 28,
+      "fixed_reservation_event_count": 4,
+      "role": "Authoritative teacher-blind baseline identity for this corrected comparison."
+    },
+    "generated_intents": {
+      "artifact_id": 12533721500,
+      "artifact_zip_sha256": "cd02b842ad44bbadab7aad661ff424cc6108f8047d260df5d0064fba2b4f35fb",
+      "payload_sha256": "a5a970725c1f16a694633416ad9fbd98e58418c267891ac83b7783d8af218ebd"
+    }
+  },
+  "mechanism_family_comparison": [
+    {
+      "id": "RADIUS1_SURVIVING_PATH_RESCUE",
+      "role": "ARM_A_UNCHANGED",
+      "rationale": "Retained exactly from the independently reviewed prior cross-paper design; tests bounded local source-neighborhood structure with surviving-path corroboration."
+    },
+    {
+      "id": "GLOBAL_SURVIVING_INTENT_ALLOCATION",
+      "role": "ARM_B_UNCHANGED",
+      "rationale": "Retained exactly from the independently reviewed prior cross-paper design; tests global teacher-blind evidence allocation over all surviving tier1 top12 paths."
+    },
+    {
+      "id": "HYBRID_RECOVERY",
+      "role": "DEFERRED_UNLESS_COMPLEMENTARY",
+      "rationale": "A hybrid is justified only if the complete 36-case comparison shows mutually exclusive recoveries."
+    },
+    {
+      "id": "ADAPTIVE_GAP_CONTROLLER",
+      "role": "DEFERRED_UNLESS_BOTH_WEAK",
+      "rationale": "Adds a new sufficiency/gap control mechanism and is not justified while the two static families have not been validly compared on all nine papers."
+    },
+    {
+      "id": "QUERY_GENERATION_OR_SEMANTIC_CERTIFICATE",
+      "role": "NOT_AUTHORIZED",
+      "rationale": "Current residual is structural recovery under a complete baseline; prior evidence does not reopen generation deficiency or rejected pairwise semantic certificate families."
+    }
+  ],
+  "selected_discriminating_experiment": {
+    "id": "ALL_NINE_FIXED_BASELINE_RECOVERY_COMPARISON_V1",
+    "implementation_scope": "nine_paper_deterministic_teacher_blind_structural_replay",
+    "purpose": "Compare the unchanged local-neighborhood and global surviving-intent allocation arms across all 36 leave-one-reservation-origin-out stresses derived from the exact reviewed all-nine baseline artifact.",
+    "new_generation_calls": 0,
+    "new_model_downloads": 0,
+    "new_model_training": false,
+    "production_routing_changed": false,
+    "scientific_state_materialized": false,
+    "frozen_inputs": {
+      "corpus_fixture": "benchmarks/document_intelligence/local-extract-wave1-corpus.v1.json",
+      "corpus_fixture_blob": "c472329d560df3d7dccab2bf49bf94d6805faef2",
+      "paper_count": 9,
+      "generated_intents_artifact_id": 12533721500,
+      "generated_intents_sha256": "a5a970725c1f16a694633416ad9fbd98e58418c267891ac83b7783d8af218ebd",
+      "all_nine_baseline_artifact_id": 12582395555,
+      "all_nine_baseline_artifact_zip_sha256": "e286a153c1c3f8173d080f15aa51e318e123d467b3d45ed1826807949b4006a5",
+      "all_nine_baseline_report_sha256": "fd893f34870b8a52b899bbf2d8f495b7bc771a7573008d6fdf130db844a38d93",
+      "source_generator": "QWEN35_SOURCE_AWARE_INTENTS_V1",
+      "author_generator": "QWEN35_AUTHOR_ANCHORED_OBLIGATIONS_V1",
+      "retriever": "BM25_DIRECT",
+      "fixed_baseline_selected_count": 28,
+      "fixed_baseline_reservation_event_count": 4,
+      "recovery_evidence_depth": 12,
+      "neighborhood_radius": 1,
+      "teacher_use": "No teacher labels, anti-leak filters, historical evidence pages, removed proposition identities, or previous recovery outcomes may generate/rank/select baseline or recovery candidates. Historical evidence pages remain posthoc secondary context only."
+    },
+    "fixed_baseline_operator": {
+      "id": "MATERIALIZE_REVIEWED_ALL_NINE_BASELINE_V1",
+      "steps": [
+        "Recover the exact baseline-depth fallback report from artifact 12582395555 and verify exact ZIP/report SHA256.",
+        "For each corpus paper, require final_complete=true, final_selected_count=28, final_event_count=4, and exact proposition/page locatability against the authoritative PDF.",
+        "Materialize the 28 selected proposition rows by exact final_selected_proposition_ids from the reviewed report; do not recompute baseline selection for the comparison.",
+        "Use exact final_reservation_events from the reviewed report as the four matched stress origins in their recorded frontier order.",
+        "Recompute only frozen tier1 BM25 top12 rankings from the exact generated-intent artifact for recovery-path support; these rankings may not alter baseline identity."
+      ],
+      "expected_papers": 9,
+      "expected_stress_cases": 36,
+      "baseline_mutation_forbidden": true
+    },
+    "stress_generator": {
+      "id": "LEAVE_ONE_TIER1_RESERVATION_ORIGIN_OUT_V1",
+      "operation": [
+        "Require the teacher-blind baseline to contain exactly 24 core propositions plus four tier1 reservation events.",
+        "Create four stress cases per valid paper, one for each reservation event in frontier order.",
+        "For one stress case, remove exactly that reservation proposition from the 28-set, yielding 27 propositions.",
+        "Exclude that reservation event's selecting intent (generator_id + intent_index) from all recovery-path support for that stress.",
+        "Do not remove or alter any other selected proposition, query, rank, or intent.",
+        "The removed proposition identity is hidden from both recovery arms and is used only for posthoc structural exact-recovery scoring."
+      ],
+      "expected_stress_cases_if_all_papers_complete": 36,
+      "baseline_completeness_gate": "The exact reviewed baseline artifact must materialize 28 selected propositions and four reservation events for each of all nine papers. Any mismatch is INVALID_EXECUTION, not a scientific recovery verdict."
+    },
+    "arm_a_local_neighborhood": {
+      "id": "RADIUS1_SURVIVING_PATH_RESCUE_V1",
+      "candidate_generation": [
+        "Use the three surviving non-core reservation propositions as seeds in original frontier order.",
+        "Generate immediate predecessor and successor propositions on the same authoritative PDF page only.",
+        "Exclude already-selected propositions and cross-page neighbors.",
+        "A neighbor is eligible only if it appears within top12 of at least one surviving tier1 intent."
+      ],
+      "candidate_ranking": [
+        "surviving_path_support_count descending",
+        "best_surviving_bm25_rank ascending",
+        "seed_frontier_rank ascending",
+        "predecessor before successor",
+        "proposition_id ascending"
+      ],
+      "action": "Append exactly the top-ranked eligible candidate; if none, arm returns NO_CANDIDATE."
+    },
+    "arm_b_surviving_intent_allocation": {
+      "id": "GLOBAL_SURVIVING_INTENT_ALLOCATION_V1",
+      "candidate_generation": [
+        "Use all unique unselected propositions appearing within BM25 top12 of surviving tier1 intents.",
+        "Do not use adjacency, teacher labels, semantic similarity, or new queries.",
+        "Annotate every candidate with best surviving BM25 rank and rank_stratum=SHALLOW_FRONTIER for ranks1-3 or DEPTH_EXTENSION for ranks4-12."
+      ],
+      "candidate_ranking": [
+        "surviving_path_support_count descending",
+        "best_surviving_bm25_rank ascending",
+        "earliest surviving intent accepted-order index ascending",
+        "proposition_id ascending"
+      ],
+      "action": "Append exactly the top-ranked eligible candidate; if none, arm returns NO_CANDIDATE."
+    },
+    "metrics": {
+      "primary_structural": [
+        "valid_paper_count",
+        "valid_stress_case_count",
+        "local_exact_removed_proposition_recovery_count",
+        "allocation_exact_removed_proposition_recovery_count",
+        "both_exact_recovery_count",
+        "local_only_exact_recovery_count",
+        "allocation_only_exact_recovery_count",
+        "neither_exact_recovery_count",
+        "allocation_exact_recoveries_from_shallow_frontier_count",
+        "allocation_exact_recoveries_from_depth_extension_count"
+      ],
+      "secondary_page_context": [
+        "removed_proposition_on_historical_evidence_page_count",
+        "local_selected_on_historical_evidence_page_count",
+        "allocation_selected_on_historical_evidence_page_count",
+        "local_same_page_as_removed_count",
+        "allocation_same_page_as_removed_count"
+      ],
+      "cost": [
+        "local_total_unique_candidate_count",
+        "allocation_total_unique_candidate_count",
+        "local_total_candidate_raw_source_chars",
+        "allocation_total_candidate_raw_source_chars",
+        "local_total_selected_raw_source_chars",
+        "allocation_total_selected_raw_source_chars"
+      ],
+      "provenance": [
+        "all baseline/rescue propositions exactly locatable to authoritative PDF page/proposition identity",
+        "exact generated-intent artifact identity",
+        "exact corpus PDF SHA/page-count identity",
+        "no teacher data used in baseline/stress/candidate generation/ranking"
+      ]
+    },
+    "frozen_interpretation": {
+      "INVALID_EXECUTION": [
+        "Any all-nine baseline artifact identity, generated-intent identity, corpus/PDF provenance, 28/4 materialization, stress count, teacher boundary, or exact recovery-arm contract fails.",
+        "Interpretation: no scientific verdict; repair only unchanged replay/identity mechanics with fresh explicit recovery authority."
+      ],
+      "COMPLEMENTARY_STRUCTURAL_RECOVERY": [
+        "local_only_exact_recovery_count > 0 and allocation_only_exact_recovery_count > 0.",
+        "Interpretation: local context and surviving-intent allocation recover different origin-dropped selections across the valid 36-case corpus; next design should test a deterministic hybrid rather than arbitrarily choose one family."
+      ],
+      "LOCAL_STRUCTURAL_ADVANTAGE": [
+        "local_only_exact_recovery_count > 0 and allocation_only_exact_recovery_count == 0.",
+        "Interpretation: radius-1 rescue adds structural recovery unavailable to global surviving-intent allocation under the corrected all-nine baseline. Cost metrics govern the bounded follow-up."
+      ],
+      "SURVIVING_ALLOCATION_ADVANTAGE": [
+        "allocation_only_exact_recovery_count > 0 and local_only_exact_recovery_count == 0.",
+        "Interpretation: global surviving-intent allocation adds structural recovery unavailable to radius-1 rescue. Allocation rank-stratum counts distinguish shallow schedule allocation from true depth extension."
+      ],
+      "BOTH_STRUCTURALLY_WEAK": [
+        "local_exact_removed_proposition_recovery_count == 0 and allocation_exact_removed_proposition_recovery_count == 0.",
+        "Interpretation: neither static family reconstructs any origin-dropped selection; move toward adaptive gap/sufficiency planning rather than posthoc radius/depth tuning."
+      ],
+      "EQUIVALENT_STRUCTURAL_RECOVERY": [
+        "local_only_exact_recovery_count == 0 and allocation_only_exact_recovery_count == 0 and both_exact_recovery_count > 0.",
+        "Interpretation: both mechanisms recover exactly the same stress cases; use frozen cost/simplicity metrics for the next discriminator, not semantic-equivalence claims."
+      ]
+    },
+    "interpretation_priority": [
+      "INVALID_EXECUTION",
+      "COMPLEMENTARY_STRUCTURAL_RECOVERY",
+      "LOCAL_STRUCTURAL_ADVANTAGE",
+      "SURVIVING_ALLOCATION_ADVANTAGE",
+      "BOTH_STRUCTURALLY_WEAK",
+      "EQUIVALENT_STRUCTURAL_RECOVERY"
+    ],
+    "stopping_rule": "Exactly one valid scientific execution after independent design review. Stop at the first frozen verdict. No changes to exact baseline artifact, 36 stress origins, radius1 local arm, global surviving-intent top12 arm, rank-stratum definition, ranking rules, budget28, metrics, or interpretation after seeing the result.",
+    "pass_authority": {
+      "INVALID_EXECUTION": "No scientific authority.",
+      "COMPLEMENTARY_STRUCTURAL_RECOVERY": "Authorize a later deterministic hybrid recovery design using the same fixed all-nine baseline; no production promotion.",
+      "LOCAL_STRUCTURAL_ADVANTAGE": "Authorize a later broader neighborhood-aware robustness/cost design and collection of proposition-level heldout semantic labels before semantic generalization.",
+      "SURVIVING_ALLOCATION_ADVANTAGE": "If advantage is predominantly SHALLOW_FRONTIER, authorize schedule-allocation redesign; if predominantly DEPTH_EXTENSION, authorize deeper-per-intent robustness/cost design; if mixed, keep both hypotheses live. Collect proposition-level heldout labels before semantic generalization.",
+      "BOTH_STRUCTURALLY_WEAK": "Authorize evidence-first adaptive gap/sufficiency-controller research; do not tune radius/depth post hoc.",
+      "EQUIVALENT_STRUCTURAL_RECOVERY": "Authorize only the lower-cost/simpler mechanism as the next bounded structural design; if cost is tied, require a new discriminator rather than arbitrary selection."
+    }
+  },
+  "hard_boundaries": {
+    "exact_all_nine_baseline_artifact_required": true,
+    "baseline_recomputation_for_selection": false,
+    "teacher_used_for_selection": false,
+    "historical_page_oracle_used_only_posthoc": true,
+    "proposition_semantic_generalization_claim": false,
+    "new_query_generation": false,
+    "new_model_or_ranker": false,
+    "pairwise_semantic_similarity": false,
+    "threshold_calibration": false,
+    "recovery_arm_changed": false,
+    "nli_rescue": false,
+    "predicate_argument_rescue": false,
+    "amr_rescue": false,
+    "production_standard_codex_extract_changed": false,
+    "accepted_qwen_verify_changed": false,
+    "wave7b_started": false,
+    "semantic_control_or_ontology_output": false,
+    "implementation_authorized_before_independent_review": false
+  },
+  "reviewer_boundary": "Independent reviewer must audit this exact corrected design before implementation. Routine implementation/CI/trigger mechanics do not require reviewer stops unless the frozen science changes. A genuine result requires post-result review before further phase selection.",
+  "next_safe_action": "Run normal CI on this design-only artifact and merge only if clean. Then checkpoint exact design in workspace-control and obtain independent review before implementing ALL_NINE_FIXED_BASELINE_RECOVERY_COMPARISON_V1."
+}
