@@ -101,13 +101,39 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          venv="$RUNNER_TEMP/exact-provenance-validation-venv"
-          python3 -m venv "$venv"
-          "$venv/bin/python" -m pip install --disable-pip-version-check -e ".[dev]"
-          "$venv/bin/python" -m pytest -q \
-            tests/test_local_extract_exact_provenance_binding_design.py \
-            tests/test_local_extract_exact_provenance_binding.py \
-            tests/test_local_extract_exact_provenance_binding_workflow.py
+          PYTHONPATH="$PWD/src" python3 - <<'PY'
+          import importlib.util
+          import pathlib
+
+          paths = [
+              pathlib.Path("tests/test_local_extract_exact_provenance_binding_design.py"),
+              pathlib.Path("tests/test_local_extract_exact_provenance_binding.py"),
+              pathlib.Path("tests/test_local_extract_exact_provenance_binding_workflow.py"),
+          ]
+          count = 0
+          for index, path in enumerate(paths):
+              spec = importlib.util.spec_from_file_location(
+                  f"_exact_provenance_contract_{index}",
+                  path,
+              )
+              if spec is None or spec.loader is None:
+                  raise RuntimeError(f"cannot load contract test module: {path}")
+              module = importlib.util.module_from_spec(spec)
+              spec.loader.exec_module(module)
+              for name in sorted(vars(module)):
+                  if not name.startswith("test_"):
+                      continue
+                  test = getattr(module, name)
+                  if not callable(test):
+                      continue
+                  test()
+                  count += 1
+          if count != 31:
+              raise RuntimeError(
+                  f"unexpected exact contract test count: {count} != 31"
+              )
+          print(f"EXACT_PROVENANCE_CONTRACT_TESTS=PASS count={count}")
+          PY
 
       - name: Emit implementation validation receipt
         env:
