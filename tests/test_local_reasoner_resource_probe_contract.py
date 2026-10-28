@@ -30,7 +30,7 @@ def test_probe_preserves_quality_boundary():
 
 def test_workflow_is_exact_head_gpu_only_and_nonpersistent():
     w=W.read_text()
-    for s in ["lambda-research-engine-gpu","persist-credentials: false","620d2225cc436ab0b001e3200e590e3b286ef9ab","/lambda-reasoner-probe "]: assert s in w
+    for s in ["lambda-research-engine-gpu","persist-credentials: false","620d2225cc436ab0b001e3200e590e3b286ef9ab","/lambda-reasoner-probe ","local-reasoner-resource-probe-request.v1.json"]: assert s in w
     for bad in ["systemctl","trusted_cache.py promote","docker run"]: assert bad not in w
     c=load()
     assert c["execution_boundary"]["persistent_cache_write"] is False
@@ -41,3 +41,11 @@ def test_helper_deletes_download_and_has_no_cloud_model_path():
     assert "model.unlink()" in h
     assert "openai" not in h.lower()
     assert "anthropic" not in h.lower()
+
+
+def test_trigger_comment_carries_only_exact_sha_and_candidate_is_manifest_bound():
+    w=W.read_text()
+    assert "candidate_extra" in w
+    assert '[[ -z "$candidate_extra" ]]' in w
+    assert "steps.request.outputs.candidate" in w
+    assert "steps.gate.outputs.candidate" not in w
