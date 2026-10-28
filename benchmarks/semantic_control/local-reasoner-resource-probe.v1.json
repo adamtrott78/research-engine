@@ -95,7 +95,7 @@
     "preferred_peak_gpu_delta_mib_lte": 14336,
     "hard_peak_rss_mib_lte": 32768,
     "hard_each_envelope_wall_seconds_lte": 240,
-    "hard_total_job_wall_seconds_lte": 3300
+    "hard_total_job_wall_seconds_lte": 1100
   },
   "interpretation": {
     "resource_pass": "Both context envelopes execute without hard resource/runtime failure.",
@@ -112,7 +112,9 @@
     "daemon_or_controller_mutation": false,
     "systemctl_forbidden": true,
     "exact_pr_head_required": true,
-    "checkout_credentials_persisted": false
+    "checkout_credentials_persisted": false,
+    "workload_class": "gpu-experiment-public",
+    "runner_runtime_ceiling_seconds": 1200
   },
   "decision_values": [
     "RESOURCE_FEASIBLE",
