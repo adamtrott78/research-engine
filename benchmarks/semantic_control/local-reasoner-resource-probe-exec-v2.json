@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "run_id": "local-reasoner-resource-probe-exec-v2",
+  "task_id": "research-engine-local-reasoner-bakeoff-v1",
+  "contract": "benchmarks/semantic_control/local-reasoner-resource-probe.v1.json",
+  "state": "OPEN_EXECUTION_ANCHOR",
+  "candidates": [
+    "qwen35-9b-q6-resource",
+    "qwythos-9b-v2-q6-resource"
+  ],
+  "quality_decision_authorized": false,
+  "production_change": false,
+  "scientific_state_materialized": false,
+  "controller_mutation": false
+}
