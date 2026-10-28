@@ -1,0 +1,420 @@
+{
+  "schema_version": 1,
+  "design_id": "local-reasoner-architecture-v1",
+  "task_id": "research-engine-local-reasoner-architecture-v1",
+  "status": "FROZEN_EXPERIMENTAL_DESIGN",
+  "baseline_sha": "0badc99b894d87413d065afdcd37a678c2839007",
+  "objective": "Select and integrate the smallest local reasoning model that materially improves autonomous scientific research, hard-case reasoning, critique, and review on the Lambda Vector while preserving existing document-inference and bounded VERIFY capacity.",
+  "decision_principles": [
+    "Size the workload before selecting the model.",
+    "Use one shared physical reasoner owner with fresh logical sessions rather than multiple resident replicas.",
+    "Do not ask the reasoner to perform deterministic, retrieval, parsing, or specialized document work already handled better elsewhere.",
+    "Optimize for false-accept avoidance, provenance fidelity, task completion, and useful work per GPU-second before generic benchmark prestige.",
+    "Experimental iteration is single-executor and measurement-driven; failed hypotheses are expected and do not require fresh independent review.",
+    "No production routing, scientific authority, or live infrastructure changes are authorized by this design."
+  ],
+  "inherited_facts": {
+    "active_research_runs_default": 1,
+    "production_semantic_backend": "codex",
+    "bounded_verify_model": {
+      "model": "Qwen/Qwen3.5-4B",
+      "revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+      "role": "radius-0 page-scoped VERIFY with whole-job Codex fallthrough",
+      "disposition": "PRESERVE_UNCHANGED_DURING_BAKEOFF"
+    },
+    "local_gpu_owners": {
+      "formula": {
+        "default_gpu": 0,
+        "residency": "persistent owner when enabled"
+      },
+      "table": {
+        "default_gpu": 1,
+        "residency": "mutually exclusive with qwen_verify on GPU 1"
+      },
+      "qwen_verify": {
+        "default_gpu": 1,
+        "residency": "mutually exclusive with table on GPU 1"
+      }
+    },
+    "current_qwen_resource_evidence": {
+      "workload": "Qwen3.5-4B bounded visual gate",
+      "model_init_seconds": 117.64840551599627,
+      "peak_gpu_delta_mib": 11989,
+      "peak_tree_rss_mib": 5807.02734375,
+      "max_warm_region_seconds": 5.179953836006462
+    }
+  },
+  "workload_model": {
+    "current_job_graph": {
+      "semantic_jobs": [
+        {
+          "job": "DISCOVERY",
+          "tier": "CHEAP",
+          "count_formula": "1"
+        },
+        {
+          "job": "SCREEN",
+          "tier": "CHEAP",
+          "count_formula": "1"
+        },
+        {
+          "job": "EXTRACT",
+          "tier": "STANDARD",
+          "count_formula": "N retained papers"
+        },
+        {
+          "job": "VERIFY",
+          "tier": "STANDARD",
+          "count_formula": "N retained papers"
+        },
+        {
+          "job": "SYNTHESIZE",
+          "tier": "STRONG",
+          "count_formula": "1"
+        },
+        {
+          "job": "GAP_GENERATE",
+          "tier": "STRONG",
+          "count_formula": "1"
+        },
+        {
+          "job": "NOVELTY_SEARCH",
+          "tier": "CHEAP",
+          "count_formula": "<=4 under default fanout"
+        },
+        {
+          "job": "NOVELTY_ARBITRATE",
+          "tier": "STRONG",
+          "count_formula": "<=2 under default fanout"
+        }
+      ],
+      "total_semantic_call_upper_bound_formula": "10 + 2*N",
+      "note": "This is the orchestration-level job bound, not a requirement that every job use the local reasoner."
+    },
+    "reasoner_roles": [
+      {
+        "id": "RESEARCH_PLANNING_AND_CRITIQUE",
+        "priority": "HIGH",
+        "expected_frequency": "several calls per long autonomous loop",
+        "context": "checkpoint, tool results, bounded evidence summaries",
+        "deep_reasoning": true
+      },
+      {
+        "id": "LOCAL_HARD_CASE_AGENT",
+        "priority": "HIGH",
+        "expected_frequency": "only unresolved EXTRACT/VERIFY or semantic-control cases",
+        "context": "bounded unresolved regions and exact source locators",
+        "deep_reasoning": true
+      },
+      {
+        "id": "SYNTHESIS_AND_GAP_REASONING",
+        "priority": "HIGH",
+        "expected_frequency": "1 synthesis + 1 gap generation per completed checkpoint cycle",
+        "context": "knowledge checkpoint and cited evidence",
+        "deep_reasoning": true
+      },
+      {
+        "id": "NOVELTY_ARBITRATION",
+        "priority": "HIGH",
+        "expected_frequency": "<=2 per default run",
+        "context": "gap plus bounded search evidence",
+        "deep_reasoning": true
+      },
+      {
+        "id": "CRITIC_OR_REVIEWER",
+        "priority": "MEDIUM",
+        "expected_frequency": "at explicit correctness gates, not every iteration",
+        "context": "immutable artifact/evidence packet; no author transcript required",
+        "deep_reasoning": true
+      }
+    ],
+    "explicitly_not_reasoner_roles": [
+      "ACQUIRE transport and hashing",
+      "CHECKPOINT construction",
+      "formula recognition",
+      "table reconstruction",
+      "baseline lexical retrieval",
+      "existing bounded Qwen3.5-4B VERIFY unless a later dedicated promotion gate changes it",
+      "routine schema validation and deterministic provenance checks"
+    ]
+  },
+  "serving_architecture": {
+    "physical_owner_count": 1,
+    "max_concurrency": 1,
+    "logical_session_policy": "Fresh prompt/context per role invocation; no cross-role hidden conversational state is required.",
+    "queue": "bounded FIFO",
+    "overflow": "fail/backpressure rather than spawn a duplicate heavyweight owner",
+    "context_tiers": [
+      {
+        "id": "NORMAL",
+        "max_context_tokens": 16384,
+        "max_reasoning_output_tokens": 4096
+      },
+      {
+        "id": "DEEP",
+        "max_context_tokens": 32768,
+        "max_reasoning_output_tokens": 8192
+      }
+    ],
+    "long_context_policy": "Do not use 1M-token model context as working memory. Durable research state lives in PostgreSQL/checkpoints/source artifacts; retrieve bounded evidence into the model.",
+    "gpu_policy": {
+      "bakeoff": "Exactly one selected GPU visible; no co-resident heavyweight candidate during first quality/resource measurements.",
+      "production_candidate": "Family switching/drain-and-evict is preferred over permanent dual-GPU occupation.",
+      "co_residency": "NOT_AUTHORIZED_UNTIL_MEASURED",
+      "dual_gpu_reasoner": "SECOND_WAVE_ONLY_IF_9B_CLASS_FAILS"
+    }
+  },
+  "candidate_ladder": {
+    "first_wave": [
+      {
+        "id": "QWEN35_4B_BASELINE",
+        "model": "Qwen/Qwen3.5-4B",
+        "revision": "851bf6e806efd8d0a36b00ddf55e13ccb7b8cd0a",
+        "precision": "existing certified BF16 runtime",
+        "role": "current local baseline/control",
+        "acquisition": "already trusted/cached"
+      },
+      {
+        "id": "QWEN35_9B_CONTROL",
+        "model": "Qwen/Qwen3.5-9B",
+        "revision_policy": "resolve and freeze immutable upstream revision before any download",
+        "precision_target": "single-GPU quantized text inference; target weight footprint <= 10 GiB",
+        "role": "parameter-count/control arm",
+        "reason": "Separates the benefit of moving 4B->9B from the benefit of reasoning-trace post-training."
+      },
+      {
+        "id": "QWYTHOS_9B_V2_REASONER",
+        "model": "nvcky/Qwythos",
+        "revision_policy": "resolve and freeze immutable v2 upstream revision before any download",
+        "precision_target": "single-GPU quantized text inference matched as closely as practical to the official 9B control",
+        "role": "reasoning-distillation candidate",
+        "reason": "Tests whether post-training on long reasoning/tool-use traces improves the actual research/critique workload."
+      }
+    ],
+    "second_wave": [
+      {
+        "id": "QWEN36_35B_A3B_DEEP_MODE",
+        "model": "Qwen/Qwen3.6-35B-A3B",
+        "activation": "only if no first-wave 9B candidate clears quality gates",
+        "placement": "exclusive dual-GPU or measured offload mode",
+        "role": "occasional deep-mode comparator, not default resident",
+        "production_default_candidate": false
+      }
+    ],
+    "prohibited_shortcuts": [
+      "Do not promote a model from public benchmark scores alone.",
+      "Do not compare candidates on different evidence packets or acceptance guards.",
+      "Do not silently change context size, reasoning budget, or tool permissions between arms.",
+      "Do not use external cloud-model fallback inside a local candidate measurement."
+    ]
+  },
+  "resource_gates": {
+    "first_wave_single_gpu": {
+      "hard_peak_gpu_memory_mib_lte": 16384,
+      "preferred_peak_gpu_memory_mib_lte": 14336,
+      "hard_peak_rss_mib_lte": 32768,
+      "hard_model_init_seconds_lte": 240,
+      "no_duplicate_model_owner": true,
+      "no_second_gpu_visibility": true
+    },
+    "forty_minute_endurance": {
+      "wall_seconds": 2400,
+      "physical_reasoner_instances": 1,
+      "max_concurrency": 1,
+      "external_llm_calls": 0,
+      "cloud_model_fallbacks": 0,
+      "scientific_state_materialized": false,
+      "required_telemetry": [
+        "reasoner_active_seconds",
+        "model_load_count",
+        "request_count",
+        "input_tokens",
+        "output_tokens",
+        "reasoning_tokens_if_available",
+        "peak_gpu_memory_mib",
+        "gpu_utilization_samples",
+        "peak_rss_mib",
+        "queue_wait_seconds",
+        "tool_wait_seconds",
+        "wall_seconds"
+      ]
+    }
+  },
+  "benchmark_suite": {
+    "principle": "Use existing difficult research-engine cases and known failure modes before generic benchmarks.",
+    "suites": [
+      {
+        "id": "BOUNDED_VERIFY_CONTROL",
+        "sources": [
+          "benchmarks/document_intelligence/qwen35-guarded-semantic-calibration-contract.v1.json"
+        ],
+        "purpose": "Ensure stronger reasoners do not regress existing source-grounded verification behavior."
+      },
+      {
+        "id": "ATOMIC_FACT_AND_OBLIGATION_REASONING",
+        "sources": [
+          "benchmarks/document_intelligence/local-extract-obligation-validity-microbenchmark.v1.json",
+          "benchmarks/document_intelligence/local-extract-exact-provenance-binding-microbenchmark.v1.json",
+          "benchmarks/document_intelligence/local-extract-family-c-zero-loss-result.v1.json"
+        ],
+        "purpose": "Test the exact semantic/provenance failures that motivated repeated local-EXTRACT redesign."
+      },
+      {
+        "id": "SEMANTIC_CONTROL",
+        "sources": [
+          "benchmarks/semantic_control/fixture-manifest.v1.json",
+          "benchmarks/semantic_control/integrated-benchmark-contract.v1.json"
+        ],
+        "purpose": "Measure structured reasoning/control behavior on preserved semantic-control fixtures."
+      },
+      {
+        "id": "RESEARCH_GRAPH_REASONING",
+        "source_policy": "Build frozen offline packets from completed historical research jobs without scientific-state mutation.",
+        "roles": [
+          "planning",
+          "synthesis",
+          "gap generation",
+          "novelty arbitration",
+          "wrong-initial-hypothesis recovery"
+        ]
+      },
+      {
+        "id": "ADVERSARIAL_CRITIQUE",
+        "source_policy": "Build frozen reviewer/critic packets from previously known blocking defects and accepted corrections.",
+        "purpose": "Measure false acceptance and issue localization; this does not impose an independent-review gate on experiments."
+      }
+    ],
+    "inference_envelopes": [
+      {
+        "id": "NORMAL_16K",
+        "context_tokens": 16384,
+        "max_output_tokens": 4096
+      },
+      {
+        "id": "DEEP_32K",
+        "context_tokens": 32768,
+        "max_output_tokens": 8192
+      }
+    ],
+    "repetition_policy": "At least 3 runs for stochastic reasoning arms; deterministic/greedy controls may use one run if byte-stable."
+  },
+  "scoring": {
+    "hard_failures": [
+      "fabricated or unlocatable evidence",
+      "false acceptance on frozen known-negative support/review cases",
+      "wrong source/page/blob identity",
+      "structured-output contract violation that bypasses fail-closed handling",
+      "external LLM/cloud fallback during local-only measurement",
+      "scientific-state mutation",
+      "resource hard-ceiling violation"
+    ],
+    "primary_metrics": [
+      "false_accept_rate",
+      "atomic_fact_or_obligation_correctness",
+      "exact_provenance_binding_accuracy",
+      "hard_case_task_completion_rate",
+      "wrong_hypothesis_recovery_rate",
+      "critic_blocker_recall",
+      "tool_call_success_rate"
+    ],
+    "secondary_metrics": [
+      "wall_time_per_success",
+      "reasoner_gpu_seconds_per_success",
+      "tokens_per_success",
+      "abstention_rate",
+      "cold_load_seconds",
+      "warm_latency_seconds",
+      "peak_gpu_memory_mib",
+      "peak_rss_mib"
+    ],
+    "promotion_rule": "A first-wave candidate must have zero hard failures on the frozen promotion set, materially improve hard-case/reasoning success over Qwen3.5-4B, and remain within the single-GPU resource envelope. If Qwythos wins, it must beat the official 9B control on workload quality rather than merely the 4B baseline."
+  },
+  "gitrunner_execution_plan": [
+    {
+      "phase": 0,
+      "id": "DESIGN_VALIDATION",
+      "runner": "lambda-research-engine CPU",
+      "action": "Validate contract/schema/tests on exact PR head.",
+      "model_downloads": 0,
+      "gpu": false
+    },
+    {
+      "phase": 1,
+      "id": "IMMUTABLE_CANDIDATE_ADMISSION",
+      "runner": "trusted cache acquisition path",
+      "action": "Resolve immutable revisions, license/provenance, reproducible quant/runtime artifact identities, and promote read-only offline-complete cache objects.",
+      "production_change": false
+    },
+    {
+      "phase": 2,
+      "id": "SINGLE_GPU_RESOURCE_PROBE",
+      "runner": "lambda-research-engine-gpu / selected-GPU isolation",
+      "action": "Load one candidate at a time; verify exact cache/runtime identity; record cold/warm resource receipt.",
+      "production_change": false
+    },
+    {
+      "phase": 3,
+      "id": "FROZEN_QUALITY_BAKEOFF",
+      "runner": "lambda-research-engine-gpu",
+      "action": "Run identical frozen evidence packets and inference envelopes sequentially across all first-wave arms.",
+      "production_change": false
+    },
+    {
+      "phase": 4,
+      "id": "FORTY_MINUTE_ENDURANCE",
+      "runner": "lambda-research-engine-gpu",
+      "action": "Run only finalists in a 2400-second autonomous local-only loop with tools/checkpoints and no cloud-model fallback.",
+      "production_change": false
+    },
+    {
+      "phase": 5,
+      "id": "DECISION",
+      "runner": "CPU/Git",
+      "action": "Write machine-readable result and select KEEP_4B, PROMOTE_9B_CONTROL, PROMOTE_QWYTHOS_9B, or OPEN_35B_DEEP_MODE.",
+      "production_change": false
+    }
+  ],
+  "iteration_policy": {
+    "experimental_architecture": {
+      "independent_review_required": false,
+      "executor_model": "single executor may design, implement, run, diagnose, patch, and rerun",
+      "required_controls": [
+        "exact-head Git commits",
+        "CI/tests",
+        "frozen benchmark contracts before each measurement",
+        "immutable candidate/runtime identities",
+        "machine-readable receipts",
+        "no post-result metric/threshold rewriting within a frozen experiment"
+      ],
+      "failure_behavior": "A failed experiment is evidence. Iterate immediately when the next change is within the frozen research scope."
+    },
+    "promotion_boundary": {
+      "independent_review_required_by_this_contract": false,
+      "requires_explicit_user_authorization": true,
+      "stop_conditions": [
+        "change production semantic routing",
+        "change scientific-state materialization authority",
+        "replace accepted bounded VERIFY behavior",
+        "install a new long-lived production model owner",
+        "change live Lambda controller/capacity/security boundaries"
+      ],
+      "note": "At a promotion boundary, choose assurance proportionate to blast radius. Independent review is optional unless separately required by the governing control-plane task."
+    }
+  },
+  "explicit_non_authorizations": [
+    "No new model download or cache promotion.",
+    "No production model route change.",
+    "No Qwen3.5-4B VERIFY replacement.",
+    "No daemon/service installation or restart.",
+    "No Lambda controller/capacity mutation.",
+    "No scientific-state materialization.",
+    "No automatic independent-review requirement for this experimental tranche."
+  ],
+  "decision_values": [
+    "KEEP_QWEN35_4B",
+    "PROMOTE_QWEN35_9B_REASONER",
+    "PROMOTE_QWYTHOS_9B_V2_REASONER",
+    "OPEN_QWEN36_35B_A3B_DEEP_MODE",
+    "FAIL_CLOSED_RETAIN_CURRENT_STACK"
+  ]
+}
