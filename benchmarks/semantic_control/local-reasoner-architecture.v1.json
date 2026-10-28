@@ -336,7 +336,8 @@
       "runner": "lambda-research-engine CPU",
       "action": "Validate contract/schema/tests on exact PR head.",
       "model_downloads": 0,
-      "gpu": false
+      "gpu": false,
+      "production_change": false
     },
     {
       "phase": 1,
