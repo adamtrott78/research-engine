@@ -27,13 +27,15 @@ jobs:
         run: |
           set -Eeuo pipefail
           sha="$(awk '{print $2}' <<<"$BODY")"
-          candidate="$(awk '{print $3}' <<<"$BODY")"
+          candidate_extra="$(awk '{print $3}' <<<"$BODY")"
           [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
-          [[ "$candidate" == "qwen35-9b-q6-resource" || "$candidate" == "qwythos-9b-v2-q6-resource" ]]
+          [[ -z "$candidate_extra" ]] || {
+            echo "Candidate id must come from the PR-head request manifest, not the trigger comment" >&2
+            exit 20
+          }
           actual="$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$REPOSITORY/pulls/$PR" | python3 -c 'import json,sys;print(json.load(sys.stdin)["head"]["sha"])')"
           [[ "$actual" == "$sha" ]]
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
-          echo "candidate=$candidate" >> "$GITHUB_OUTPUT"
       - name: Safety preflight
         shell: bash
         run: |
@@ -52,6 +54,45 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
           clean: true
+      - name: Resolve exact candidate from PR-head request manifest
+        id: request
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          request="benchmarks/semantic_control/local-reasoner-resource-probe-request.v1.json"
+          [[ -f "$request" ]] || {
+            echo "Missing exact request manifest: $request" >&2
+            exit 23
+          }
+          candidate="$(
+            python3 - "$request" <<'PY'
+import json, pathlib, sys
+p=pathlib.Path(sys.argv[1])
+v=json.loads(p.read_text(encoding="utf-8"))
+assert set(v) == {
+    "schema_version",
+    "experiment_id",
+    "candidate_id",
+    "quality_decision_authorized",
+    "trusted_cache_promotion_authorized",
+    "production_change",
+    "scientific_state_materialized",
+}
+assert v["schema_version"] == 1
+assert v["experiment_id"] == "local-reasoner-resource-probe-v1"
+assert v["candidate_id"] in {
+    "qwen35-9b-q6-resource",
+    "qwythos-9b-v2-q6-resource",
+}
+assert v["quality_decision_authorized"] is False
+assert v["trusted_cache_promotion_authorized"] is False
+assert v["production_change"] is False
+assert v["scientific_state_materialized"] is False
+print(v["candidate_id"])
+PY
+          )"
+          echo "candidate=$candidate" >> "$GITHUB_OUTPUT"
+
       - name: Build exact llama.cpp runtime
         shell: bash
         run: |
@@ -64,7 +105,7 @@ jobs:
           "$src/build/bin/llama-cli" --version
       - name: Run frozen single-GPU resource probe
         env:
-          CANDIDATE: ${{ steps.gate.outputs.candidate }}
+          CANDIDATE: ${{ steps.request.outputs.candidate }}
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -73,7 +114,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: local-reasoner-resource-probe-${{ steps.gate.outputs.candidate }}
+          name: local-reasoner-resource-probe-${{ steps.request.outputs.candidate }}
           path: ${{ runner.temp }}/local-reasoner-resource-probe.json
           if-no-files-found: error
           retention-days: 7
