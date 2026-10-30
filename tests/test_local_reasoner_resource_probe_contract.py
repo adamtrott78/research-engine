@@ -34,7 +34,9 @@ def test_workflow_is_exact_head_gpu_only_and_nonpersistent():
     for bad in ["systemctl","trusted_cache.py promote","docker run"]: assert bad not in w
     c=load()
     assert c["execution_boundary"]["persistent_cache_write"] is False
-    assert c["execution_boundary"]["trusted_cache_promotion"] is False\n    assert c["execution_boundary"]["workload_class"] == "gpu-experiment-public"\n    assert c["execution_boundary"]["runner_runtime_ceiling_seconds"] == 1200
+    assert c["execution_boundary"]["trusted_cache_promotion"] is False
+    assert c["execution_boundary"]["workload_class"] == "gpu-experiment-public"
+    assert c["execution_boundary"]["runner_runtime_ceiling_seconds"] == 1200
 
 def test_helper_deletes_download_and_has_no_cloud_model_path():
     h=H.read_text()
